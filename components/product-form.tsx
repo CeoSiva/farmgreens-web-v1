@@ -31,19 +31,20 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
   const form = useForm<ProductFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(ProductSchema) as any,
-    defaultValues: initialData || {
-      name: "",
-      description: "",
-      price: 0,
-      sku: "",
-      status: "active",
-      orderQuantity: {
-        type: "weight",
-        unit: "kg",
-        step: 1,
-      },
-      imageUrl: "",
-    },
+    defaultValues: initialData
+      ? { ...initialData, category: initialData.category || "vegetable" }
+      : {
+          name: "",
+          category: "vegetable",
+          description: "",
+          price: 0,
+          status: "active",
+          orderQuantity: {
+            type: "weight",
+            unit: "kg",
+          },
+          imageUrl: "",
+        },
   });
 
   const onSubmit: SubmitHandler<ProductFormValues> = (data) => {
@@ -85,9 +86,22 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sku">SKU (Optional)</Label>
-            <Input id="sku" placeholder="e.g. TOM-001" {...form.register("sku")} />
-            {errors.sku && <p className="text-sm text-red-500">{errors.sku.message}</p>}
+            <Label>Category</Label>
+            <Select
+              value={form.watch("category")}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onValueChange={(val) => form.setValue("category", val as any, { shouldValidate: true, shouldDirty: true })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vegetable">Vegetable</SelectItem>
+                <SelectItem value="batter">Batter</SelectItem>
+                <SelectItem value="greens">Greens</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.category && <p className="text-sm text-red-500">{errors.category.message}</p>}
           </div>
         </div>
 
@@ -105,9 +119,9 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
           <div className="space-y-2">
             <Label>Status</Label>
             <Select
-              defaultValue={form.watch("status")}
+              value={form.watch("status")}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onValueChange={(val) => form.setValue("status", val as any)}
+              onValueChange={(val) => form.setValue("status", val as any, { shouldValidate: true, shouldDirty: true })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select status" />
@@ -123,14 +137,14 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
 
         <div className="space-y-4 border p-4 rounded-lg bg-muted/50">
           <h4 className="font-medium text-sm">Order Quantity Config</h4>
-          <div className={`grid gap-4 ${orderType === 'weight' ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Type</Label>
               <Select
-                defaultValue={form.watch("orderQuantity.type")}
+                value={form.watch("orderQuantity.type")}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onValueChange={(val) => {
-                form.setValue("orderQuantity.type", val as any);
+                form.setValue("orderQuantity.type", val as any, { shouldValidate: true, shouldDirty: true });
                 if (val === "count") {
                   form.setValue("orderQuantity.unit", "batch");
                 }
@@ -152,11 +166,6 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
                 {errors.orderQuantity?.unit && <p className="text-sm text-red-500">{errors.orderQuantity.unit.message}</p>}
               </div>
             )}
-            <div className="space-y-2">
-              <Label htmlFor="step">Step (Increment)</Label>
-              <Input id="step" type="number" step="0.1" {...form.register("orderQuantity.step")} />
-              {errors.orderQuantity?.step && <p className="text-sm text-red-500">{errors.orderQuantity.step.message}</p>}
-            </div>
           </div>
         </div>
 

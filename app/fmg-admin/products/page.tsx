@@ -1,5 +1,5 @@
-import { getProducts } from "@/lib/data/product";
-import { AddProductButton } from "@/components/product-actions";
+import { getProducts } from "@/lib/data/product"
+import { AddProductButton } from "@/components/product-actions"
 import {
   Table,
   TableBody,
@@ -7,13 +7,32 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import Image from "next/image"
+import {
+  EditProductButton,
+  DeleteProductButton,
+  BulkUploadProductsButton,
+} from "@/components/product-actions"
+import { InlineImageUpload } from "@/components/inline-image-upload"
 
-export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic"
 
 export default async function ProductsPage() {
-  const products = await getProducts();
+  const rawProducts = await getProducts()
+  const products = rawProducts.map((p) => ({
+    _id: p._id.toString(),
+    name: p.name,
+    category: p.category,
+    description: p.description,
+    price: p.price,
+    status: p.status,
+    orderQuantity: p.orderQuantity,
+    imageUrl: p.imageUrl,
+    createdAt: p.createdAt.toISOString(),
+    updatedAt: p.updatedAt.toISOString(),
+  }))
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-6 lg:p-8">
@@ -24,39 +43,62 @@ export default async function ProductsPage() {
             Manage your store&apos;s products and their order configurations.
           </p>
         </div>
-        <AddProductButton />
+        <div className="flex items-center gap-2">
+          <BulkUploadProductsButton />
+          <AddProductButton />
+        </div>
       </div>
 
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[80px]">Image</TableHead>
               <TableHead>Product Name</TableHead>
-              <TableHead>SKU</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Order Setup</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={7} className="h-24 text-center">
                   No products found.
                 </TableCell>
               </TableRow>
             ) : (
               products.map((product) => (
-                <TableRow key={product._id.toString()}>
+                <TableRow key={product._id}>
+                  <TableCell>
+                    {product.imageUrl ? (
+                      <div className="relative h-10 w-10 overflow-hidden rounded-md border">
+                        <Image
+                          src={product.imageUrl}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-md border bg-muted">
+                        <InlineImageUpload productId={product._id} />
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium">
                     {product.name}
                     {product.description && (
-                      <p className="text-xs text-muted-foreground line-clamp-1">
+                      <p className="line-clamp-1 text-xs text-muted-foreground">
                         {product.description}
                       </p>
                     )}
                   </TableCell>
-                  <TableCell>{product.sku || "-"}</TableCell>
+                  <TableCell className="capitalize">
+                    {product.category}
+                  </TableCell>
                   <TableCell>₹{product.price.toFixed(2)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1.5">
@@ -64,8 +106,7 @@ export default async function ProductsPage() {
                         {product.orderQuantity.type}
                       </Badge>
                       <span className="text-xs text-muted-foreground">
-                        (Step: {product.orderQuantity.step}{" "}
-                        {product.orderQuantity.unit})
+                        ({product.orderQuantity.unit})
                       </span>
                     </div>
                   </TableCell>
@@ -75,13 +116,22 @@ export default async function ProductsPage() {
                         product.status === "active"
                           ? "default"
                           : product.status === "draft"
-                          ? "secondary"
-                          : "outline"
+                            ? "secondary"
+                            : "outline"
                       }
                       className="capitalize"
                     >
                       {product.status}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      <EditProductButton product={product} />
+                      <DeleteProductButton
+                        id={product._id}
+                        name={product.name}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -90,5 +140,5 @@ export default async function ProductsPage() {
         </Table>
       </div>
     </div>
-  );
+  )
 }

@@ -1,16 +1,14 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-
 export interface IProduct extends Document {
   name: string;
+  category: 'vegetable' | 'batter' | 'greens';
   description?: string;
   price: number;
-  sku?: string;
   status: 'active' | 'draft' | 'archived';
   orderQuantity: {
     type: 'weight' | 'count';
     unit: string;
-    step: number;
   };
   imageUrl?: string;
   createdAt: Date;
@@ -24,6 +22,11 @@ const productSchema: Schema<IProduct> = new Schema(
       required: true,
       trim: true,
     },
+    category: {
+      type: String,
+      enum: ['vegetable', 'batter', 'greens'],
+      required: true,
+    },
     description: {
       type: String,
       trim: true,
@@ -32,12 +35,6 @@ const productSchema: Schema<IProduct> = new Schema(
       type: Number,
       required: true,
       min: 0,
-    },
-    sku: {
-      type: String,
-      unique: true,
-      sparse: true, // Allows multiple docs without sku
-      trim: true,
     },
     status: {
       type: String,
@@ -54,11 +51,6 @@ const productSchema: Schema<IProduct> = new Schema(
         type: String,
         required: true,
         trim: true,
-      },
-      step: {
-        type: Number,
-        required: true,
-        min: 0,
       },
     },
     imageUrl: {
