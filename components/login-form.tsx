@@ -60,7 +60,7 @@ export function LoginForm({
           toast.success("Successfully logged in!")
           router.push('/fmg-admin')
         }
-      } catch (error) {
+      } catch (err) {
         toast.error("Something went wrong. Please try again.")
       }
     })

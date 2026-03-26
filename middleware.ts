@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
     await verifyToken(token);
     // Token is valid, let the request proceed
     return NextResponse.next();
-  } catch (error) {
+  } catch (err) {
     // Token is invalid/expired, clear the cookie and redirect to login
     const response = NextResponse.redirect(new URL("/fmg-login", request.url));
     response.cookies.delete("auth_token");

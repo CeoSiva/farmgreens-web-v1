@@ -2,9 +2,7 @@
 
 import * as React from "react"
 
-import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
@@ -15,7 +13,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, ListIcon, ChartBarIcon, FolderIcon, UsersIcon, CameraIcon, FileTextIcon, Settings2Icon, CircleHelpIcon, SearchIcon, DatabaseIcon, FileChartColumnIcon, FileIcon, CommandIcon } from "lucide-react"
+import { LayoutDashboardIcon, ListIcon, ChartBarIcon, FolderIcon, UsersIcon, CameraIcon, FileTextIcon, Settings2Icon, CircleHelpIcon, SearchIcon, DatabaseIcon, FileChartColumnIcon, FileIcon } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
 
 const data = {
   user: {
@@ -33,15 +33,15 @@ const data = {
       ),
     },
     {
-      title: "Lifecycle",
-      url: "#",
+      title: "Products",
+      url: "/fmg-admin/products",
       icon: (
         <ListIcon
         />
       ),
     },
     {
-      title: "Analytics",
+      title: "Customers",
       url: "#",
       icon: (
         <ChartBarIcon
@@ -49,7 +49,7 @@ const data = {
       ),
     },
     {
-      title: "Projects",
+      title: "Orders",
       url: "#",
       icon: (
         <FolderIcon
@@ -186,10 +186,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <a href="/">
-                <img src="/assets/farm-greens-logo.png" alt="FarmGreens Logo" className="size-10 object-contain" />
+              <Link href="/">
+                <Image src="/assets/farm-greens-logo.png" alt="FarmGreens Logo" width={40} height={40} className="size-10 object-contain" />
                 <span className="text-base font-semibold">FarmGreens</span>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

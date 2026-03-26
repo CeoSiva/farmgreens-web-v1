@@ -9,6 +9,7 @@ const getJwtSecretKey = () => {
 };
 
 export const signToken = async (
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: { sub: string; mobile: string; [key: string]: any },
   options: { exp: string } = { exp: "7d" }
 ) => {
@@ -31,7 +32,7 @@ export const verifyToken = async <T>(token: string): Promise<T> => {
     const secret = new TextEncoder().encode(getJwtSecretKey());
     const { payload } = await jwtVerify(token, secret);
     return payload as T;
-  } catch (error) {
+  } catch (err) {
     throw new Error("Your token has expired or is invalid.");
   }
 };
