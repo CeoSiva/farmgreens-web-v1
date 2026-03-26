@@ -2,6 +2,7 @@ import { Geist, Geist_Mono, Noto_Sans, IBM_Plex_Sans } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils";
 
 const ibmPlexSansHeading = IBM_Plex_Sans({subsets:['latin'],variable:'--font-heading'});
@@ -25,7 +26,10 @@ export default function RootLayout({
       className={cn("antialiased", fontMono.variable, "font-sans", notoSans.variable, ibmPlexSansHeading.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )

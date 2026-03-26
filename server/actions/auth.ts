@@ -65,3 +65,9 @@ export async function loginUserAction(formData: LoginFormValues) {
     return { error: "An unexpected error occurred during login." };
   }
 }
+
+export async function logoutUserAction() {
+  const cookieStore = await cookies();
+  cookieStore.delete("auth_token");
+  return { success: true };
+}

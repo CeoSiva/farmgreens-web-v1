@@ -21,6 +21,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { EllipsisVerticalIcon, CircleUserRoundIcon, CreditCardIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { logoutUserAction } from "@/server/actions/auth"
 
 export function NavUser({
   user,
@@ -94,9 +95,13 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOutIcon
-              />
+            <DropdownMenuItem
+              onClick={async () => {
+                await logoutUserAction();
+                window.location.href = "/fmg-login";
+              }}
+            >
+              <LogOutIcon />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
