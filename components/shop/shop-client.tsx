@@ -2,9 +2,11 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
+import { Search } from "lucide-react"
 
 import { ProductCard, SerializedProduct } from "@/components/landing/product-card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 type Category = "all" | "vegetable" | "greens" | "batter"
 
@@ -30,38 +32,54 @@ export function ShopClient({
   })()
 
   const [category, setCategory] = useState<Category>(normalizedInitial)
+  const [searchQuery, setSearchQuery] = useState("")
 
   const filtered = useMemo(() => {
-    if (category === "all") return products
-    return products.filter((p) => p.category === category)
-  }, [category, products])
+    return products.filter((p) => {
+      const matchesCategory = category === "all" || p.category === category
+      const matchesSearch = 
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+      
+      return matchesCategory && matchesSearch
+    })
+  }, [category, searchQuery, products])
 
   return (
     <section className="w-full px-4 py-10 md:px-8 lg:px-16 xl:px-24">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Shop</h1>
-            <p className="text-sm text-muted-foreground">
-              Browse fresh products and order in minutes.
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Shop</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Browse our fresh collection and eat healthy today.
             </p>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
-            {CATEGORIES.map((c) => (
-              <Button
-                key={c.value}
-                variant={category === c.value ? "default" : "outline"}
-                className="rounded-full"
-                onClick={() => setCategory(c.value)}
-              >
-                {c.label}
-              </Button>
-            ))}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            {/* Search Bar */}
+            <div className="relative w-full sm:w-64 lg:w-80">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="rounded-full pl-9 focus-visible:ring-primary"
+              />
+            </div>
 
-            <Button variant="ghost" asChild className="rounded-full">
-              <Link href="/cart">Cart</Link>
-            </Button>
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+              {CATEGORIES.map((c) => (
+                <Button
+                  key={c.value}
+                  variant={category === c.value ? "default" : "outline"}
+                  className="rounded-full transition-all"
+                  onClick={() => setCategory(c.value)}
+                >
+                  {c.label}
+                </Button>
+              ))}
+            </div>
           </div>
         </div>
 

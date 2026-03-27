@@ -16,6 +16,7 @@ import { Minus, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
+import { useCart } from "./cart-context"
 
 export function CartClient({
   cart,
@@ -27,6 +28,7 @@ export function CartClient({
   deliveryFee: number
 }) {
   const [isPending, startTransition] = useTransition()
+  const { updateCart } = useCart()
 
   const byId = useMemo(() => {
     return new Map(products.map((p) => [p._id, p]))
@@ -52,8 +54,10 @@ export function CartClient({
     startTransition(async () => {
       try {
         const res = await updateCartQtyAction(productId, qty)
-        if ((res as any)?.success) toast.success("Cart updated")
-        else toast.error("Failed to update cart")
+        if ((res as any)?.success) {
+          toast.success("Cart updated")
+          updateCart((res as any).cart.items)
+        } else toast.error("Failed to update cart")
       } catch {
         toast.error("Failed to update cart")
       }
@@ -64,8 +68,10 @@ export function CartClient({
     startTransition(async () => {
       try {
         const res = await removeFromCartAction(productId)
-        if ((res as any)?.success) toast.success("Removed from cart")
-        else toast.error("Failed to remove")
+        if ((res as any)?.success) {
+          toast.success("Removed from cart")
+          updateCart((res as any).cart.items)
+        } else toast.error("Failed to remove")
       } catch {
         toast.error("Failed to remove")
       }
@@ -76,8 +82,10 @@ export function CartClient({
     startTransition(async () => {
       try {
         const res = await clearCartAction()
-        if ((res as any)?.success) toast.success("Cart cleared")
-        else toast.error("Failed to clear")
+        if ((res as any)?.success) {
+          toast.success("Cart cleared")
+          updateCart([])
+        } else toast.error("Failed to clear")
       } catch {
         toast.error("Failed to clear")
       }

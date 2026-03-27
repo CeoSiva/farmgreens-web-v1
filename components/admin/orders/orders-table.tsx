@@ -287,15 +287,16 @@ export function OrdersTable({ data }: { data: any[] }) {
     const exportData = table.getFilteredRowModel().rows.map(r => {
       const o = r.original
       return {
+        "Date": new Date(o.createdAt).toLocaleString(),
         "Order Number": o.orderNumber,
         "Customer Name": o.customer.name,
         "Mobile": o.customer.mobile,
-        "Status": o.status,
-        "Total": o.total,
+        "Address": `${o.shippingAddress.door}, ${o.shippingAddress.street}`,
         "Area": o.shippingAddress.areaName,
         "District": o.shippingAddress.districtName,
         "Items": o.items.map((it: any) => `${it.name} (${it.qty} ${it.unit})`).join(", "),
-        "Date": new Date(o.createdAt).toLocaleString()
+        "Total": o.total,
+        "Status": o.status,
       }
     })
     downloadCSV(exportData, `orders-export-${new Date().toISOString().split('T')[0]}.csv`)

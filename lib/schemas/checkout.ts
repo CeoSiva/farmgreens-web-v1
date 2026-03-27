@@ -12,7 +12,7 @@ export const CheckoutSchema = z.object({
   street: z.string().min(1, "Street is required"),
   districtId: z.string().min(1, "District is required"),
   areaId: z.string().min(1, "Area is required"),
-  saveDetails: z.boolean().optional().default(false),
+  saveDetails: z.boolean().default(true),
 });
 
 export type CheckoutFormValues = z.infer<typeof CheckoutSchema>;

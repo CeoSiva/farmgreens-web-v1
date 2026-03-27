@@ -11,7 +11,8 @@ export function downloadCSV(data: any[], filename: string) {
   for (const row of data) {
     const values = headers.map((header) => {
       const val = row[header]
-      const escaped = ("" + val).replace(/"/g, '\\"')
+      // Standard CSV escaping: double up any double quotes
+      const escaped = ("" + (val ?? "")).replace(/"/g, '""')
       return `"${escaped}"`
     })
     csvRows.push(values.join(","))

@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ArrowRight } from "lucide-react"
 import { ProductCard, SerializedProduct } from "@/components/landing/product-card"
+import { Button } from "@/components/ui/button"
 
 interface ProductGridProps {
   title: string
@@ -31,11 +32,30 @@ export function ProductGrid({ title, products, seeAllLink }: ProductGridProps) {
             No products available at the moment.
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 md:gap-6">
-            {products.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 md:gap-6">
+              {products.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+
+            {/* Show More Button */}
+            {seeAllLink && products.length > 0 && (
+              <div className="mt-12 flex justify-center">
+                <Button 
+                  asChild 
+                  variant="outline" 
+                  size="lg" 
+                  className="rounded-full px-8 font-semibold shadow-sm hover:shadow-md transition-all active:scale-95"
+                >
+                  <Link href={seeAllLink}>
+                    Show More Products
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>

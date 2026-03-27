@@ -8,6 +8,8 @@ import { useTransition } from "react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { addToCartAction, clearCartAction } from "@/server/actions/cart"
+import { useCart } from "@/components/cart/cart-context"
+import { cn } from "@/lib/utils"
 
 export interface SerializedProduct {
   _id: string
@@ -35,6 +37,8 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  const { isInCart, updateCart } = useCart()
+  const inCart = isInCart(product._id)
 
   const handleAddToCart = () => {
     startTransition(async () => {
@@ -42,9 +46,15 @@ export function ProductCard({ product }: ProductCardProps) {
         const res = await addToCartAction(product._id, 1)
         if ((res as any)?.success) {
           toast.success("Added to cart")
+          // Update global context
+          updateCart((res as any).cart.items)
+          // Maintain legacy event for other components (like navbar badge)
           window.dispatchEvent(
             new CustomEvent("cart-updated", {
-              detail: { itemCount: (res as any).itemCount },
+              detail: { 
+                itemCount: (res as any).itemCount,
+                items: (res as any).cart.items 
+              },
             })
           )
         } else toast.error("Failed to add to cart")
@@ -60,9 +70,15 @@ export function ProductCard({ product }: ProductCardProps) {
         await clearCartAction()
         const res = await addToCartAction(product._id, 1)
         if ((res as any)?.success) {
+          // Update global context
+          updateCart((res as any).cart.items)
+          
           window.dispatchEvent(
             new CustomEvent("cart-updated", {
-              detail: { itemCount: (res as any).itemCount },
+              detail: { 
+                itemCount: (res as any).itemCount,
+                items: (res as any).cart.items
+              },
             })
           )
           router.push("/checkout")
@@ -132,12 +148,17 @@ export function ProductCard({ product }: ProductCardProps) {
           <div className="mt-auto pt-2">
             <div className="grid grid-cols-2 gap-2">
               <Button
-                variant="outline"
-                className="w-full rounded-lg border-primary/20 bg-primary/5 text-sm text-primary transition-colors hover:bg-primary/10"
+                variant={inCart ? "secondary" : "outline"}
+                className={cn(
+                  "w-full rounded-lg text-sm transition-all",
+                  inCart 
+                    ? "bg-green-50 text-green-600 border-green-200 hover:bg-green-100" 
+                    : "border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
+                )}
                 onClick={handleAddToCart}
                 disabled={isPending}
               >
-                Add to Cart
+                {inCart ? "Added ✅" : "Add to Cart"}
               </Button>
               <Button
                 className="w-full rounded-lg text-sm"

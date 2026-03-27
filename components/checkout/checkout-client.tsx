@@ -47,7 +47,7 @@ export function CheckoutClient({
     setValue,
     watch,
     formState: { errors },
-  } = useForm<CheckoutFormValues>({
+  } = useForm({
     resolver: zodResolver(CheckoutSchema),
     defaultValues: {
       countryCode: "+91",

@@ -1,26 +1,26 @@
-import { Truck, ShieldCheck, Undo2, BadgePercent } from "lucide-react"
+import { Leaf, Truck, MapPin, Banknote } from "lucide-react"
 
 export function TrustBar() {
   const features = [
     {
+      icon: <Leaf className="h-6 w-6" />,
+      title: "Daily Harvest",
+      subtitle: "Fresh from farm to your door",
+    },
+    {
       icon: <Truck className="h-6 w-6" />,
-      title: "Free Delivery",
-      subtitle: "On all orders above ₹500",
+      title: "Fast Delivery",
+      subtitle: "Delivered within 24 hours",
     },
     {
-      icon: <ShieldCheck className="h-6 w-6" />,
-      title: "Safe Payment",
-      subtitle: "100% secure checkouts",
+      icon: <MapPin className="h-6 w-6" />,
+      title: "Locally Grown",
+      subtitle: "Grown in your community",
     },
     {
-      icon: <Undo2 className="h-6 w-6" />,
-      title: "Money Back",
-      subtitle: "If you are not satisfied",
-    },
-    {
-      icon: <BadgePercent className="h-6 w-6" />,
-      title: "Best Prices",
-      subtitle: "Farm direct, no middlemen",
+      icon: <Banknote className="h-6 w-6" />,
+      title: "Pay on Delivery",
+      subtitle: "Safe Cash on Delivery (COD)",
     },
   ]
 

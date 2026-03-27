@@ -154,7 +154,7 @@ export function Footer() {
         <div className="mt-12 flex flex-col items-center justify-between border-t border-zinc-800 pt-8 md:mt-16 md:flex-row">
           <div className="flex flex-col items-center gap-4 text-xs text-zinc-500 md:flex-row md:gap-6">
             <span>
-              &copy; {new Date().getFullYear()} FarmGreens Inc. All rights
+              &copy; {new Date().getFullYear()} FarmGreens. All rights
               reserved.
             </span>
             <div className="flex gap-4">

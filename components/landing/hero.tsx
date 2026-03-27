@@ -36,7 +36,7 @@ export function Hero() {
         
         <div className="flex flex-col items-center gap-4 sm:flex-row">
           <Button size="lg" className="h-14 rounded-full px-10 text-base shadow-lg transition-transform hover:scale-105" asChild>
-            <Link href="#store">
+            <Link href="/shop">
               Shop Fresh Now <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
