@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
-export type OrderStatus = "placed" | "confirmed" | "cancelled" | "delivered";
+export type OrderStatus = "placed" | "confirmed" | "dispatched" | "delivered" | "cancelled";
 
 export interface IOrderItem {
   productId: Types.ObjectId;
@@ -52,7 +52,7 @@ const orderSchema: Schema<IOrder> = new Schema(
     orderNumber: { type: String, required: true, unique: true, trim: true },
     status: {
       type: String,
-      enum: ["placed", "confirmed", "cancelled", "delivered"],
+      enum: ["placed", "confirmed", "dispatched", "delivered", "cancelled"],
       default: "placed",
     },
     paymentMethod: { type: String, enum: ["cod"], default: "cod" },

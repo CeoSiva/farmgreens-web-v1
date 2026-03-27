@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
 
 import type { Cart } from "@/lib/cart"
-import { CheckoutSchema, CheckoutFormValues } from "@/lib/schemas/checkout"
+import { CheckoutSchema, type CheckoutFormValues } from "@/lib/schemas/checkout"
 import { findCustomerByMobileAction } from "@/server/actions/customer"
 import { listAreasByDistrictAction } from "@/server/actions/location"
 import { placeOrderAction } from "@/server/actions/order"
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select"
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Separator } from "@/components/ui/separator"
 
 export function CheckoutClient({
   cart,
@@ -35,7 +36,9 @@ export function CheckoutClient({
   deliveryFee: number
 }) {
   const [isPending, startTransition] = useTransition()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [areas, setAreas] = useState<any[]>([])
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [existingCustomer, setExistingCustomer] = useState<any | null>(null)
 
   const {
@@ -60,7 +63,6 @@ export function CheckoutClient({
     startTransition(async () => {
       const res = await listAreasByDistrictAction(districtId)
       setAreas(res.areas as any)
-      // reset area when district changes
       setValue("areaId", "")
     })
   }, [districtId, setValue])
@@ -87,12 +89,12 @@ export function CheckoutClient({
   const canCheckout = cart.items.length > 0
 
   const summary = useMemo(() => {
-    // We do not have prices here (server recomputes totals). For v1, show simple item count.
     const itemCount = cart.items.reduce((acc, i) => acc + i.qty, 0)
     return { itemCount }
   }, [cart.items])
 
   const onSubmit = (data: CheckoutFormValues) => {
+    setValue("countryCode", "+91")
     startTransition(async () => {
       try {
         const res = await placeOrderAction(data)
@@ -130,52 +132,72 @@ export function CheckoutClient({
           <div>
             <div className="font-medium">Order summary</div>
             <div className="text-sm text-muted-foreground">
-              Items: {summary.itemCount}
-            </div>{deliveryFee}
+              {summary.itemCount} {summary.itemCount === 1 ? "item" : "items"}
+            </div>
           </div>
-          <div className="text-sm text-muted-foreground">Delivery fee: ₹0</div>
+          <div className="text-sm text-muted-foreground">
+            Delivery fee: ₹{deliveryFee.toFixed(2)}
+          </div>
         </div>
       </Card>
 
       <Card className="p-4">
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
-          <div className="grid gap-2">
-            <label className="text-sm font-medium">Name</label>
-            <Input {...register("name")} disabled={isPending} />
-            {errors.name && (
-              <div className="text-xs text-destructive">{errors.name.message}</div>
-            )}
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6">
+          {/* Section: Contact Details */}
+          <div>
+            <h3 className="text-sm font-semibold">Contact details</h3>
+            <p className="mb-3 text-xs text-muted-foreground">
+              We&apos;ll use this to confirm your order.
+            </p>
+
+            <div className="grid gap-3">
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Full name</label>
+                <Input
+                  {...register("name")}
+                  placeholder="Your full name"
+                  disabled={isPending}
+                />
+                {errors.name && (
+                  <div className="text-xs text-destructive">
+                    {errors.name.message}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Mobile number</label>
+                <div className="flex">
+                  <span className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
+                    +91
+                  </span>
+                  <Input
+                    type="tel"
+                    {...register("mobile")}
+                    placeholder="9876543210"
+                    className="rounded-l-none"
+                    disabled={isPending}
+                  />
+                </div>
+                {errors.mobile && (
+                  <div className="text-xs text-destructive">
+                    {errors.mobile.message}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Country Code</label>
-              <Input {...register("countryCode")} disabled={isPending} />
-              {errors.countryCode && (
-                <div className="text-xs text-destructive">
-                  {errors.countryCode.message}
-                </div>
-              )}
-            </div>
-
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Mobile</label>
-              <Input type="tel" {...register("mobile")} disabled={isPending} />
-              {errors.mobile && (
-                <div className="text-xs text-destructive">
-                  {errors.mobile.message}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {existingCustomer && Array.isArray(existingCustomer.addresses) &&
+          {/* Saved addresses (auto-filled when mobile matches) */}
+          {existingCustomer &&
+            Array.isArray(existingCustomer.addresses) &&
             existingCustomer.addresses.length > 0 && (
-              <Card className="p-3 bg-muted/30">
+              <Card className="bg-muted/30 p-3">
                 <div className="text-sm font-medium">Saved addresses</div>
                 <div className="mt-2 grid gap-2">
                   {existingCustomer.addresses
                     .slice(0, 3)
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     .map((a: any, idx: number) => (
                       <button
                         key={idx}
@@ -192,7 +214,7 @@ export function CheckoutClient({
                         <div className="font-medium">
                           {existingCustomer.name}
                         </div>
-                        <div className="text-muted-foreground text-xs">
+                        <div className="text-xs text-muted-foreground">
                           {a.door}, {a.street}
                         </div>
                       </button>
@@ -201,78 +223,103 @@ export function CheckoutClient({
               </Card>
             )}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Door / Flat</label>
-              <Input {...register("door")} disabled={isPending} />
-              {errors.door && (
-                <div className="text-xs text-destructive">{errors.door.message}</div>
-              )}
-            </div>
+          <Separator />
 
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Street</label>
-              <Input {...register("street")} disabled={isPending} />
-              {errors.street && (
-                <div className="text-xs text-destructive">
-                  {errors.street.message}
+          {/* Section: Delivery Address */}
+          <div>
+            <h3 className="text-sm font-semibold">Delivery address</h3>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Where should we deliver your order?
+            </p>
+
+            <div className="grid gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Door / Flat</label>
+                  <Input
+                    {...register("door")}
+                    placeholder="12A, Ground floor"
+                    disabled={isPending}
+                  />
+                  {errors.door && (
+                    <div className="text-xs text-destructive">
+                      {errors.door.message}
+                    </div>
+                  )}
                 </div>
-              )}
+
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Street</label>
+                  <Input
+                    {...register("street")}
+                    placeholder="Main road, Gandhi nagar"
+                    disabled={isPending}
+                  />
+                  {errors.street && (
+                    <div className="text-xs text-destructive">
+                      {errors.street.message}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">District</label>
+                  <Select
+                    onValueChange={(val) => setValue("districtId", val)}
+                    value={watch("districtId")}
+                    disabled={isPending}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select district" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {districts.map((d) => (
+                        <SelectItem key={d._id} value={d._id}>
+                          {d.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.districtId && (
+                    <div className="text-xs text-destructive">
+                      {errors.districtId.message}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Area</label>
+                  <Select
+                    onValueChange={(val) => setValue("areaId", val)}
+                    value={watch("areaId")}
+                    disabled={isPending || !districtId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select area" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {areas.map((a) => (
+                        <SelectItem key={a._id} value={a._id}>
+                          {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.areaId && (
+                    <div className="text-xs text-destructive">
+                      {errors.areaId.message}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">District</label>
-              <Select
-                onValueChange={(val) => setValue("districtId", val)}
-                value={watch("districtId")}
-                disabled={isPending}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select district" />
-                </SelectTrigger>
-                <SelectContent>
-                  {districts.map((d) => (
-                    <SelectItem key={d._id} value={d._id}>
-                      {d.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.districtId && (
-                <div className="text-xs text-destructive">
-                  {errors.districtId.message}
-                </div>
-              )}
-            </div>
+          <Separator />
 
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Area</label>
-              <Select
-                onValueChange={(val) => setValue("areaId", val)}
-                value={watch("areaId")}
-                disabled={isPending || !districtId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select area" />
-                </SelectTrigger>
-                <SelectContent>
-                  {areas.map((a) => (
-                    <SelectItem key={a._id} value={a._id}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.areaId && (
-                <div className="text-xs text-destructive">
-                  {errors.areaId.message}
-                </div>
-              )}
-            </div>
-          </div>
-
+          {/* Save details */}
           <div className="flex items-center gap-2">
             <Checkbox
               checked={watch("saveDetails")}
@@ -285,7 +332,7 @@ export function CheckoutClient({
             </label>
           </div>
 
-          <Button type="submit" disabled={isPending}>
+          <Button type="submit" disabled={isPending} size="lg">
             Place order (COD)
           </Button>
         </form>

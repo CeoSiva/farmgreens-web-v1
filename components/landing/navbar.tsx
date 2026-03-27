@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Search, User, ShoppingCart, Leaf } from "lucide-react"
+import { Search, Leaf } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -15,18 +15,17 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 import Image from "next/image"
-import { useRouter } from "next/navigation"
+import { CartBadge } from "@/components/cart/cart-badge"
 
 export function Navbar() {
-  const router = useRouter()
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white">
-      <div className="mx-auto flex h-16 max-w-7xl items-center px-4 md:h-[72px] md:px-8 lg:px-16 xl:px-24">
+      <div className="mx-auto flex h-20 md:h-16 max-w-7xl items-center px-4 md:h-[72px] md:px-8 lg:px-16 xl:px-24">
         {/* Mobile Menu & Logo */}
         <div className="mr-4 flex items-center gap-2 md:hidden">
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/assets/farm-greens-logo.png"
+              src="/assets/farm-greens-logo-full.png"
               alt="Logo"
               width={1862}
               height={413}
@@ -161,10 +160,7 @@ export function Navbar() {
 
           <div className="flex items-center text-muted-foreground">
             <span className="hidden text-border md:inline-block">|</span>
-            <Button onClick={() => router.push("/cart")} variant="ghost" size="icon" className="text-foreground">
-              <ShoppingCart className="h-5 w-5" />
-              <span className="sr-only">Cart</span>
-            </Button>
+            <CartBadge />
           </div>
         </div>
       </div>

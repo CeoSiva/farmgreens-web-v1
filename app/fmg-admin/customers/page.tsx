@@ -1,13 +1,20 @@
 import Link from "next/link"
+import { Search } from "lucide-react"
 
-import { listCustomers } from "@/lib/data/admin"
+import { searchCustomers } from "@/lib/data/admin"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export const dynamic = "force-dynamic"
 
-export default async function CustomersAdminPage() {
-  const raw = await listCustomers(200)
+export default async function CustomersAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const { q = "" } = await searchParams
+  const raw = await searchCustomers(q, 200)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const customers = raw.map((c: any) => ({
@@ -32,6 +39,30 @@ export default async function CustomersAdminPage() {
         </Button>
       </div>
 
+      <form
+        className="flex items-center gap-2"
+        action="/fmg-admin/customers"
+        method="GET"
+      >
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            name="q"
+            placeholder="Search by name or mobile..."
+            defaultValue={q}
+            className="pl-9"
+          />
+        </div>
+        <Button type="submit" variant="secondary">
+          Search
+        </Button>
+        {q && (
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/fmg-admin/customers">Clear</Link>
+          </Button>
+        )}
+      </form>
+
       <Card className="overflow-hidden">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-sm">
@@ -50,7 +81,7 @@ export default async function CustomersAdminPage() {
                     className="px-4 py-8 text-center text-muted-foreground"
                     colSpan={4}
                   >
-                    No customers yet.
+                    {q ? `No customers found for "${q}".` : "No customers yet."}
                   </td>
                 </tr>
               ) : (
@@ -60,7 +91,9 @@ export default async function CustomersAdminPage() {
                     <td className="px-4 py-3">{c.mobile}</td>
                     <td className="px-4 py-3">{c.addressCount}</td>
                     <td className="px-4 py-3 text-muted-foreground">
-                      {c.updatedAt ? new Date(c.updatedAt).toLocaleString() : "-"}
+                      {c.updatedAt
+                        ? new Date(c.updatedAt).toLocaleString()
+                        : "-"}
                     </td>
                   </tr>
                 ))
