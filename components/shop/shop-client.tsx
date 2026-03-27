@@ -20,9 +20,11 @@ const CATEGORIES: { label: string; value: Category }[] = [
 export function ShopClient({
   products,
   initialCategory,
+  initialSearch = "",
 }: {
   products: SerializedProduct[]
   initialCategory: string
+  initialSearch?: string
 }) {
   const normalizedInitial = ((): Category => {
     if (initialCategory === "vegetable") return "vegetable"
@@ -32,7 +34,7 @@ export function ShopClient({
   })()
 
   const [category, setCategory] = useState<Category>(normalizedInitial)
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchQuery, setSearchQuery] = useState(initialSearch)
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -88,7 +90,7 @@ export function ShopClient({
             No products available.
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 md:gap-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-6">
             {filtered.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}

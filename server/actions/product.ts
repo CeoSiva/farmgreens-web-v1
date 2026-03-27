@@ -84,3 +84,15 @@ export async function updateProductImageAction(id: string, imageUrl: string) {
   }
 }
 
+export async function searchProductsAction(query: string) {
+  try {
+    const { searchProducts } = await import("@/lib/data/product");
+    const rawMatches = await searchProducts(query);
+    const matches = JSON.parse(JSON.stringify(rawMatches));
+    return { success: true, matches };
+  } catch (error) {
+    console.error("Search Action Error:", error);
+    return { error: "Failed to search products" };
+  }
+}
+

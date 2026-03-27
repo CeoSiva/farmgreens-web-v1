@@ -67,7 +67,12 @@ import { DateRange } from "react-day-picker"
 export function OrdersTable({ data }: { data: any[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
+    items: false,
+    address: false,
+    createdAt: false,
+    select: true,
+  })
   const [rowSelection, setRowSelection] = React.useState({})
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [selectedOrder, setSelectedOrder] = React.useState<any | null>(null)
@@ -142,7 +147,9 @@ export function OrdersTable({ data }: { data: any[] }) {
             ))}
           </div>
         )
-      }
+      },
+      // Ensure visibility is reactive on various sizes
+      enableHiding: true,
     },
     {
       id: "address",
@@ -184,11 +191,12 @@ export function OrdersTable({ data }: { data: any[] }) {
       header: "Date",
       cell: ({ row }) => {
         return (
-          <div className="text-xs text-muted-foreground whitespace-nowrap">
+          <div className="text-xs text-muted-foreground whitespace-nowrap px-2">
             {new Date(row.getValue("createdAt")).toLocaleDateString()}
           </div>
         )
       },
+      enableHiding: true,
     },
     {
       id: "actions",
@@ -304,27 +312,27 @@ export function OrdersTable({ data }: { data: any[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col sm:flex-row gap-4 flex-1">
-          <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col sm:grid sm:grid-cols-2 lg:flex lg:flex-row gap-3 flex-1">
+          <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search orders, mobile, area..."
               value={globalFilter ?? ""}
               onChange={(event) => setGlobalFilter(event.target.value)}
-              className="pl-9"
+              className="pl-9 h-10 lg:h-9 bg-card"
             />
           </div>
           <DatePickerWithRange date={date} setDate={setDate} />
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport} className="h-10 lg:h-9 flex-1 sm:flex-none">
             <Download className="mr-2 h-4 w-4" /> Export
           </Button>
           <Select 
             onValueChange={(val) => table.getColumn("status")?.setFilterValue(val === "all" ? "" : val)}
           >
-            <SelectTrigger className="w-[150px] h-9 text-sm">
+            <SelectTrigger className="w-full sm:w-[150px] h-10 lg:h-9 text-sm bg-card">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
@@ -341,27 +349,27 @@ export function OrdersTable({ data }: { data: any[] }) {
 
       {/* Bulk Actions Bar */}
       {selectedIds.length > 0 && (
-        <div className="flex items-center gap-4 rounded-xl bg-primary/5 p-4 border border-primary/10 animate-in fade-in slide-in-from-top-2">
-          <span className="text-sm font-bold text-primary">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl bg-primary/5 p-4 border border-primary/10 animate-in fade-in slide-in-from-top-2">
+          <span className="text-sm font-bold text-primary whitespace-nowrap">
             {selectedIds.length} orders selected
           </span>
-          <div className="h-4 w-px bg-primary/20" />
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bulk Move:</span>
-            <Button size="sm" variant="ghost" className="h-8 font-bold hover:bg-blue-100 hover:text-blue-700" onClick={() => handleBulkUpdate("confirmed")}>
+          <div className="hidden sm:block h-4 w-px bg-primary/20" />
+          <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mr-1">Bulk:</span>
+            <Button size="sm" variant="secondary" className="h-7 text-xs font-bold hover:bg-blue-100 hover:text-blue-700" onClick={() => handleBulkUpdate("confirmed")}>
               Confirm
             </Button>
-            <Button size="sm" variant="ghost" className="h-8 font-bold hover:bg-orange-100 hover:text-orange-700" onClick={() => handleBulkUpdate("dispatched")}>
+            <Button size="sm" variant="secondary" className="h-7 text-xs font-bold hover:bg-orange-100 hover:text-orange-700" onClick={() => handleBulkUpdate("dispatched")}>
               Dispatch
             </Button>
-            <Button size="sm" variant="ghost" className="h-8 font-bold hover:bg-green-100 hover:text-green-700" onClick={() => handleBulkUpdate("delivered")}>
+            <Button size="sm" variant="secondary" className="h-7 text-xs font-bold hover:bg-green-100 hover:text-green-700" onClick={() => handleBulkUpdate("delivered")}>
               Deliver
             </Button>
           </div>
         </div>
       )}
 
-      <div className="rounded-md border bg-card overflow-hidden">
+      <div className="rounded-md border bg-card overflow-x-auto no-scrollbar">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

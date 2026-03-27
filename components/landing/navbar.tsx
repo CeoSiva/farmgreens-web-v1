@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Search, Leaf } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui/navigation-menu"
 import Image from "next/image"
 import { CartBadge } from "@/components/cart/cart-badge"
+import { NavbarSearch } from "@/components/landing/navbar-search"
 
 export function Navbar() {
   return (
@@ -65,66 +67,89 @@ export function Navbar() {
               <NavigationMenuItem>
                 <NavigationMenuTrigger>Shop</NavigationMenuTrigger>
                 <NavigationMenuContent>
-                  <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px]">
+                  <ul className="grid w-[400px] gap-3 p-4 md:w-[600px] md:grid-cols-[.75fr_1fr] lg:w-[750px]">
                     <li className="row-span-3">
                       <NavigationMenuLink asChild>
                         <a
-                          className="flex h-full w-full flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none select-none focus:shadow-md"
+                          className="relative flex h-full w-full flex-col justify-end overflow-hidden rounded-md bg-muted p-6 no-underline outline-none select-none focus:shadow-md group"
                           href="/"
                         >
-                          <Leaf className="h-6 w-6 text-primary" />
-                          <div className="mt-4 mb-2 text-lg font-medium">
-                            Fresh Produce
+                          <Image
+                            src="/nav-fresh-produce.webp"
+                            alt="Fresh Produce"
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                          <div className="relative z-10">
+                            <Leaf className="h-6 w-6 text-primary-foreground mb-2" />
+                            <div className="mb-1 text-lg font-medium text-white">
+                              Fresh Produce
+                            </div>
+                            <p className="text-sm leading-tight text-white/80">
+                              Organic vegetables and greens straight from the farm.
+                            </p>
                           </div>
-                          <p className="text-sm leading-tight text-muted-foreground">
-                            Organic vegetables and greens straight from the
-                            farm.
-                          </p>
                         </a>
                       </NavigationMenuLink>
                     </li>
-                    <li>
+                    <li className="group/item">
                       <NavigationMenuLink asChild>
                         <a
-                          href="/shop/vegetables"
-                          className="block space-y-1 rounded-md p-3 leading-none no-underline transition-colors outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          href="/shop?category=vegetable"
+                          className="flex items-start gap-4 space-y-1 rounded-md p-3 leading-none no-underline transition-all outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
-                          <div className="text-sm leading-none font-medium">
-                            Vegetables
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-orange-100 group-hover/item:bg-orange-200 transition-colors">
+                            <span className="text-2xl">🥕</span>
                           </div>
-                          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                            Seasonal and daily fresh veggies.
-                          </p>
+                          <div>
+                            <div className="text-sm leading-none font-semibold mb-1">
+                              Vegetables
+                            </div>
+                            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                              Seasonal and daily fresh veggies.
+                            </p>
+                          </div>
                         </a>
                       </NavigationMenuLink>
                     </li>
-                    <li>
+                    <li className="group/item">
                       <NavigationMenuLink asChild>
                         <a
-                          href="/shop/greens"
-                          className="block space-y-1 rounded-md p-3 leading-none no-underline transition-colors outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          href="/shop?category=greens"
+                          className="flex items-start gap-4 space-y-1 rounded-md p-3 leading-none no-underline transition-all outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
-                          <div className="text-sm leading-none font-medium">
-                            Greens
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-green-100 group-hover/item:bg-green-200 transition-colors">
+                            <span className="text-2xl">🥬</span>
                           </div>
-                          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                            Healthy leafy greens and herbs.
-                          </p>
+                          <div>
+                            <div className="text-sm leading-none font-semibold mb-1">
+                              Greens
+                            </div>
+                            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                              Healthy leafy greens and herbs.
+                            </p>
+                          </div>
                         </a>
                       </NavigationMenuLink>
                     </li>
-                    <li>
+                    <li className="group/item">
                       <NavigationMenuLink asChild>
                         <a
-                          href="/shop/batter"
-                          className="block space-y-1 rounded-md p-3 leading-none no-underline transition-colors outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                          href="/shop?category=batter"
+                          className="flex items-start gap-4 space-y-1 rounded-md p-3 leading-none no-underline transition-all outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
-                          <div className="text-sm leading-none font-medium">
-                            Batter
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-amber-100 group-hover/item:bg-amber-200 transition-colors">
+                            <span className="text-2xl">🍚</span>
                           </div>
-                          <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                            Freshly ground idli/dosa batters.
-                          </p>
+                          <div>
+                            <div className="text-sm leading-none font-semibold mb-1">
+                              Batter
+                            </div>
+                            <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                              Freshly ground idli/dosa batters.
+                            </p>
+                          </div>
                         </a>
                       </NavigationMenuLink>
                     </li>
@@ -144,14 +169,7 @@ export function Navbar() {
 
         {/* Right Actions */}
         <div className="flex flex-1 items-center justify-end gap-2 md:flex-none md:gap-4">
-          <div className="relative hidden w-full max-w-[280px] md:block">
-            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search products..."
-              className="w-full rounded-full bg-muted/50 pl-9"
-            />
-          </div>
+          <NavbarSearch />
 
           <Button variant="ghost" size="icon" className="md:hidden">
             <Search className="h-5 w-5" />

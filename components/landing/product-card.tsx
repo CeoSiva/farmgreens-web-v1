@@ -92,29 +92,20 @@ export function ProductCard({ product }: ProductCardProps) {
   }
 
   return (
-    <Card className="group relative overflow-hidden rounded-2xl border-border/50 shadow-sm transition-all duration-200 hover:scale-[1.01] hover:shadow-md">
-      {/* Wishlist Button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-3 right-3 z-10 h-8 w-8 rounded-full bg-white/50 text-muted-foreground hover:bg-white hover:text-red-500 hover:shadow-sm"
-      >
-        <Heart className="h-4 w-4" />
-        <span className="sr-only">Add to wishlist</span>
-      </Button>
+    <Card className="group flex flex-col relative overflow-hidden rounded-2xl border-border/50 shadow-sm transition-all duration-200 hover:shadow-md p-0 gap-0">
 
-      <CardContent className="flex h-full flex-col p-4 md:p-5">
-        {/* Product Image Area */}
-        <div className="relative mb-4 h-40 w-full overflow-hidden rounded-xl bg-white md:h-48">
-          <Image
-            src={imageUrl}
-            alt={product.name}
-            fill
-            className="object-contain p-2"
-            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-          />
-        </div>
+      {/* Product Image Area - Full Bleed */}
+      <div className="relative h-48 w-full overflow-hidden bg-muted/20 md:h-56">
+        <Image
+          src={imageUrl}
+          alt={product.name}
+          fill
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+        />
+      </div>
 
+      <CardContent className="flex flex-1 flex-col p-4 md:p-5">
         {/* Content Area */}
         <div className="flex flex-1 flex-col">
           <div className="flex items-start justify-between gap-2">
@@ -146,7 +137,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
 
           <div className="mt-auto pt-2">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2">
               <Button
                 variant={inCart ? "secondary" : "outline"}
                 className={cn(

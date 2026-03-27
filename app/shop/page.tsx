@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic"
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ category?: string }>
+  searchParams?: Promise<{ category?: string; search?: string }>
 }) {
   const rawProducts = await getProducts()
 
@@ -29,12 +29,13 @@ export default async function ShopPage({
 
   const sp = (await searchParams) ?? {}
   const initialCategory = sp.category ?? "all"
+  const initialSearch = sp.search ?? ""
 
   return (
     <div className="flex min-h-screen flex-col w-full">
       <Navbar />
       <main className="flex-1 w-full">
-        <ShopClient products={products} initialCategory={initialCategory} />
+        <ShopClient products={products} initialCategory={initialCategory} initialSearch={initialSearch} />
       </main>
       <Footer />
     </div>

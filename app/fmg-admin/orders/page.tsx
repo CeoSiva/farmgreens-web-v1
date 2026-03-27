@@ -13,16 +13,18 @@ export default async function OrdersAdminPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-6 lg:p-8 text-foreground">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
           <p className="text-sm text-muted-foreground">
-            Manage your store orders, track deliveries and bulk update status.
+            Manage your store orders and track real-time deliveries.
           </p>
         </div>
-        <Button asChild variant="outline" size="sm">
-          <Link href="/">View site</Link>
-        </Button>
+        <div className="flex items-center gap-2 sm:justify-end">
+          <Button asChild variant="outline" size="sm" className="rounded-full shadow-sm">
+            <Link href="/">View site</Link>
+          </Button>
+        </div>
       </div>
 
       <OrdersTable data={orders} />

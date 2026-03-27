@@ -31,3 +31,19 @@ export async function deleteProduct(id: string): Promise<IProduct | null> {
   await connectDB();
   return ProductModel.findByIdAndDelete(id).lean();
 }
+
+export async function searchProducts(query: string, limit = 5): Promise<IProduct[]> {
+  await connectDB();
+  if (!query.trim()) return [];
+  
+  const regex = new RegExp(query, "i");
+  return ProductModel.find({
+    $or: [
+      { name: regex },
+      { description: regex }
+    ]
+  })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+}
