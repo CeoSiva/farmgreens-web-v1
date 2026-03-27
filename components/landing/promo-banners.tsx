@@ -27,7 +27,7 @@ export function PromoBanners() {
             {/* Background Image Absolute Right */}
             <div className="absolute -bottom-8 -right-8 h-48 w-48 md:h-64 md:w-64 opacity-90 mix-blend-multiply">
                <Image 
-                 src="/promo_banner_left.png" 
+                 src="/promo_banner_left.webp" 
                  alt="Fresh greens" 
                  fill 
                  className="object-cover rounded-full" 
@@ -55,7 +55,7 @@ export function PromoBanners() {
             {/* Background Image Absolute Right */}
             <div className="absolute -bottom-4 -right-4 h-48 w-48 md:h-64 md:w-64 opacity-90 mix-blend-multiply">
                <Image 
-                 src="/promo_banner_right.png" 
+                 src="/promo_banner_right.webp" 
                  alt="Root vegetables" 
                  fill 
                  className="object-cover rounded-full" 

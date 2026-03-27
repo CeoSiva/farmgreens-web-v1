@@ -9,7 +9,7 @@ export function Hero() {
       {/* Background Image Layer */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="/banner-bg.png"
+          src="/banner-bg.webp"
           alt="Lush organic farm at dawn"
           fill
           priority
