@@ -15,8 +15,12 @@ import {
   deleteDistrictAction,
   renameAreaAction,
   renameDistrictAction,
+  bulkCreateAreasAction,
 } from "@/server/actions/location-admin"
-import { updateDeliveryFeeAction, updateStoreProfileAction } from "@/server/actions/setting"
+import {
+  updateDeliveryFeeAction,
+  updateStoreProfileAction,
+} from "@/server/actions/setting"
 import { listAreasByDistrictAction } from "@/server/actions/location"
 
 export function SettingsClient({
@@ -33,10 +37,14 @@ export function SettingsClient({
 
   const [storeName, setStoreName] = useState(settings.storeName ?? "")
   const [supportPhone, setSupportPhone] = useState(settings.supportPhone ?? "")
-  const [supportWhatsapp, setSupportWhatsapp] = useState(settings.supportWhatsapp ?? "")
+  const [supportWhatsapp, setSupportWhatsapp] = useState(
+    settings.supportWhatsapp ?? ""
+  )
   const [storeAddress, setStoreAddress] = useState(settings.storeAddress ?? "")
 
-  const [deliveryFee, setDeliveryFee] = useState(String(settings.deliveryFee ?? 0))
+  const [deliveryFee, setDeliveryFee] = useState(
+    String(settings.deliveryFee ?? 0)
+  )
 
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>(
     districts?.[0]?._id ? String(districts[0]._id) : ""
@@ -45,6 +53,7 @@ export function SettingsClient({
 
   const [newDistrictName, setNewDistrictName] = useState("")
   const [newAreaName, setNewAreaName] = useState("")
+  const [bulkAreaNames, setBulkAreaNames] = useState("")
 
   useEffect(() => {
     if (!selectedDistrictId) {
@@ -81,7 +90,9 @@ export function SettingsClient({
 
   const saveDeliveryFee = () => {
     startTransition(async () => {
-      const res = await updateDeliveryFeeAction({ deliveryFee: Number(deliveryFee) })
+      const res = await updateDeliveryFeeAction({
+        deliveryFee: Number(deliveryFee),
+      })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
         toast.success("Delivery fee saved")
@@ -135,7 +146,10 @@ export function SettingsClient({
       return
     }
     startTransition(async () => {
-      const res = await createAreaAction({ districtId: selectedDistrictId, name: newAreaName })
+      const res = await createAreaAction({
+        districtId: selectedDistrictId,
+        name: newAreaName,
+      })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
         toast.success("Area created")
@@ -170,6 +184,33 @@ export function SettingsClient({
     })
   }
 
+  const bulkAddAreas = () => {
+    if (!selectedDistrictId) {
+      toast.error("Select a district first")
+      return
+    }
+    const names = bulkAreaNames
+      .split("\n")
+      .map((n) => n.trim())
+      .filter(Boolean)
+    if (names.length === 0) {
+      toast.error("Enter at least one area name")
+      return
+    }
+    startTransition(async () => {
+      const res = await bulkCreateAreasAction({
+        districtId: selectedDistrictId,
+        names,
+      })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success(`Created ${(res as any).count} areas`)
+        setBulkAreaNames("")
+        router.refresh()
+      }
+    })
+  }
+
   return (
     <Tabs defaultValue="store" className="w-full">
       <TabsList>
@@ -179,39 +220,65 @@ export function SettingsClient({
       </TabsList>
 
       <TabsContent value="store" className="mt-4">
-        <Card className="p-4 grid gap-3">
+        <Card className="grid gap-3 p-4">
           <div className="grid gap-2">
             <label className="text-sm font-medium">Store name</label>
-            <Input value={storeName} onChange={(e) => setStoreName(e.target.value)} disabled={isPending} />
+            <Input
+              value={storeName}
+              onChange={(e) => setStoreName(e.target.value)}
+              disabled={isPending}
+            />
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="grid gap-2">
               <label className="text-sm font-medium">Support phone</label>
-              <Input value={supportPhone} onChange={(e) => setSupportPhone(e.target.value)} disabled={isPending} />
+              <Input
+                value={supportPhone}
+                onChange={(e) => setSupportPhone(e.target.value)}
+                disabled={isPending}
+              />
             </div>
             <div className="grid gap-2">
               <label className="text-sm font-medium">WhatsApp</label>
-              <Input value={supportWhatsapp} onChange={(e) => setSupportWhatsapp(e.target.value)} disabled={isPending} />
+              <Input
+                value={supportWhatsapp}
+                onChange={(e) => setSupportWhatsapp(e.target.value)}
+                disabled={isPending}
+              />
             </div>
           </div>
           <div className="grid gap-2">
             <label className="text-sm font-medium">Store address</label>
-            <Input value={storeAddress} onChange={(e) => setStoreAddress(e.target.value)} disabled={isPending} />
+            <Input
+              value={storeAddress}
+              onChange={(e) => setStoreAddress(e.target.value)}
+              disabled={isPending}
+            />
           </div>
           <div>
-            <Button onClick={saveStoreProfile} disabled={isPending}>Save</Button>
+            <Button onClick={saveStoreProfile} disabled={isPending}>
+              Save
+            </Button>
           </div>
         </Card>
       </TabsContent>
 
       <TabsContent value="delivery" className="mt-4">
-        <Card className="p-4 grid gap-3">
+        <Card className="grid gap-3 p-4">
           <div className="grid gap-2">
             <label className="text-sm font-medium">Flat delivery fee (₹)</label>
-            <Input type="number" min={0} value={deliveryFee} onChange={(e) => setDeliveryFee(e.target.value)} disabled={isPending} />
+            <Input
+              type="number"
+              min={0}
+              value={deliveryFee}
+              onChange={(e) => setDeliveryFee(e.target.value)}
+              disabled={isPending}
+            />
           </div>
           <div>
-            <Button onClick={saveDeliveryFee} disabled={isPending}>Save</Button>
+            <Button onClick={saveDeliveryFee} disabled={isPending}>
+              Save
+            </Button>
           </div>
         </Card>
       </TabsContent>
@@ -221,12 +288,24 @@ export function SettingsClient({
           <Card className="p-4">
             <div className="font-medium">Districts</div>
             <div className="mt-3 flex gap-2">
-              <Input placeholder="New district" value={newDistrictName} onChange={(e) => setNewDistrictName(e.target.value)} disabled={isPending} />
-              <Button onClick={addDistrict} disabled={isPending || !newDistrictName}>Add</Button>
+              <Input
+                placeholder="New district"
+                value={newDistrictName}
+                onChange={(e) => setNewDistrictName(e.target.value)}
+                disabled={isPending}
+              />
+              <Button
+                onClick={addDistrict}
+                disabled={isPending || !newDistrictName}
+              >
+                Add
+              </Button>
             </div>
             <div className="mt-4 grid gap-2">
               {districts.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No districts yet.</div>
+                <div className="text-sm text-muted-foreground">
+                  No districts yet.
+                </div>
               ) : (
                 districts.map((d) => (
                   <button
@@ -234,17 +313,39 @@ export function SettingsClient({
                     type="button"
                     onClick={() => setSelectedDistrictId(String(d._id))}
                     className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
-                      String(d._id) === selectedDistrictId ? "bg-muted" : "bg-background"
+                      String(d._id) === selectedDistrictId
+                        ? "bg-muted"
+                        : "bg-background"
                     }`}
                     disabled={isPending}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{d.name}</span>
                       <span className="flex gap-2">
-                        <Button type="button" size="sm" variant="outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRenameDistrict(String(d._id)); }} disabled={isPending}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleRenameDistrict(String(d._id))
+                          }}
+                          disabled={isPending}
+                        >
                           Rename
                         </Button>
-                        <Button type="button" size="sm" variant="destructive" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveDistrict(String(d._id)); }} disabled={isPending}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            handleRemoveDistrict(String(d._id))
+                          }}
+                          disabled={isPending}
+                        >
                           Delete
                         </Button>
                       </span>
@@ -264,23 +365,77 @@ export function SettingsClient({
             </div>
 
             <div className="mt-3 flex gap-2">
-              <Input placeholder="New area" value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} disabled={isPending || !selectedDistrictId} />
-              <Button onClick={addArea} disabled={isPending || !selectedDistrictId || !newAreaName}>Add</Button>
+              <Input
+                placeholder="New area"
+                value={newAreaName}
+                onChange={(e) => setNewAreaName(e.target.value)}
+                disabled={isPending || !selectedDistrictId}
+              />
+              <Button
+                onClick={addArea}
+                disabled={isPending || !selectedDistrictId || !newAreaName}
+              >
+                Add
+              </Button>
+            </div>
+
+            <div className="mt-3 grid gap-2">
+              <div className="text-xs font-medium text-muted-foreground">
+                Bulk add (one area per line)
+              </div>
+              <textarea
+                className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder={"Area 1\nArea 2\nArea 3"}
+                value={bulkAreaNames}
+                onChange={(e) => setBulkAreaNames(e.target.value)}
+                disabled={isPending || !selectedDistrictId}
+              />
+              <div>
+                <Button
+                  onClick={bulkAddAreas}
+                  disabled={
+                    isPending || !selectedDistrictId || !bulkAreaNames.trim()
+                  }
+                  variant="secondary"
+                  size="sm"
+                >
+                  Bulk Add
+                </Button>
+              </div>
             </div>
 
             <div className="mt-4 grid gap-2">
               {areas.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No areas yet.</div>
+                <div className="text-sm text-muted-foreground">
+                  No areas yet.
+                </div>
               ) : (
                 areas.map((a) => (
-                  <div key={a._id} className="rounded-md border px-3 py-2 text-sm">
+                  <div
+                    key={a._id}
+                    className="rounded-md border px-3 py-2 text-sm"
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{a.name}</span>
                       <span className="flex gap-2">
-                        <Button type="button" size="sm" variant="outline" onClick={() => handleRenameArea(String(a._id), a.name)} disabled={isPending}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            handleRenameArea(String(a._id), a.name)
+                          }
+                          disabled={isPending}
+                        >
                           Rename
                         </Button>
-                        <Button type="button" size="sm" variant="destructive" onClick={() => handleRemoveArea(String(a._id))} disabled={isPending}>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRemoveArea(String(a._id))}
+                          disabled={isPending}
+                        >
                           Delete
                         </Button>
                       </span>
