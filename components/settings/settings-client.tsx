@@ -1,0 +1,297 @@
+"use client"
+
+import { useEffect, useMemo, useState, useTransition } from "react"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  createDistrictAction,
+  createAreaAction,
+  deleteAreaAction,
+  deleteDistrictAction,
+  renameAreaAction,
+  renameDistrictAction,
+} from "@/server/actions/location-admin"
+import { updateDeliveryFeeAction, updateStoreProfileAction } from "@/server/actions/setting"
+import { listAreasByDistrictAction } from "@/server/actions/location"
+
+export function SettingsClient({
+  settings,
+  districts,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  settings: any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  districts: any[]
+}) {
+  const [isPending, startTransition] = useTransition()
+  const router = useRouter()
+
+  const [storeName, setStoreName] = useState(settings.storeName ?? "")
+  const [supportPhone, setSupportPhone] = useState(settings.supportPhone ?? "")
+  const [supportWhatsapp, setSupportWhatsapp] = useState(settings.supportWhatsapp ?? "")
+  const [storeAddress, setStoreAddress] = useState(settings.storeAddress ?? "")
+
+  const [deliveryFee, setDeliveryFee] = useState(String(settings.deliveryFee ?? 0))
+
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string>(
+    districts?.[0]?._id ? String(districts[0]._id) : ""
+  )
+  const [areas, setAreas] = useState<any[]>([])
+
+  const [newDistrictName, setNewDistrictName] = useState("")
+  const [newAreaName, setNewAreaName] = useState("")
+
+  useEffect(() => {
+    if (!selectedDistrictId) {
+      setAreas([])
+      return
+    }
+    startTransition(async () => {
+      const res = await listAreasByDistrictAction(selectedDistrictId)
+      setAreas(res.areas as any)
+    })
+  }, [selectedDistrictId])
+
+  const districtById = useMemo(() => {
+    const m = new Map<string, any>()
+    for (const d of districts) m.set(String(d._id), d)
+    return m
+  }, [districts])
+
+  const saveStoreProfile = () => {
+    startTransition(async () => {
+      const res = await updateStoreProfileAction({
+        storeName,
+        supportPhone,
+        supportWhatsapp,
+        storeAddress,
+      })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("Store profile saved")
+        router.refresh()
+      }
+    })
+  }
+
+  const saveDeliveryFee = () => {
+    startTransition(async () => {
+      const res = await updateDeliveryFeeAction({ deliveryFee: Number(deliveryFee) })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("Delivery fee saved")
+        router.refresh()
+      }
+    })
+  }
+
+  const addDistrict = () => {
+    startTransition(async () => {
+      const res = await createDistrictAction({ name: newDistrictName })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("District created")
+        setNewDistrictName("")
+        router.refresh()
+      }
+    })
+  }
+
+  const handleRenameDistrict = (id: string) => {
+    const current = districtById.get(id)
+    const name = window.prompt("Rename district", current?.name ?? "")
+    if (!name) return
+    startTransition(async () => {
+      const res = await renameDistrictAction({ id, name })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("District renamed")
+        router.refresh()
+      }
+    })
+  }
+
+  const handleRemoveDistrict = (id: string) => {
+    if (!window.confirm("Delete this district?")) return
+    startTransition(async () => {
+      const res = await deleteDistrictAction({ id })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("District deleted")
+        if (selectedDistrictId === id) setSelectedDistrictId("")
+        router.refresh()
+      }
+    })
+  }
+
+  const addArea = () => {
+    if (!selectedDistrictId) {
+      toast.error("Select a district first")
+      return
+    }
+    startTransition(async () => {
+      const res = await createAreaAction({ districtId: selectedDistrictId, name: newAreaName })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("Area created")
+        setNewAreaName("")
+        router.refresh()
+      }
+    })
+  }
+
+  const handleRenameArea = (id: string, currentName: string) => {
+    const name = window.prompt("Rename area", currentName)
+    if (!name) return
+    startTransition(async () => {
+      const res = await renameAreaAction({ id, name })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("Area renamed")
+        router.refresh()
+      }
+    })
+  }
+
+  const handleRemoveArea = (id: string) => {
+    if (!window.confirm("Delete this area?")) return
+    startTransition(async () => {
+      const res = await deleteAreaAction({ id })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("Area deleted")
+        router.refresh()
+      }
+    })
+  }
+
+  return (
+    <Tabs defaultValue="store" className="w-full">
+      <TabsList>
+        <TabsTrigger value="store">Store</TabsTrigger>
+        <TabsTrigger value="delivery">Delivery</TabsTrigger>
+        <TabsTrigger value="locations">Locations</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="store" className="mt-4">
+        <Card className="p-4 grid gap-3">
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Store name</label>
+            <Input value={storeName} onChange={(e) => setStoreName(e.target.value)} disabled={isPending} />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Support phone</label>
+              <Input value={supportPhone} onChange={(e) => setSupportPhone(e.target.value)} disabled={isPending} />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">WhatsApp</label>
+              <Input value={supportWhatsapp} onChange={(e) => setSupportWhatsapp(e.target.value)} disabled={isPending} />
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Store address</label>
+            <Input value={storeAddress} onChange={(e) => setStoreAddress(e.target.value)} disabled={isPending} />
+          </div>
+          <div>
+            <Button onClick={saveStoreProfile} disabled={isPending}>Save</Button>
+          </div>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="delivery" className="mt-4">
+        <Card className="p-4 grid gap-3">
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Flat delivery fee (₹)</label>
+            <Input type="number" min={0} value={deliveryFee} onChange={(e) => setDeliveryFee(e.target.value)} disabled={isPending} />
+          </div>
+          <div>
+            <Button onClick={saveDeliveryFee} disabled={isPending}>Save</Button>
+          </div>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="locations" className="mt-4">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card className="p-4">
+            <div className="font-medium">Districts</div>
+            <div className="mt-3 flex gap-2">
+              <Input placeholder="New district" value={newDistrictName} onChange={(e) => setNewDistrictName(e.target.value)} disabled={isPending} />
+              <Button onClick={addDistrict} disabled={isPending || !newDistrictName}>Add</Button>
+            </div>
+            <div className="mt-4 grid gap-2">
+              {districts.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No districts yet.</div>
+              ) : (
+                districts.map((d) => (
+                  <button
+                    key={d._id}
+                    type="button"
+                    onClick={() => setSelectedDistrictId(String(d._id))}
+                    className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
+                      String(d._id) === selectedDistrictId ? "bg-muted" : "bg-background"
+                    }`}
+                    disabled={isPending}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{d.name}</span>
+                      <span className="flex gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRenameDistrict(String(d._id)); }} disabled={isPending}>
+                          Rename
+                        </Button>
+                        <Button type="button" size="sm" variant="destructive" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRemoveDistrict(String(d._id)); }} disabled={isPending}>
+                          Delete
+                        </Button>
+                      </span>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <div className="font-medium">Areas</div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              {selectedDistrictId
+                ? `For district: ${districtById.get(selectedDistrictId)?.name ?? ""}`
+                : "Select a district to manage areas."}
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              <Input placeholder="New area" value={newAreaName} onChange={(e) => setNewAreaName(e.target.value)} disabled={isPending || !selectedDistrictId} />
+              <Button onClick={addArea} disabled={isPending || !selectedDistrictId || !newAreaName}>Add</Button>
+            </div>
+
+            <div className="mt-4 grid gap-2">
+              {areas.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No areas yet.</div>
+              ) : (
+                areas.map((a) => (
+                  <div key={a._id} className="rounded-md border px-3 py-2 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{a.name}</span>
+                      <span className="flex gap-2">
+                        <Button type="button" size="sm" variant="outline" onClick={() => handleRenameArea(String(a._id), a.name)} disabled={isPending}>
+                          Rename
+                        </Button>
+                        <Button type="button" size="sm" variant="destructive" onClick={() => handleRemoveArea(String(a._id))} disabled={isPending}>
+                          Delete
+                        </Button>
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
+      </TabsContent>
+    </Tabs>
+  )
+}

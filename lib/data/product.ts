@@ -6,6 +6,12 @@ export async function getProducts(): Promise<IProduct[]> {
   return ProductModel.find().sort({ createdAt: -1 }).lean();
 }
 
+export async function getProductsByIds(ids: string[]): Promise<IProduct[]> {
+  await connectDB();
+  if (ids.length === 0) return [];
+  return ProductModel.find({ _id: { $in: ids } }).lean();
+}
+
 export async function getProductById(id: string): Promise<IProduct | null> {
   await connectDB();
   return ProductModel.findById(id).lean();

@@ -42,7 +42,7 @@ const data = {
     },
     {
       title: "Customers",
-      url: "#",
+      url: "/fmg-admin/customers",
       icon: (
         <ChartBarIcon
         />
@@ -50,9 +50,17 @@ const data = {
     },
     {
       title: "Orders",
-      url: "#",
+      url: "/fmg-admin/orders",
       icon: (
         <FolderIcon
+        />
+      ),
+    },
+    {
+      title: "Settings",
+      url: "/fmg-admin/settings",
+      icon: (
+        <Settings2Icon
         />
       ),
     },

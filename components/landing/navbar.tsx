@@ -68,7 +68,7 @@ export function Navbar() {
                       <NavigationMenuLink asChild>
                         <a
                           className="flex h-full w-full flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none select-none focus:shadow-md"
-                          href="/"
+                          href="/shop"
                         >
                           <Leaf className="h-6 w-6 text-primary" />
                           <div className="mt-4 mb-2 text-lg font-medium">
@@ -84,7 +84,7 @@ export function Navbar() {
                     <li>
                       <NavigationMenuLink asChild>
                         <a
-                          href="/shop/vegetables"
+                          href="/shop?category=vegetable"
                           className="block space-y-1 rounded-md p-3 leading-none no-underline transition-colors outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <div className="text-sm leading-none font-medium">
@@ -99,7 +99,7 @@ export function Navbar() {
                     <li>
                       <NavigationMenuLink asChild>
                         <a
-                          href="/shop/greens"
+                          href="/shop?category=greens"
                           className="block space-y-1 rounded-md p-3 leading-none no-underline transition-colors outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <div className="text-sm leading-none font-medium">
@@ -114,7 +114,7 @@ export function Navbar() {
                     <li>
                       <NavigationMenuLink asChild>
                         <a
-                          href="/shop/batter"
+                          href="/shop?category=batter"
                           className="block space-y-1 rounded-md p-3 leading-none no-underline transition-colors outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <div className="text-sm leading-none font-medium">
@@ -162,9 +162,11 @@ export function Navbar() {
               <span className="sr-only">Account</span>
             </Button>
             <span className="hidden text-border md:inline-block">|</span>
-            <Button variant="ghost" size="icon" className="text-foreground">
-              <ShoppingCart className="h-5 w-5" />
-              <span className="sr-only">Cart</span>
+            <Button variant="ghost" size="icon" className="text-foreground" asChild>
+              <Link href="/cart">
+                <ShoppingCart className="h-5 w-5" />
+                <span className="sr-only">Cart</span>
+              </Link>
             </Button>
           </div>
         </div>

@@ -1,7 +1,13 @@
+"use client"
+
 import Image from "next/image"
 import { Heart, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { useTransition } from "react"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { addToCartAction, clearCartAction } from "@/server/actions/cart"
 
 export interface SerializedProduct {
   _id: string;
@@ -26,6 +32,37 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   // Use a fallback image if none provided
   const imageUrl = product.imageUrl || "/placeholder-hero.png" // Temporary fallback
+
+  const [isPending, startTransition] = useTransition()
+  const router = useRouter()
+
+  const handleAddToCart = () => {
+    startTransition(async () => {
+      try {
+        const res = await addToCartAction(product._id, 1)
+        if ((res as any)?.success) toast.success("Added to cart")
+        else toast.error("Failed to add to cart")
+      } catch {
+        toast.error("Failed to add to cart")
+      }
+    })
+  }
+
+  const handleBuyNow = () => {
+    startTransition(async () => {
+      try {
+        await clearCartAction()
+        const res = await addToCartAction(product._id, 1)
+        if ((res as any)?.success) {
+          router.push("/checkout")
+        } else {
+          toast.error("Failed to start checkout")
+        }
+      } catch {
+        toast.error("Failed to start checkout")
+      }
+    })
+  }
 
   return (
     <Card className="group relative overflow-hidden rounded-2xl border-border/50 shadow-sm transition-all duration-200 hover:scale-[1.01] hover:shadow-md">
@@ -76,9 +113,23 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
 
           <div className="mt-auto pt-2">
-            <Button variant="outline" className="w-full rounded-lg text-sm bg-primary/5 text-primary hover:bg-primary/10 border-primary/20 transition-colors">
-              Add to Cart
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                className="w-full rounded-lg text-sm bg-primary/5 text-primary hover:bg-primary/10 border-primary/20 transition-colors"
+                onClick={handleAddToCart}
+                disabled={isPending}
+              >
+                Add to Cart
+              </Button>
+              <Button
+                className="w-full rounded-lg text-sm"
+                onClick={handleBuyNow}
+                disabled={isPending}
+              >
+                Buy Now
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>
