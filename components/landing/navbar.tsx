@@ -15,8 +15,10 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 
 export function Navbar() {
+  const router = useRouter()
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center px-4 md:h-[72px] md:px-8 lg:px-16 xl:px-24">
@@ -24,7 +26,7 @@ export function Navbar() {
         <div className="mr-4 flex items-center gap-2 md:hidden">
           <Link href="/" className="flex items-center gap-2">
             <Image
-              src="/assets/farm-greens-logo-full.png"
+              src="/assets/farm-greens-logo.png"
               alt="Logo"
               width={1862}
               height={413}
@@ -40,11 +42,12 @@ export function Navbar() {
           <Link href="/" className="flex items-center gap-2">
             <Image
               src="/assets/farm-greens-logo-full.png"
-              alt="Logo"
+              alt="logo"
               width={1862}
               height={413}
+              priority
               quality={100}
-              className="h-10 w-44"
+              className="h-fit w-44"
             />
           </Link>
         </div>
@@ -54,11 +57,11 @@ export function Navbar() {
           <NavigationMenu>
             <NavigationMenuList>
               <NavigationMenuItem>
-                <Link href="/" legacyBehavior passHref>
-                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                <NavigationMenuLink asChild>
+                  <Link href="/" className={navigationMenuTriggerStyle()}>
                     Home
-                  </NavigationMenuLink>
-                </Link>
+                  </Link>
+                </NavigationMenuLink>
               </NavigationMenuItem>
               <NavigationMenuItem>
                 <NavigationMenuTrigger>Shop</NavigationMenuTrigger>
@@ -68,7 +71,7 @@ export function Navbar() {
                       <NavigationMenuLink asChild>
                         <a
                           className="flex h-full w-full flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none select-none focus:shadow-md"
-                          href="/shop"
+                          href="/"
                         >
                           <Leaf className="h-6 w-6 text-primary" />
                           <div className="mt-4 mb-2 text-lg font-medium">
@@ -84,7 +87,7 @@ export function Navbar() {
                     <li>
                       <NavigationMenuLink asChild>
                         <a
-                          href="/shop?category=vegetable"
+                          href="/shop/vegetables"
                           className="block space-y-1 rounded-md p-3 leading-none no-underline transition-colors outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <div className="text-sm leading-none font-medium">
@@ -99,7 +102,7 @@ export function Navbar() {
                     <li>
                       <NavigationMenuLink asChild>
                         <a
-                          href="/shop?category=greens"
+                          href="/shop/greens"
                           className="block space-y-1 rounded-md p-3 leading-none no-underline transition-colors outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <div className="text-sm leading-none font-medium">
@@ -114,7 +117,7 @@ export function Navbar() {
                     <li>
                       <NavigationMenuLink asChild>
                         <a
-                          href="/shop?category=batter"
+                          href="/shop/batter"
                           className="block space-y-1 rounded-md p-3 leading-none no-underline transition-colors outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
                           <div className="text-sm leading-none font-medium">
@@ -130,11 +133,11 @@ export function Navbar() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
               <NavigationMenuItem>
-                <Link href="/about" legacyBehavior passHref>
-                  <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                <NavigationMenuLink asChild>
+                  <Link href="/about" className={navigationMenuTriggerStyle()}>
                     About Us
-                  </NavigationMenuLink>
-                </Link>
+                  </Link>
+                </NavigationMenuLink>
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
@@ -157,16 +160,10 @@ export function Navbar() {
           </Button>
 
           <div className="flex items-center text-muted-foreground">
-            <Button variant="ghost" size="icon" className="text-foreground">
-              <User className="h-5 w-5" />
-              <span className="sr-only">Account</span>
-            </Button>
             <span className="hidden text-border md:inline-block">|</span>
-            <Button variant="ghost" size="icon" className="text-foreground" asChild>
-              <Link href="/cart">
-                <ShoppingCart className="h-5 w-5" />
-                <span className="sr-only">Cart</span>
-              </Link>
+            <Button onClick={() => router.push("/cart")} variant="ghost" size="icon" className="text-foreground">
+              <ShoppingCart className="h-5 w-5" />
+              <span className="sr-only">Cart</span>
             </Button>
           </div>
         </div>

@@ -12,6 +12,7 @@ import {
   updateCartQtyAction,
   clearCartAction,
 } from "@/server/actions/cart"
+import { Minus, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -37,8 +38,14 @@ export function CartClient({
       if (!p) return null
       return { item: i, product: p }
     })
-    .filter(Boolean) as { item: { productId: string; qty: number }; product: SerializedProduct }[]
-  const subtotal = rows.reduce((acc, r) => acc + r.product.price * r.item.qty, 0)
+    .filter(Boolean) as {
+    item: { productId: string; qty: number }
+    product: SerializedProduct
+  }[]
+  const subtotal = rows.reduce(
+    (acc, r) => acc + r.product.price * r.item.qty,
+    0
+  )
   const total = subtotal + deliveryFee
 
   const updateQty = (productId: string, qty: number) => {
@@ -110,10 +117,10 @@ export function CartClient({
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <div className="font-medium leading-tight">
+                      <div className="leading-tight font-medium">
                         {product.name}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1 capitalize">
+                      <div className="mt-1 text-xs text-muted-foreground capitalize">
                         {product.category}
                       </div>
                     </div>
@@ -123,19 +130,41 @@ export function CartClient({
                   </div>
 
                   <div className="mt-3 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Qty</span>
+                    <div className="flex items-center">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-r-none"
+                        onClick={() =>
+                          updateQty(product._id, Math.max(1, item.qty - 1))
+                        }
+                        disabled={isPending || item.qty <= 1}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
                       <Input
-                        className="h-8 w-20"
+                        className="h-8 w-12 [appearance:textfield] rounded-none border-x-0 text-center [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         type="number"
                         min={1}
                         max={99}
                         value={item.qty}
-                        onChange={(e) =>
-                          updateQty(product._id, Number(e.target.value))
-                        }
+                        onChange={(e) => {
+                          const val = Number(e.target.value)
+                          if (val >= 1 && val <= 99) updateQty(product._id, val)
+                        }}
                         disabled={isPending}
                       />
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 rounded-l-none"
+                        onClick={() =>
+                          updateQty(product._id, Math.min(99, item.qty + 1))
+                        }
+                        disabled={isPending || item.qty >= 99}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
                     </div>
 
                     <div className="flex items-center gap-2">
