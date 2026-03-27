@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button"
 type Category = "all" | "vegetable" | "greens" | "batter"
 
 const CATEGORIES: { label: string; value: Category }[] = [
-  { label: "All", value: "all" },
+  { label: "All Products", value: "all" },
   { label: "Vegetables", value: "vegetable" },
-  { label: "Greens", value: "greens" },
-  { label: "Batter", value: "batter" },
+  { label: "Fresh Greens", value: "greens" },
+  { label: "Idli/Dosa Batter", value: "batter" },
 ]
 
 export function ShopClient({

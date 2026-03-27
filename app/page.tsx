@@ -11,15 +11,23 @@ import { Footer } from "@/components/landing/footer"
 
 export const dynamic = "force-dynamic"
 
-export default async function Page() {
+import { Suspense } from "react"
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const { category: activeCategory } = await searchParams;
+
   // Fetch real products from the database
   const rawProducts = await getProducts()
   
   // Serialize documents for Server Component -> Client Component prop passing
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const products = rawProducts.map((p: any) => ({
+  const allProducts = rawProducts.map((p: any) => ({
     _id: p._id.toString(),
-    id: p._id.toString(), // some components might expect id instead of _id
+    id: p._id.toString(),
     name: p.name,
     category: p.category,
     description: p.description,
@@ -31,7 +39,22 @@ export default async function Page() {
     updatedAt: p.updatedAt.toISOString(),
   }))
 
-  const popularProducts = products.slice(0, 8); // Display only top 8 for UI grid
+  // Filter by category if requested
+  const filteredProducts = activeCategory && activeCategory !== "All Products"
+    ? allProducts.filter(p => p.category === activeCategory)
+    : allProducts;
+
+  const displayProducts = filteredProducts.slice(0, 8); // Display only top 8 for UI grid
+
+  const categoryLabels: Record<string, string> = {
+    vegetable: "Vegetables",
+    greens: "Fresh Greens",
+    batter: "Idli/Dosa Batter",
+  }
+
+  const sectionTitle = activeCategory && categoryLabels[activeCategory as string] 
+    ? categoryLabels[activeCategory as string] 
+    : "Popular Choices";
 
   return (
     <div className="flex min-h-screen flex-col w-full">
@@ -43,12 +66,14 @@ export default async function Page() {
         <Hero />
 
         {/* 3. Category Filter Chips (Above products grid) */}
-        <CategoryChips />
+        <Suspense fallback={<div className="h-20" />}>
+          <CategoryChips />
+        </Suspense>
 
         {/* 4. Product Grids */}
         <ProductGrid 
-          title="Popular Choices" 
-          products={popularProducts} 
+          title={sectionTitle} 
+          products={displayProducts} 
           seeAllLink="/shop"
         />
         
