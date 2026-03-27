@@ -47,9 +47,15 @@ export function CheckoutClient({
     setValue,
     watch,
     formState: { errors },
-  } = useForm({
+  } = useForm<CheckoutFormValues>({
     resolver: zodResolver(CheckoutSchema),
     defaultValues: {
+      name: "",
+      mobile: "",
+      door: "",
+      street: "",
+      districtId: "",
+      areaId: "",
       countryCode: "+91",
       saveDetails: true,
     },

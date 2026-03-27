@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const CheckoutSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  countryCode: z.string().min(1, "Country code is required").default("+91"),
+  countryCode: z.string().min(1, "Country code is required"),
   mobile: z
     .string()
     .min(10, "Mobile number must be at least 10 digits")
@@ -12,7 +12,7 @@ export const CheckoutSchema = z.object({
   street: z.string().min(1, "Street is required"),
   districtId: z.string().min(1, "District is required"),
   areaId: z.string().min(1, "Area is required"),
-  saveDetails: z.boolean().default(true),
+  saveDetails: z.boolean(),
 });
 
 export type CheckoutFormValues = z.infer<typeof CheckoutSchema>;
