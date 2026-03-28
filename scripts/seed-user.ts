@@ -38,9 +38,9 @@ async function seed() {
     await mongoose.connect(MONGODB_URI!);
     console.log("Connected.");
 
-    const mobile = "7904391341";
+    const mobile = "9790381233";
     const countryCode = "+91";
-    const password = "ceo@123";
+    const password = "farmgreens@123";
 
     // Check if user exists
     const existing = await User.findOne({ mobile });

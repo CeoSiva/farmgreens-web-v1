@@ -1,9 +1,9 @@
 import { getProducts } from "@/lib/data/product"
 import { Navbar } from "@/components/landing/navbar"
 import { Hero } from "@/components/landing/hero"
-import { CategoryChips } from "@/components/landing/category-chips"
 import { ProductGrid } from "@/components/landing/product-grid"
 import { PromoBanners } from "@/components/landing/promo-banners"
+import { StatsBanner } from "@/components/landing/stats-banner"
 import { InfoCards } from "@/components/landing/info-cards"
 import { CallToAction } from "@/components/landing/call-to-action"
 import { TrustBar } from "@/components/landing/trust-bar"
@@ -18,8 +18,6 @@ export default async function Page({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const { category: activeCategory } = await searchParams;
-
   // Fetch real products from the database
   const rawProducts = await getProducts()
   
@@ -39,22 +37,11 @@ export default async function Page({
     updatedAt: p.updatedAt.toISOString(),
   }))
 
-  // Filter by category if requested
-  const filteredProducts = activeCategory && activeCategory !== "All Products"
-    ? allProducts.filter(p => p.category === activeCategory)
-    : allProducts;
-
-  const displayProducts = filteredProducts.slice(0, 8); // Display only top 8 for UI grid
-
-  const categoryLabels: Record<string, string> = {
-    vegetable: "Vegetables",
-    greens: "Fresh Greens",
-    batter: "Idli/Dosa Batter",
-  }
-
-  const sectionTitle = activeCategory && categoryLabels[activeCategory as string] 
-    ? categoryLabels[activeCategory as string] 
-    : "Popular Choices";
+  const categoriesToRender = [
+    { key: "vegetable", title: "Fresh Vegetables", link: "/shop?category=vegetable" },
+    { key: "greens", title: "Leafy Greens", link: "/shop?category=greens" },
+    { key: "batter", title: "Idli & Dosa Batter", link: "/shop?category=batter" },
+  ];
 
   return (
     <div className="flex min-h-screen flex-col w-full">
@@ -65,20 +52,26 @@ export default async function Page({
         {/* 2. Hero Section */}
         <Hero />
 
-        {/* 3. Category Filter Chips (Above products grid) */}
-        <Suspense fallback={<div className="h-20" />}>
-          <CategoryChips />
-        </Suspense>
-
-        {/* 4. Product Grids */}
-        <ProductGrid 
-          title={sectionTitle} 
-          products={displayProducts} 
-          seeAllLink="/shop"
-        />
+        {/* 4. Product Grids by Category */}
+        <div className="flex flex-col gap-2 md:gap-4">
+          {categoriesToRender.map((cat) => {
+            const catProducts = allProducts.filter(p => p.category === cat.key).slice(0, 10);
+            return catProducts.length > 0 ? (
+              <ProductGrid 
+                key={cat.key}
+                title={cat.title} 
+                products={catProducts} 
+                seeAllLink={cat.link}
+              />
+            ) : null;
+          })}
+        </div>
         
         {/* 5. Promotional Banners */}
         <PromoBanners />
+
+        {/* 5.5. Statistics Banner */}
+        <StatsBanner />
 
         {/* 6. Feature Info Cards */}
         <InfoCards />

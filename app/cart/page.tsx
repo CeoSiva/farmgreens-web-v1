@@ -1,5 +1,6 @@
 import { getCartAction } from "@/server/actions/cart"
-import { getProductsByIds } from "@/lib/data/product"
+import { getProductsByIds, getProducts } from "@/lib/data/product"
+import { ProductGrid } from "@/components/landing/product-grid"
 import { Navbar } from "@/components/landing/navbar"
 import { Footer } from "@/components/landing/footer"
 import { CartClient } from "@/components/cart/cart-client"
@@ -28,6 +29,25 @@ export default async function CartPage() {
     updatedAt: p.updatedAt?.toISOString?.() ?? "",
   }))
 
+  const allProductsRaw = await getProducts()
+  const recommendedRaw = allProductsRaw
+    .filter((p: any) => p.status === "active" && !ids.includes(p._id.toString()))
+    .slice(0, 10)
+
+  const recommendedProducts = recommendedRaw.map((p: any) => ({
+    _id: p._id.toString(),
+    id: p._id.toString(),
+    name: p.name,
+    category: p.category,
+    description: p.description,
+    price: p.price,
+    status: p.status,
+    orderQuantity: p.orderQuantity,
+    imageUrl: p.imageUrl,
+    createdAt: p.createdAt?.toISOString?.() ?? "",
+    updatedAt: p.updatedAt?.toISOString?.() ?? "",
+  }))
+
   return (
     <div className="flex min-h-screen flex-col w-full">
       <Navbar />
@@ -42,6 +62,17 @@ export default async function CartPage() {
             <CartClient cart={cart} products={products} deliveryFee={deliveryFee} />
           </div>
         </div>
+
+        {/* Cross-Sell / Recommendations Section */}
+        {recommendedProducts.length > 0 && (
+          <div className="mx-auto max-w-7xl mt-16 border-t pt-8 md:mt-24 md:pt-12">
+            <ProductGrid 
+              title="You might also like" 
+              products={recommendedProducts} 
+              seeAllLink="/shop"
+            />
+          </div>
+        )}
       </main>
       <Footer />
     </div>

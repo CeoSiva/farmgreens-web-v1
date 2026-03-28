@@ -11,10 +11,10 @@ interface ProductGridProps {
 
 export function ProductGrid({ title, products, seeAllLink }: ProductGridProps) {
   return (
-    <section className="w-full px-4 py-12 md:px-8 md:py-16 lg:px-16 xl:px-24">
-      <div className="mx-auto max-w-7xl">
+    <section className="w-full pl-4 py-8 md:pl-0 md:px-8 md:py-12 lg:px-16 xl:px-24">
+      <div className="mx-auto max-w-7xl md:px-0">
         {/* Section Header */}
-        <div className="mb-6 flex items-center justify-between md:mb-8">
+        <div className="mb-4 pr-4 md:mb-6 flex items-center justify-between md:pr-0">
           <h2 className="text-xl font-bold text-foreground md:text-2xl">{title}</h2>
           {seeAllLink && (
             <Link
@@ -28,14 +28,16 @@ export function ProductGrid({ title, products, seeAllLink }: ProductGridProps) {
 
         {/* Grid Layout */}
         {products.length === 0 ? (
-          <div className="flex items-center justify-center rounded-xl border border-dashed p-12 text-muted-foreground">
+          <div className="mr-4 flex flex-1 items-center justify-center rounded-xl border border-dashed p-12 text-muted-foreground md:mr-0">
             No products available at the moment.
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-6">
+            <div className="no-scrollbar flex gap-4 overflow-x-auto snap-x sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-6 sm:overflow-visible sm:pb-0">
               {products.map((product) => (
-                <ProductCard key={product._id} product={product} />
+                <div key={product._id} className="min-w-[160px] max-w-[170px] shrink-0 snap-start sm:min-w-0 sm:max-w-none">
+                  <ProductCard product={product} />
+                </div>
               ))}
             </div>
 
