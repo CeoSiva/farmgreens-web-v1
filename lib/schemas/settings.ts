@@ -9,6 +9,7 @@ export const StoreProfileSchema = z.object({
 
 export const DeliveryFeeSchema = z.object({
   deliveryFee: z.coerce.number().min(0, "Delivery fee must be >= 0"),
+  freeDeliveryThreshold: z.coerce.number().min(0, "Threshold must be >= 0"),
 });
 
 export type StoreProfileValues = z.infer<typeof StoreProfileSchema>;

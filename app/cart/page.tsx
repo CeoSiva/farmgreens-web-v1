@@ -13,6 +13,7 @@ export default async function CartPage() {
   const ids = cart.items.map((i) => i.productId)
   const settings = await getSettings()
   const deliveryFee = Number((settings as any).deliveryFee ?? 0)
+  const freeDeliveryThreshold = Number((settings as any).freeDeliveryThreshold ?? 500)
   const productsRaw = await getProductsByIds(ids)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,7 +60,12 @@ export default async function CartPage() {
           </p>
 
           <div className="mt-6">
-            <CartClient cart={cart} products={products} deliveryFee={deliveryFee} />
+            <CartClient 
+              cart={cart} 
+              products={products} 
+              deliveryFee={deliveryFee} 
+              freeDeliveryThreshold={freeDeliveryThreshold}
+            />
           </div>
         </div>
 

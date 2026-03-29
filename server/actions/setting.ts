@@ -23,11 +23,17 @@ export async function updateStoreProfileAction(payload: {
   return { success: true };
 }
 
-export async function updateDeliveryFeeAction(payload: { deliveryFee: number }) {
+export async function updateDeliveryFeeAction(payload: { 
+  deliveryFee: number;
+  freeDeliveryThreshold: number;
+}) {
   const parsed = DeliveryFeeSchema.safeParse(payload);
-  if (!parsed.success) return { error: "Invalid delivery fee" };
+  if (!parsed.success) return { error: "Invalid delivery settings" };
 
-  await updateSettings({ deliveryFee: parsed.data.deliveryFee } as any);
+  await updateSettings({ 
+    deliveryFee: parsed.data.deliveryFee,
+    freeDeliveryThreshold: parsed.data.freeDeliveryThreshold,
+  } as any);
   revalidatePath("/fmg-admin/settings");
   revalidatePath("/cart");
   revalidatePath("/checkout");

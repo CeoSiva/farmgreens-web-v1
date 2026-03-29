@@ -142,7 +142,7 @@ export function CheckoutClient({
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
-            Delivery fee: ₹{deliveryFee.toFixed(2)}
+            Delivery fee: {deliveryFee === 0 ? "Free" : `₹${deliveryFee.toFixed(2)}`}
           </div>
         </div>
       </Card>

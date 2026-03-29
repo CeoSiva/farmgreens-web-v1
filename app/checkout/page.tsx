@@ -1,6 +1,7 @@
 import { Navbar } from "@/components/landing/navbar"
 import { Footer } from "@/components/landing/footer"
 import { getCartAction } from "@/server/actions/cart"
+import { getProductsByIds } from "@/lib/data/product"
 import { listDistrictsAction } from "@/server/actions/location"
 import { CheckoutClient } from "@/components/checkout/checkout-client"
 import { getSettings } from "@/lib/data/setting"
@@ -10,8 +11,21 @@ export const dynamic = "force-dynamic"
 export default async function CheckoutPage() {
   const { cart } = await getCartAction()
   const settings = await getSettings()
-  const deliveryFee = Number((settings as any).deliveryFee ?? 0)
+  const baseDeliveryFee = Number((settings as any).deliveryFee ?? 0)
+  const freeDeliveryThreshold = Number((settings as any).freeDeliveryThreshold ?? 500)
   const { districts } = await listDistrictsAction()
+
+  // Compute subtotal on the server for checkout display
+  const ids = cart.items.map((i: any) => i.productId)
+  const productsRaw = await getProductsByIds(ids)
+  const byId = new Map(productsRaw.map((p: any) => [p._id.toString(), p]))
+  const subtotal = cart.items.reduce((acc: number, it: any) => {
+    const p = byId.get(it.productId)
+    if (!p) return acc
+    return acc + (p.price * it.qty)
+  }, 0)
+
+  const effectiveDeliveryFee = subtotal >= freeDeliveryThreshold ? 0 : baseDeliveryFee
 
   return (
     <div className="flex min-h-screen flex-col w-full">
@@ -24,7 +38,11 @@ export default async function CheckoutPage() {
           </p>
 
           <div className="mt-6">
-            <CheckoutClient cart={cart} districts={districts as any} deliveryFee={deliveryFee} />
+            <CheckoutClient 
+              cart={cart} 
+              districts={districts as any} 
+              deliveryFee={effectiveDeliveryFee} 
+            />
           </div>
         </div>
       </main>

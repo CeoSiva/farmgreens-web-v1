@@ -45,6 +45,9 @@ export function SettingsClient({
   const [deliveryFee, setDeliveryFee] = useState(
     String(settings.deliveryFee ?? 0)
   )
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(
+    String(settings.freeDeliveryThreshold ?? 500)
+  )
 
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>(
     districts?.[0]?._id ? String(districts[0]._id) : ""
@@ -92,6 +95,7 @@ export function SettingsClient({
     startTransition(async () => {
       const res = await updateDeliveryFeeAction({
         deliveryFee: Number(deliveryFee),
+        freeDeliveryThreshold: Number(freeDeliveryThreshold),
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
@@ -265,15 +269,27 @@ export function SettingsClient({
 
       <TabsContent value="delivery" className="mt-4">
         <Card className="grid gap-3 p-4">
-          <div className="grid gap-2">
-            <label className="text-sm font-medium">Flat delivery fee (₹)</label>
-            <Input
-              type="number"
-              min={0}
-              value={deliveryFee}
-              onChange={(e) => setDeliveryFee(e.target.value)}
-              disabled={isPending}
-            />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Flat delivery fee (₹)</label>
+              <Input
+                type="number"
+                min={0}
+                value={deliveryFee}
+                onChange={(e) => setDeliveryFee(e.target.value)}
+                disabled={isPending}
+              />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Free Delivery Minimum Order (₹)</label>
+              <Input
+                type="number"
+                min={0}
+                value={freeDeliveryThreshold}
+                onChange={(e) => setFreeDeliveryThreshold(e.target.value)}
+                disabled={isPending}
+              />
+            </div>
           </div>
           <div>
             <Button onClick={saveDeliveryFee} disabled={isPending}>

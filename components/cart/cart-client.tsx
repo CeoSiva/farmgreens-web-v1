@@ -22,10 +22,13 @@ export function CartClient({
   cart,
   products,
   deliveryFee,
+  freeDeliveryThreshold,
 }: {
   cart: Cart
   products: SerializedProduct[]
   deliveryFee: number
+  freeDeliveryThreshold: number
+
 }) {
   const [isPending, startTransition] = useTransition()
   const { updateCart } = useCart()
@@ -41,14 +44,16 @@ export function CartClient({
       return { item: i, product: p }
     })
     .filter(Boolean) as {
-    item: { productId: string; qty: number }
-    product: SerializedProduct
-  }[]
+      item: { productId: string; qty: number }
+      product: SerializedProduct
+    }[]
   const subtotal = rows.reduce(
     (acc, r) => acc + r.product.price * r.item.qty,
     0
   )
-  const total = subtotal + deliveryFee
+  const effectiveDeliveryFee = subtotal >= freeDeliveryThreshold ? 0 : deliveryFee
+  const total = subtotal + effectiveDeliveryFee
+  const amountToFreeDelivery = Math.max(0, freeDeliveryThreshold - subtotal)
 
   const updateQty = (productId: string, qty: number) => {
     startTransition(async () => {
@@ -132,8 +137,11 @@ export function CartClient({
                         {product.category}
                       </div>
                     </div>
-                    <div className="text-sm font-semibold">
-                      ₹{product.price.toFixed(2)}
+                    <div className="text-sm font-semibold text-right whitespace-nowrap">
+                      <span className="text-xs font-normal text-muted-foreground block">
+                        ₹{product.price} x {item.qty} {product.orderQuantity.unit}
+                      </span>
+                      ₹{(product.price * item.qty).toFixed(2)}
                     </div>
                   </div>
 
@@ -193,6 +201,12 @@ export function CartClient({
         })}
       </div>
 
+      <Card className="p-4 outline outline-green-500 bg-green-50">
+        <div className="flex items-center justify-center">
+          <p className="text-md font-bold text-green-700">Free delivery on orders above ₹{freeDeliveryThreshold}</p>
+        </div>
+      </Card>
+
       <Card className="p-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Subtotal</span>
@@ -200,11 +214,25 @@ export function CartClient({
         </div>
         <div className="mt-2 flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Delivery fee</span>
-          <span className="font-medium">₹{deliveryFee.toFixed(2)}</span>
+          <span className="font-medium">
+            {effectiveDeliveryFee === 0 ? "Free" : `₹${effectiveDeliveryFee.toFixed(2)}`}
+          </span>
         </div>
-        <div className="mt-3 flex items-center justify-between">
-          <span className="font-semibold">Total</span>
-          <span className="font-semibold">₹{total.toFixed(2)}</span>
+
+        {/* Free Delivery Upsell Message */}
+        {amountToFreeDelivery > 0 ? (
+          <div className="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-800 border border-amber-200">
+            Add <span className="font-bold">₹{amountToFreeDelivery.toFixed(0)}</span> more to unlock <strong>Free Delivery!</strong>
+          </div>
+        ) : (
+          <div className="mt-3 rounded-md bg-green-50 p-3 text-sm text-green-800 border border-green-200">
+            Yay! You&apos;ve unlocked <strong>Free Delivery!</strong> 🎉
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center justify-between border-t pt-4">
+          <span className="font-semibold text-lg">Total</span>
+          <span className="font-semibold text-lg">₹{total.toFixed(2)}</span>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
