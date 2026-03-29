@@ -27,7 +27,7 @@ export function Hero() {
           Farm to Table Guarantee
         </p>
         <h1 className="mb-6 text-4xl font-extrabold leading-tight text-white drop-shadow-lg md:text-5xl lg:text-7xl">
-          Fresh harvest, <br className="hidden sm:block" /> delivered daily to your door.
+          Freshly harvested, <br className="hidden sm:block" /> Greens and Vegetables daily to your door step
         </h1>
         <p className="mb-10 max-w-2xl text-sm leading-relaxed text-zinc-200 drop-shadow-md md:text-base lg:text-lg">
           Experience the vibrant taste of strictly organic vegetables, fresh greens, and stone-ground batter. 

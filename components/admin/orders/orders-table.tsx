@@ -69,7 +69,7 @@ export function OrdersTable({ data }: { data: any[] }) {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
     items: false,
-    address: false,
+    doorStreet: false,
     createdAt: false,
     select: true,
   })
@@ -152,16 +152,37 @@ export function OrdersTable({ data }: { data: any[] }) {
       enableHiding: true,
     },
     {
-      id: "address",
-      header: "Area / District",
+      id: "doorStreet",
+      header: "Address",
       cell: ({ row }) => {
         const addr = row.original.shippingAddress
         return (
           <div className="max-w-[150px] truncate text-xs text-muted-foreground">
-            {addr.areaName}, {addr.districtName}
+            {addr.door}, {addr.street}
           </div>
         )
       },
+      enableHiding: true,
+    },
+    {
+      accessorFn: (row) => row.shippingAddress?.areaName,
+      id: "areaName",
+      header: "Area",
+      cell: ({ row }) => (
+        <div className="truncate max-w-[120px] text-xs font-medium">
+          {row.getValue("areaName")}
+        </div>
+      ),
+    },
+    {
+      accessorFn: (row) => row.shippingAddress?.districtName,
+      id: "districtName",
+      header: "City",
+      cell: ({ row }) => (
+        <div className="truncate max-w-[120px] text-xs font-medium text-muted-foreground">
+          {row.getValue("districtName")}
+        </div>
+      ),
     },
     {
       accessorKey: "total",
@@ -273,6 +294,8 @@ export function OrdersTable({ data }: { data: any[] }) {
         order.orderNumber.toLowerCase().includes(value) ||
         order.customer.name.toLowerCase().includes(value) ||
         order.customer.mobile.toLowerCase().includes(value) ||
+        order.shippingAddress.door.toLowerCase().includes(value) ||
+        order.shippingAddress.street.toLowerCase().includes(value) ||
         order.shippingAddress.areaName.toLowerCase().includes(value) ||
         order.shippingAddress.districtName.toLowerCase().includes(value)
       )
@@ -291,21 +314,27 @@ export function OrdersTable({ data }: { data: any[] }) {
     }
   }
 
-  const handleExport = () => {
+  const handleExport = (includeMobile: boolean) => {
     const exportData = table.getFilteredRowModel().rows.map(r => {
       const o = r.original
-      return {
+      const rowData: Record<string, string> = {
         "Date": new Date(o.createdAt).toLocaleString(),
         "Order Number": o.orderNumber,
         "Customer Name": o.customer.name,
-        "Mobile": o.customer.mobile,
+      }
+      if (includeMobile) {
+        rowData["Mobile"] = o.customer.mobile
+      }
+      
+      Object.assign(rowData, {
         "Address": `${o.shippingAddress.door}, ${o.shippingAddress.street}`,
         "Area": o.shippingAddress.areaName,
         "District": o.shippingAddress.districtName,
         "Items": o.items.map((it: any) => `${it.name} (${it.qty} ${it.unit})`).join(", "),
         "Total": o.total,
         "Status": o.status,
-      }
+      })
+      return rowData
     })
     downloadCSV(exportData, `orders-export-${new Date().toISOString().split('T')[0]}.csv`)
   }
@@ -326,9 +355,22 @@ export function OrdersTable({ data }: { data: any[] }) {
           <DatePickerWithRange date={date} setDate={setDate} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExport} className="h-10 lg:h-9 flex-1 sm:flex-none">
-            <Download className="mr-2 h-4 w-4" /> Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="lg" className="h-10 lg:h-9 flex-1 sm:flex-none">
+                <Download className="mr-2 h-4 w-4" /> Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport(false)}>
+                Without Contact Numbers
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport(true)}>
+                With Contact Numbers
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Select 
             onValueChange={(val) => table.getColumn("status")?.setFilterValue(val === "all" ? "" : val)}
           >
