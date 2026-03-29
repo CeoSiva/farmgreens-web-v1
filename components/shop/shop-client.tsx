@@ -7,13 +7,14 @@ import { Search } from "lucide-react"
 import { ProductCard, SerializedProduct } from "@/components/landing/product-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
 type Category = "all" | "vegetable" | "greens" | "batter"
 
 const CATEGORIES: { label: string; value: Category }[] = [
   { label: "All Products", value: "all" },
-  { label: "Vegetables", value: "vegetable" },
   { label: "Fresh Greens", value: "greens" },
+  { label: "Vegetables", value: "vegetable" },
   { label: "Idli/Dosa Batter", value: "batter" },
 ]
 
@@ -48,13 +49,15 @@ export function ShopClient({
   }, [category, searchQuery, products])
 
   return (
-    <section className="w-full px-4 py-10 md:px-8 lg:px-16 xl:px-24">
+    <section className="w-full px-4 py-8 md:px-8 lg:px-16 xl:px-24 bg-background/50">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Shop</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Browse our fresh collection and eat healthy today.
+            <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-4xl lg:text-5xl">
+              Shop <span className="text-primary">Fresh</span>
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground md:text-base max-w-lg">
+              Farm-to-table greens and organic vegetables, delivered straight to your doorstep within hours of harvest.
             </p>
           </div>
 
@@ -75,7 +78,12 @@ export function ShopClient({
                 <Button
                   key={c.value}
                   variant={category === c.value ? "default" : "outline"}
-                  className="rounded-full transition-all"
+                  className={cn(
+                    "rounded-full px-5 py-2 h-auto text-xs font-bold transition-all whitespace-nowrap",
+                    category === c.value 
+                      ? "bg-primary text-primary-foreground shadow-md" 
+                      : "border-primary/20 bg-background hover:bg-primary/5 hover:border-primary/40"
+                  )}
                   onClick={() => setCategory(c.value)}
                 >
                   {c.label}
@@ -86,11 +94,15 @@ export function ShopClient({
         </div>
 
         {filtered.length === 0 ? (
-          <div className="flex items-center justify-center rounded-xl border border-dashed p-12 text-muted-foreground">
-            No products available.
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-primary/20 bg-primary/5 p-16 text-center">
+            <div className="mb-4 rounded-full bg-primary/10 p-4 text-primary">
+              <Search className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">No matches found</h3>
+            <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters or search query.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-6">
             {filtered.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}
