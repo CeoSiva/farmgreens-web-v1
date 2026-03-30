@@ -33,9 +33,9 @@ export function ProductGrid({ title, products, seeAllLink }: ProductGridProps) {
           </div>
         ) : (
           <>
-            <div className="no-scrollbar flex gap-4 overflow-x-auto snap-x sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-6 sm:overflow-visible sm:pb-0">
+            <div className="no-scrollbar flex gap-2 overflow-x-auto snap-x sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-6 sm:overflow-visible sm:pb-0">
               {products.map((product) => (
-                <div key={product._id} className="min-w-[160px] max-w-[170px] shrink-0 snap-start sm:min-w-0 sm:max-w-none">
+                <div key={product._id} className="min-w-[115px] max-w-[125px] shrink-0 snap-start sm:min-w-0 sm:max-w-none">
                   <ProductCard product={product} />
                 </div>
               ))}

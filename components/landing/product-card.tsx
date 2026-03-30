@@ -48,7 +48,12 @@ export function ProductCard({ product }: ProductCardProps) {
       try {
         const res = await addToCartAction(product._id, 1)
         if ((res as any)?.success) {
-          toast.success("Added to cart")
+          toast.success(`Added ${product.name} to cart`, {
+            action: {
+              label: "Go to Cart",
+              onClick: () => router.push("/cart"),
+            },
+          })
           updateCart((res as any).cart.items)
           window.dispatchEvent(
             new CustomEvent("cart-updated", {
@@ -95,11 +100,11 @@ export function ProductCard({ product }: ProductCardProps) {
     <>
       {/* MOBILE / ZEPTO STYLE CARD (Visible only on mobile) */}
       <Card className="md:hidden group flex flex-col relative overflow-hidden rounded-xl border border-border/50 bg-background shadow-xs transition-all duration-200 hover:shadow-md p-0 gap-0">
-        <div className="absolute top-0 right-0 z-10 rounded-bl-xl bg-orange-500/90 backdrop-blur-sm px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
+        <div className="absolute top-0 right-0 z-10 rounded-bl-lg bg-orange-500/90 backdrop-blur-sm px-1.5 py-0.5 text-[8px] font-bold text-white shadow-sm">
           FRESH
         </div>
 
-        <div className="relative h-40 w-full overflow-hidden">
+        <div className="relative h-28 w-full overflow-hidden">
           <Image
             src={imageUrl}
             alt={product.name}
@@ -109,22 +114,22 @@ export function ProductCard({ product }: ProductCardProps) {
           />
         </div>
 
-        <CardContent className="flex flex-1 flex-col p-3">
-          <div className="flex flex-1 flex-col gap-1">
-            <h3 className="line-clamp-2 text-xs font-semibold leading-tight text-foreground min-h-[32px]">
+        <CardContent className="flex flex-1 flex-col p-2 pt-1.5">
+          <div className="flex flex-1 flex-col gap-0.5">
+            <h3 className="line-clamp-2 text-[10px] font-bold leading-tight text-foreground min-h-[26px]">
               {product.name}
             </h3>
-            <span className="text-[11px] font-medium text-muted-foreground">
+            <span className="text-[9px] font-medium text-muted-foreground">
               {product.orderQuantity.type === "count" ? "1 piece" : `1 ${product.orderQuantity.unit}`}
             </span>
           </div>
 
-          <div className="mt-auto pt-3 flex items-end justify-between">
-            <div className="flex flex-col leading-tight">
-              <span className="text-[10px] text-muted-foreground line-through">
+          <div className="mt-auto pt-2 flex items-center justify-between gap-1">
+            <div className="flex flex-col leading-none">
+              <span className="text-[8px] text-muted-foreground line-through">
                 ₹{(product.price * 1.1).toFixed(0)}
               </span>
-              <span className="text-sm font-bold text-foreground">
+              <span className="text-xs font-black text-foreground">
                 ₹{product.price.toFixed(0)}
               </span>
             </div>
@@ -133,7 +138,7 @@ export function ProductCard({ product }: ProductCardProps) {
               variant={inCart ? "default" : "outline"}
               size="sm"
               className={cn(
-                "h-8 min-w-[64px] rounded-md px-3 text-xs font-bold transition-all shadow-sm",
+                "h-7 min-w-[48px] rounded-md px-2 text-[9px] font-black transition-all shadow-sm",
                 inCart
                   ? "bg-green-600 text-white hover:bg-green-700 border-green-600"
                   : "border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/60"
@@ -190,28 +195,19 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
 
             <div className="mt-auto pt-5">
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant={inCart ? "secondary" : "outline"}
-                  className={cn(
-                    "w-full rounded-lg text-sm transition-all",
-                    inCart 
-                      ? "bg-green-50 text-green-600 border-green-200 hover:bg-green-100" 
-                      : "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary"
-                  )}
-                  onClick={handleAddToCart}
-                  disabled={isPending}
-                >
-                  {inCart ? "Added ✅" : "Add to Cart"}
-                </Button>
-                <Button
-                  className="w-full rounded-lg text-sm shadow-sm"
-                  onClick={handleBuyNow}
-                  disabled={isPending}
-                >
-                  Buy Now
-                </Button>
-              </div>
+              <Button
+                variant={inCart ? "secondary" : "outline"}
+                className={cn(
+                  "w-full h-11 rounded-xl text-sm font-bold transition-all",
+                  inCart 
+                    ? "bg-green-50 text-green-600 border-green-200 hover:bg-green-100" 
+                    : "border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary shadow-sm"
+                )}
+                onClick={handleAddToCart}
+                disabled={isPending}
+              >
+                {inCart ? "Added ✅" : "Add to Cart"}
+              </Button>
             </div>
           </div>
         </CardContent>

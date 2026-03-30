@@ -38,8 +38,8 @@ export default async function Page({
   }))
 
   const categoriesToRender = [
-    { key: "vegetable", title: "Fresh Vegetables", link: "/shop?category=vegetable" },
     { key: "greens", title: "Leafy Greens", link: "/shop?category=greens" },
+    { key: "vegetable", title: "Fresh Vegetables", link: "/shop?category=vegetable" },
     { key: "batter", title: "Idli & Dosa Batter", link: "/shop?category=batter" },
   ];
 

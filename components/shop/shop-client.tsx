@@ -102,7 +102,7 @@ export function ShopClient({
             <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters or search query.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-6">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 md:gap-6">
             {filtered.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}

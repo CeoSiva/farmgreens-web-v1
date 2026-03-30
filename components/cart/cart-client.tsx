@@ -147,40 +147,51 @@ export function CartClient({
 
                   <div className="mt-3 flex items-center justify-between gap-3">
                     <div className="flex items-center">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 rounded-r-none"
-                        onClick={() =>
-                          updateQty(product._id, Math.max(1, item.qty - 1))
-                        }
-                        disabled={isPending || item.qty <= 1}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <Input
-                        className="h-8 w-12 [appearance:textfield] rounded-none border-x-0 text-center [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        type="number"
-                        min={1}
-                        max={99}
-                        value={item.qty}
-                        onChange={(e) => {
-                          const val = Number(e.target.value)
-                          if (val >= 1 && val <= 99) updateQty(product._id, val)
-                        }}
-                        disabled={isPending}
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 rounded-l-none"
-                        onClick={() =>
-                          updateQty(product._id, Math.min(99, item.qty + 1))
-                        }
-                        disabled={isPending || item.qty >= 99}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
+                      {(() => {
+                        const isKg = product.orderQuantity.unit.toLowerCase() === "kg"
+                        const step = isKg ? 0.25 : 1
+                        const min = isKg ? 0.25 : 1
+                        
+                        return (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded-r-none"
+                              onClick={() =>
+                                updateQty(product._id, Math.max(min, item.qty - step))
+                              }
+                              disabled={isPending || item.qty <= min}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              className="h-8 w-14 [appearance:textfield] rounded-none border-x-0 text-center text-xs font-bold [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                              type="number"
+                              step={step}
+                              min={min}
+                              max={99}
+                              value={item.qty}
+                              onChange={(e) => {
+                                const val = Number(e.target.value)
+                                if (val >= min && val <= 99) updateQty(product._id, val)
+                              }}
+                              disabled={isPending}
+                            />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded-l-none"
+                              onClick={() =>
+                                updateQty(product._id, Math.min(99, item.qty + step))
+                              }
+                              disabled={isPending || item.qty >= 99}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </>
+                        )
+                      })()}
                     </div>
 
                     <div className="flex items-center gap-2">

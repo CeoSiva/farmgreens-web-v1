@@ -9,7 +9,7 @@ import { useCart } from "@/components/cart/cart-context"
 export function CartBadge() {
   const router = useRouter()
   const { items } = useCart()
-  const count = items.reduce((acc, i) => acc + i.qty, 0)
+  const count = items.length
 
   return (
     <Button

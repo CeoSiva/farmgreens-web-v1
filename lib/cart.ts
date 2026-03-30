@@ -11,7 +11,9 @@ export type Cart = {
 
 export function normalizeQty(qty: number) {
   if (!Number.isFinite(qty)) return 1;
-  return Math.max(1, Math.min(99, Math.floor(qty)));
+  // Support decimals. Min 0.25, Max 99.
+  // Round to 2 decimal places to avoid float issues.
+  return Math.max(0.25, Math.min(99, Math.round(qty * 100) / 100));
 }
 
 export function emptyCart(): Cart {
@@ -82,5 +84,5 @@ export function removeItem(cart: Cart, productId: string): Cart {
 }
 
 export function cartItemCount(cart: Cart): number {
-  return cart.items.reduce((acc, i) => acc + normalizeQty(i.qty), 0);
+  return cart.items.length;
 }

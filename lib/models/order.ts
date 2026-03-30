@@ -41,7 +41,7 @@ const orderItemSchema = new Schema<IOrderItem>(
     productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
     name: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
-    qty: { type: Number, required: true, min: 1 },
+    qty: { type: Number, required: true, min: 0.25 },
     unit: { type: String, required: true, trim: true },
   },
   { _id: false }

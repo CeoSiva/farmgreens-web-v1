@@ -95,7 +95,7 @@ export function CheckoutClient({
   const canCheckout = cart.items.length > 0
 
   const summary = useMemo(() => {
-    const itemCount = cart.items.reduce((acc, i) => acc + i.qty, 0)
+    const itemCount = cart.items.length
     return { itemCount }
   }, [cart.items])
 
