@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 import { addToCartAction, clearCartAction } from "@/server/actions/cart"
 import { useCart } from "@/components/cart/cart-context"
 import { cn } from "@/lib/utils"
+import { formatQuantity } from "@/lib/utils/format"
 
 
 
@@ -44,9 +45,10 @@ export function ProductCard({ product }: ProductCardProps) {
   const inCart = isInCart(product._id)
 
   const handleAddToCart = () => {
+    const defaultQty = product.orderQuantity.unit.toLowerCase() === "kg" ? 0.25 : 1;
     startTransition(async () => {
       try {
-        const res = await addToCartAction(product._id, 1)
+        const res = await addToCartAction(product._id, defaultQty)
         if ((res as any)?.success) {
           toast.success(`Added ${product.name} to cart`, {
             action: {
@@ -120,7 +122,7 @@ export function ProductCard({ product }: ProductCardProps) {
               {product.name}
             </h3>
             <span className="text-[9px] font-medium text-muted-foreground">
-              {product.orderQuantity.type === "count" ? "1 piece" : `1 ${product.orderQuantity.unit}`}
+              {product.orderQuantity.type === "count" ? "1 piece" : formatQuantity(product.orderQuantity.unit.toLowerCase() === "kg" ? 0.25 : 1, product.orderQuantity.unit)}
             </span>
           </div>
 
@@ -188,7 +190,7 @@ export function ProductCard({ product }: ProductCardProps) {
               <span className="mr-1 font-medium capitalize">
                 {product.orderQuantity.type}:
               </span>
-              1 {product.orderQuantity.unit}
+              {product.orderQuantity.type === "count" ? "1 piece" : formatQuantity(product.orderQuantity.unit.toLowerCase() === "kg" ? 0.25 : 1, product.orderQuantity.unit)}
               {product.description && (
                 <span className="mt-1.5 block line-clamp-2 leading-relaxed">{product.description}</span>
               )}

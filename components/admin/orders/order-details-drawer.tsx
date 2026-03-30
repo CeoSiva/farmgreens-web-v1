@@ -22,6 +22,7 @@ import {
   FileDown
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatQuantity } from "@/lib/utils/format"
 import { Button } from "@/components/ui/button"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
@@ -97,7 +98,7 @@ export function OrderDetailsDrawer({
       const tableData = order.items.map((item: any) => [
         item.name,
         `Rs. ${item.price.toFixed(2)}`,
-        item.qty,
+        formatQuantity(item.qty, item.unit),
         `Rs. ${(item.price * item.qty).toFixed(2)}`
       ])
       
@@ -241,7 +242,7 @@ export function OrderDetailsDrawer({
                     </div>
                     <div className="text-right">
                       <p className="text-xs font-medium bg-muted px-2 py-0.5 rounded-full inline-block mb-1">
-                        × {item.qty}
+                        × {formatQuantity(item.qty, item.unit)}
                       </p>
                       <p className="text-sm font-bold text-primary">
                         ₹{(item.price * item.qty).toFixed(2)}

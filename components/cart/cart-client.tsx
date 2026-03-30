@@ -16,6 +16,7 @@ import { Minus, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
+import { formatQuantity } from "@/lib/utils/format"
 import { useCart } from "./cart-context"
 
 export function CartClient({
@@ -139,7 +140,7 @@ export function CartClient({
                     </div>
                     <div className="text-sm font-semibold text-right whitespace-nowrap">
                       <span className="text-xs font-normal text-muted-foreground block">
-                        ₹{product.price} x {item.qty} {product.orderQuantity.unit}
+                        ₹{product.price} x {formatQuantity(item.qty, product.orderQuantity.unit)}
                       </span>
                       ₹{(product.price * item.qty).toFixed(2)}
                     </div>

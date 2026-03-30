@@ -59,6 +59,7 @@ import {
 } from "@/server/actions/order-admin"
 import { downloadCSV } from "@/lib/utils/export"
 import { cn } from "@/lib/utils"
+import { formatQuantity } from "@/lib/utils/format"
 
 import { DatePickerWithRange } from "./date-range-picker"
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns"
@@ -142,7 +143,7 @@ export function OrdersTable({ data }: { data: any[] }) {
             {items.map((it: any, i: number) => (
               <div key={i} className="text-[11px] leading-tight flex justify-between gap-2">
                 <span className="truncate">{it.name}</span>
-                <span className="font-bold whitespace-nowrap">x{it.qty}</span>
+                <span className="font-bold whitespace-nowrap">x{formatQuantity(it.qty, it.unit)}</span>
               </div>
             ))}
           </div>
@@ -330,7 +331,7 @@ export function OrdersTable({ data }: { data: any[] }) {
         "Address": `${o.shippingAddress.door}, ${o.shippingAddress.street}`,
         "Area": o.shippingAddress.areaName,
         "District": o.shippingAddress.districtName,
-        "Items": o.items.map((it: any) => `${it.name} (${it.qty} ${it.unit})`).join(", "),
+        "Items": o.items.map((it: any) => `${it.name} (${formatQuantity(it.qty, it.unit)})`).join(", "),
         "Total": o.total,
         "Status": o.status,
       })
