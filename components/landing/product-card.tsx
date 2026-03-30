@@ -135,13 +135,13 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
 
             <Button
-              variant={inCart ? "default" : "outline"}
+              variant={inCart ? "default" : "default"}
               size="sm"
               className={cn(
                 "h-7 min-w-[48px] rounded-md px-2 text-[9px] font-black transition-all shadow-sm",
                 inCart
-                  ? "bg-green-600 text-white hover:bg-green-700 border-green-600"
-                  : "border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/60"
+                  ? "bg-muted text-muted-foreground hover:bg-muted/80"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
               )}
               onClick={handleAddToCart}
               disabled={isPending}
@@ -196,12 +196,12 @@ export function ProductCard({ product }: ProductCardProps) {
 
             <div className="mt-auto pt-5">
               <Button
-                variant={inCart ? "secondary" : "outline"}
+                variant="default"
                 className={cn(
-                  "w-full h-11 rounded-xl text-sm font-bold transition-all",
+                  "w-full h-11 rounded-xl text-sm font-bold transition-all shadow-md",
                   inCart 
-                    ? "bg-green-50 text-green-600 border-green-200 hover:bg-green-100" 
-                    : "border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary shadow-sm"
+                    ? "bg-muted text-muted-foreground hover:bg-muted/80" 
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
                 )}
                 onClick={handleAddToCart}
                 disabled={isPending}
