@@ -26,6 +26,7 @@ export default async function ProductsPage() {
       price: cp.price,
     })) || [],
     imageUrl: p.imageUrl,
+    showOnHomePage: p.showOnHomePage,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   }))

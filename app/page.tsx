@@ -36,6 +36,7 @@ export default async function Page({
     status: p.status,
     orderQuantity: p.orderQuantity,
     imageUrl: p.imageUrl,
+    showOnHomePage: p.showOnHomePage,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   }))
@@ -58,7 +59,7 @@ export default async function Page({
         {/* 4. Product Grids by Category */}
         <div className="flex flex-col gap-2 md:gap-4">
           {categoriesToRender.map((cat) => {
-            const catProducts = allProducts.filter(p => p.category === cat.key).slice(0, 10);
+            const catProducts = allProducts.filter(p => p.category === cat.key && p.showOnHomePage !== false).slice(0, 10);
             return catProducts.length > 0 ? (
               <ProductGrid 
                 key={cat.key}

@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ProductSchema, ProductFormValues } from "@/lib/schemas/product";
 import { createProductAction, updateProductAction } from "@/server/actions/product";
 import { ImageUpload } from "@/components/image-upload";
@@ -55,6 +56,7 @@ export function ProductForm({ initialData, districts = [], onSuccess }: ProductF
           },
           customPricing: defaultCustomPricing,
           imageUrl: "",
+          showOnHomePage: true,
         },
   });
 
@@ -151,6 +153,22 @@ export function ProductForm({ initialData, districts = [], onSuccess }: ProductF
                 <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2 border p-4 rounded-lg bg-muted/30">
+          <Checkbox 
+            id="showOnHomePage" 
+            checked={form.watch("showOnHomePage")}
+            onCheckedChange={(checked) => form.setValue("showOnHomePage", !!checked, { shouldDirty: true })}
+          />
+          <div className="grid gap-1.5 leading-none">
+            <Label htmlFor="showOnHomePage" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+              Show on Home Page
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              If disabled, this product will be hidden from the Home page category sections but will still appear in the Shop page.
+            </p>
           </div>
         </div>
 

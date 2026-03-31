@@ -12,6 +12,7 @@ export interface IProduct extends Document {
   };
   customPricing?: { districtId: mongoose.Types.ObjectId; price: number }[];
   imageUrl?: string;
+  showOnHomePage: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,6 +63,10 @@ const productSchema: Schema<IProduct> = new Schema(
     ],
     imageUrl: {
       type: String,
+    },
+    showOnHomePage: {
+      type: Boolean,
+      default: true,
     },
   },
   {

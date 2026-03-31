@@ -78,6 +78,7 @@ export function Navbar() {
                             src="/nav-fresh-produce.webp"
                             alt="Fresh Produce"
                             fill
+                            unoptimized
                             className="object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -170,11 +171,6 @@ export function Navbar() {
         {/* Right Actions */}
         <div className="flex flex-1 items-center justify-end gap-2 md:flex-none md:gap-4">
           <NavbarSearch />
-
-          <Button variant="ghost" size="icon" className="md:hidden">
-            <Search className="h-5 w-5" />
-            <span className="sr-only">Search</span>
-          </Button>
 
           <div className="flex items-center text-muted-foreground">
             <span className="hidden text-border md:inline-block">|</span>

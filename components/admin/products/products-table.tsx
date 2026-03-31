@@ -21,6 +21,7 @@ import {
   EditProductButton,
   DeleteProductButton,
 } from "@/components/product-actions"
+import { Eye, EyeOff } from "lucide-react"
 import { InlineImageUpload } from "@/components/inline-image-upload"
 import { bulkUpdateProductStatusAction } from "@/server/actions/product"
 
@@ -119,6 +120,7 @@ export function ProductsTable({
               <TableHead className="hidden lg:table-cell">Category</TableHead>
               <TableHead>Price</TableHead>
               <TableHead className="hidden md:table-cell">Order Setup</TableHead>
+              <TableHead className="w-[80px] text-center">Home</TableHead>
               <TableHead className="hidden sm:table-cell text-center">Status</TableHead>
               <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
@@ -185,6 +187,21 @@ export function ProductsTable({
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
                         ({product.orderQuantity.unit})
                       </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <div className="flex justify-center">
+                      {product.showOnHomePage !== false ? (
+                        <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-100" title="Visible on Home Page">
+                           <Eye className="h-3.5 w-3.5" />
+                           <span className="text-[10px] font-bold">ON</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-muted-foreground bg-muted/30 px-2 py-1 rounded-md border" title="Hidden from Home Page">
+                           <EyeOff className="h-3.5 w-3.5" />
+                           <span className="text-[10px] font-bold">OFF</span>
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-center">

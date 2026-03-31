@@ -8,7 +8,7 @@ import { findCustomerByMobile, upsertCustomerByMobile } from "@/lib/data/custome
 export async function findCustomerByMobileAction(mobile: string) {
   if (!mobile) return { customer: null };
   const customer = await findCustomerByMobile(mobile);
-  return { customer };
+  return { customer: customer ? JSON.parse(JSON.stringify(customer)) : null };
 }
 
 export async function upsertCustomerAction(payload: {
@@ -25,7 +25,7 @@ export async function upsertCustomerAction(payload: {
   };
 }) {
   const customer = await upsertCustomerByMobile(payload);
-  return { success: true, customer };
+  return { success: true, customer: JSON.parse(JSON.stringify(customer)) };
 }
 
 export async function updateCustomerAdminAction(
@@ -42,5 +42,5 @@ export async function updateCustomerAdminAction(
   if (!customer) return { error: "Customer not found" };
   
   revalidatePath("/fmg-admin/customers");
-  return { success: true, customer };
+  return { success: true, customer: JSON.parse(JSON.stringify(customer)) };
 }

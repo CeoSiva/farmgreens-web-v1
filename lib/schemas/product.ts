@@ -21,6 +21,7 @@ export const ProductSchema = z.object({
     )
     .optional(),
   imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  showOnHomePage: z.boolean().default(true),
 });
 
 export type ProductFormValues = z.infer<typeof ProductSchema>;

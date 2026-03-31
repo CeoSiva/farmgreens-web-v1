@@ -97,10 +97,10 @@ export async function updateProductImageAction(id: string, imageUrl: string) {
   }
 }
 
-export async function searchProductsAction(query: string) {
+export async function searchProductsAction(query: string, districtSlug?: string) {
   try {
     const { searchProducts } = await import("@/lib/data/product");
-    const rawMatches = await searchProducts(query);
+    const rawMatches = await searchProducts(query, districtSlug);
     const matches = JSON.parse(JSON.stringify(rawMatches));
     return { success: true, matches };
   } catch (error) {
