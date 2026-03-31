@@ -23,7 +23,7 @@ export default async function Page({
 
   // Fetch real products from the database with location-based pricing applied
   const rawProducts = await getProducts(districtSlug)
-  
+
   // Serialize documents for Server Component -> Client Component prop passing
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allProducts = rawProducts.map((p: any) => ({
@@ -61,16 +61,16 @@ export default async function Page({
           {categoriesToRender.map((cat) => {
             const catProducts = allProducts.filter(p => p.category === cat.key && p.showOnHomePage !== false).slice(0, 10);
             return catProducts.length > 0 ? (
-              <ProductGrid 
+              <ProductGrid
                 key={cat.key}
-                title={cat.title} 
-                products={catProducts} 
+                title={cat.title}
+                products={catProducts}
                 seeAllLink={cat.link}
               />
             ) : null;
           })}
         </div>
-        
+
         {/* 5. Promotional Banners */}
         <PromoBanners />
 

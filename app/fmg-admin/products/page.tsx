@@ -10,9 +10,9 @@ export default async function ProductsPage() {
     getProducts(undefined, true),
     listDistricts()
   ])
-  
+
   const districts = JSON.parse(JSON.stringify(dbDistricts))
-  
+
   const products = rawProducts.map((p) => ({
     _id: p._id.toString(),
     name: p.name,
