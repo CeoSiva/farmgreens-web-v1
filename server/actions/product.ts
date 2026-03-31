@@ -108,4 +108,17 @@ export async function searchProductsAction(query: string, districtSlug?: string)
     return { error: "Failed to search products" };
   }
 }
-
+export async function updateProductVisibilityAction(id: string, showOnHomePage: boolean) {
+  try {
+    const updatedProduct = await updateProduct(id, { showOnHomePage } as any);
+    if (!updatedProduct) {
+      return { error: "Product not found" };
+    }
+    revalidatePath("/fmg-admin/products");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Update Product Visibility Error:", error);
+    return { error: "Failed to update product visibility" };
+  }
+}

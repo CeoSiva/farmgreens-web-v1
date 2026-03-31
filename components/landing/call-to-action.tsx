@@ -8,7 +8,7 @@ export function CallToAction() {
       {/* Left Decorative Image */}
       <div className="absolute left-0 top-0 hidden h-full w-1/4 opacity-80 md:block mix-blend-multiply">
         <Image
-          src="/cta_farm_left.webp"
+          src="/assets/cta_farm_left.webp"
           alt="Lush organic farm at sunrise"
           fill
           className="object-cover mask-image-to-r"
@@ -19,7 +19,7 @@ export function CallToAction() {
       {/* Right Decorative Image */}
       <div className="absolute right-0 top-0 hidden h-full w-1/4 opacity-80 md:block mix-blend-multiply">
         <Image
-          src="/cta_farm_right.webp"
+          src="/assets/cta_farm_right.webp"
           alt="Hands holding fresh soil and sprouts"
           fill
           className="object-cover mask-image-to-l"

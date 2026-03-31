@@ -75,7 +75,7 @@ export function Navbar() {
                           href="/"
                         >
                           <Image
-                            src="/nav-fresh-produce.webp"
+                            src="/assets/nav-fresh-produce.webp"
                             alt="Fresh Produce"
                             fill
                             unoptimized

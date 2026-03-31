@@ -21,9 +21,8 @@ import {
   EditProductButton,
   DeleteProductButton,
 } from "@/components/product-actions"
-import { Eye, EyeOff } from "lucide-react"
 import { InlineImageUpload } from "@/components/inline-image-upload"
-import { bulkUpdateProductStatusAction } from "@/server/actions/product"
+import { bulkUpdateProductStatusAction, updateProductVisibilityAction } from "@/server/actions/product"
 
 export function ProductsTable({
   products,
@@ -61,6 +60,17 @@ export function ProductsTable({
       } else {
         toast.success(`Updated ${selectedIds.length} products to ${status}`)
         setSelectedIds([])
+      }
+    })
+  }
+
+  const handleVisibilityToggle = (id: string, currentVal: boolean) => {
+    startTransition(async () => {
+      const res = await updateProductVisibilityAction(id, !currentVal)
+      if (res.error) {
+        toast.error(res.error)
+      } else {
+        toast.success(`Home page visibility ${!currentVal ? "enabled" : "disabled"}!`)
       }
     })
   }
@@ -191,17 +201,11 @@ export function ProductsTable({
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center">
-                      {product.showOnHomePage !== false ? (
-                        <div className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-100" title="Visible on Home Page">
-                           <Eye className="h-3.5 w-3.5" />
-                           <span className="text-[10px] font-bold">ON</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 text-muted-foreground bg-muted/30 px-2 py-1 rounded-md border" title="Hidden from Home Page">
-                           <EyeOff className="h-3.5 w-3.5" />
-                           <span className="text-[10px] font-bold">OFF</span>
-                        </div>
-                      )}
+                       <Checkbox 
+                         checked={product.showOnHomePage !== false}
+                         onCheckedChange={() => handleVisibilityToggle(product._id, product.showOnHomePage !== false)}
+                         disabled={isPending}
+                       />
                     </div>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-center">
