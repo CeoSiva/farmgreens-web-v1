@@ -1,6 +1,7 @@
 import { connectDB } from "../db"
 import DistrictModel from "../models/district"
 import AreaModel from "../models/area"
+import ApartmentModel from "../models/apartment"
 import CustomerModel from "../models/customer"
 import OrderModel from "../models/order"
 
@@ -35,6 +36,11 @@ export async function deleteDistrict(id: string) {
   const areas = await AreaModel.find({ districtId: id }).lean()
   if (areas.length > 0) {
     throw new Error("Cannot delete district: it still has areas")
+  }
+
+  const apartments = await ApartmentModel.find({ districtId: id }).lean()
+  if (apartments.length > 0) {
+    throw new Error("Cannot delete district: it still has apartments")
   }
 
   const deleted = await DistrictModel.findByIdAndDelete(id).lean()
@@ -79,4 +85,39 @@ export async function bulkCreateAreas(districtId: string, names: string[]) {
   await connectDB()
   const docs = names.map((name) => ({ districtId, name }))
   return AreaModel.insertMany(docs)
+}
+
+export async function createApartment(districtId: string, name: string) {
+  await connectDB()
+  return ApartmentModel.create({ districtId, name })
+}
+
+export async function renameApartment(id: string, name: string) {
+  await connectDB()
+  const updated = await ApartmentModel.findByIdAndUpdate(
+    id,
+    { name },
+    { new: true }
+  ).lean()
+  if (!updated) throw new Error("Apartment not found")
+  return updated
+}
+
+export async function deleteApartment(id: string) {
+  await connectDB()
+  // Generic safe delete (extend with orders/customers checks if needed later)
+  const deleted = await ApartmentModel.findByIdAndDelete(id).lean()
+  if (!deleted) throw new Error("Apartment not found")
+  return deleted
+}
+
+export async function listApartmentsForDistrict(districtId: string) {
+  await connectDB()
+  return ApartmentModel.find({ districtId }).sort({ name: 1 }).lean()
+}
+
+export async function bulkCreateApartments(districtId: string, names: string[]) {
+  await connectDB()
+  const docs = names.map((name) => ({ districtId, name }))
+  return ApartmentModel.insertMany(docs)
 }

@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { DistrictSchema, AreaSchema } from "@/lib/schemas/location-admin"
+import { DistrictSchema, AreaSchema, ApartmentSchema } from "@/lib/schemas/location-admin"
 import {
   createDistrict,
   renameDistrict,
@@ -10,6 +10,10 @@ import {
   renameArea,
   deleteArea,
   bulkCreateAreas,
+  createApartment,
+  renameApartment,
+  deleteApartment,
+  bulkCreateApartments,
 } from "@/lib/data/location-admin"
 
 export async function createDistrictAction(payload: { name: string }) {
@@ -99,5 +103,59 @@ export async function bulkCreateAreasAction(payload: {
     return { success: true, count: areas.length }
   } catch (e: any) {
     return { error: e?.message ?? "Failed to create areas" }
+  }
+}
+
+export async function createApartmentAction(payload: {
+  districtId: string
+  name: string
+}) {
+  const parsed = ApartmentSchema.safeParse(payload)
+  if (!parsed.success) return { error: "Invalid apartment" }
+  try {
+    const apartment = await createApartment(parsed.data.districtId, parsed.data.name)
+    revalidatePath("/fmg-admin/settings")
+    return { success: true, apartment: JSON.parse(JSON.stringify(apartment)) }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to create apartment" }
+  }
+}
+
+export async function renameApartmentAction(payload: { id: string; name: string }) {
+  // Can reuse a generic schema or recreate if needed. ApartmentSchema requires districtId which we don't need for rename, so we just use DistrictSchema structural equality for "name".
+  const parsed = DistrictSchema.safeParse({ name: payload.name })
+  if (!parsed.success) return { error: "Invalid apartment name" }
+  try {
+    const apartment = await renameApartment(payload.id, parsed.data.name)
+    revalidatePath("/fmg-admin/settings")
+    return { success: true, apartment: JSON.parse(JSON.stringify(apartment)) }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to rename apartment" }
+  }
+}
+
+export async function deleteApartmentAction(payload: { id: string }) {
+  try {
+    await deleteApartment(payload.id)
+    revalidatePath("/fmg-admin/settings")
+    return { success: true }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to delete apartment" }
+  }
+}
+
+export async function bulkCreateApartmentsAction(payload: {
+  districtId: string
+  names: string[]
+}) {
+  if (!payload.districtId) return { error: "District is required" }
+  const names = payload.names.map((n) => n.trim()).filter(Boolean)
+  if (names.length === 0) return { error: "No valid apartment names provided" }
+  try {
+    const apartments = await bulkCreateApartments(payload.districtId, names)
+    revalidatePath("/fmg-admin/settings")
+    return { success: true, count: apartments.length }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to create apartments" }
   }
 }

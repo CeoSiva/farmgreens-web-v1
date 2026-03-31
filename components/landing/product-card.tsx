@@ -44,8 +44,15 @@ export function ProductCard({ product }: ProductCardProps) {
   const { isInCart, updateCart } = useCart()
   const inCart = isInCart(product._id)
 
+  // Default quantity logic: 250g for kg products, 1 unit/piece otherwise
+  const isKgProduct = product.orderQuantity.unit.toLowerCase() === "kg"
+  const defaultQty = isKgProduct ? 0.25 : 1
+  const displayPrice = product.price * defaultQty
+  const displayQuantityText = product.orderQuantity.type === "count" 
+    ? "1 piece" 
+    : formatQuantity(defaultQty, product.orderQuantity.unit)
+
   const handleAddToCart = () => {
-    const defaultQty = product.orderQuantity.unit.toLowerCase() === "kg" ? 0.25 : 1;
     startTransition(async () => {
       try {
         const res = await addToCartAction(product._id, defaultQty)
@@ -76,7 +83,7 @@ export function ProductCard({ product }: ProductCardProps) {
     startTransition(async () => {
       try {
         await clearCartAction()
-        const res = await addToCartAction(product._id, 1)
+        const res = await addToCartAction(product._id, defaultQty)
         if ((res as any)?.success) {
           updateCart((res as any).cart.items)
           
@@ -121,18 +128,18 @@ export function ProductCard({ product }: ProductCardProps) {
             <h3 className="line-clamp-2 text-[10px] font-bold leading-tight text-foreground min-h-[26px]">
               {product.name}
             </h3>
-            <span className="text-[9px] font-medium text-muted-foreground">
-              {product.orderQuantity.type === "count" ? "1 piece" : formatQuantity(product.orderQuantity.unit.toLowerCase() === "kg" ? 0.25 : 1, product.orderQuantity.unit)}
-            </span>
+              <span className="text-[9px] font-medium text-muted-foreground">
+                {displayQuantityText}
+              </span>
           </div>
 
           <div className="mt-auto pt-2 flex items-center justify-between gap-1">
             <div className="flex flex-col leading-none">
               <span className="text-[8px] text-muted-foreground line-through">
-                ₹{(product.price * 1.1).toFixed(0)}
+                ₹{(displayPrice * 1.1).toFixed(0)}
               </span>
               <span className="text-xs font-black text-foreground">
-                ₹{product.price.toFixed(0)}
+                ₹{displayPrice.toFixed(0)}
               </span>
             </div>
 
@@ -173,7 +180,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 {product.name}
               </h3>
               <span className="text-lg font-bold">
-                ₹{product.price.toFixed(0)}
+                ₹{displayPrice.toFixed(0)}
               </span>
             </div>
 
@@ -190,7 +197,7 @@ export function ProductCard({ product }: ProductCardProps) {
               <span className="mr-1 font-medium capitalize">
                 {product.orderQuantity.type}:
               </span>
-              {product.orderQuantity.type === "count" ? "1 piece" : formatQuantity(product.orderQuantity.unit.toLowerCase() === "kg" ? 0.25 : 1, product.orderQuantity.unit)}
+              {displayQuantityText}
               {product.description && (
                 <span className="mt-1.5 block line-clamp-2 leading-relaxed">{product.description}</span>
               )}

@@ -5,11 +5,13 @@ import { LocationAwareLink as Link } from "@/components/location-aware-link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import { Check, ChevronsUpDown, Plus } from "lucide-react"
 
 import type { Cart } from "@/lib/cart"
 import { CheckoutSchema, type CheckoutFormValues } from "@/lib/schemas/checkout"
 import { findCustomerByMobileAction } from "@/server/actions/customer"
-import { listAreasByDistrictAction } from "@/server/actions/location"
+import { listAreasByDistrictAction, listApartmentsByDistrictAction } from "@/server/actions/location"
+import { createAreaAction } from "@/server/actions/location-admin"
 import { placeOrderAction } from "@/server/actions/order"
 
 import { Button } from "@/components/ui/button"
@@ -24,6 +26,11 @@ import {
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 export function CheckoutClient({
   cart,
@@ -38,13 +45,19 @@ export function CheckoutClient({
   const [isPending, startTransition] = useTransition()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [areas, setAreas] = useState<any[]>([])
+  const [apartments, setApartments] = useState<any[]>([])
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [existingCustomer, setExistingCustomer] = useState<any | null>(null)
+  const [areaSearch, setAreaSearch] = useState("")
+  const [areaOpen, setAreaOpen] = useState(false)
+  const [apartmentSearch, setApartmentSearch] = useState("")
+  const [apartmentOpen, setApartmentOpen] = useState(false)
 
   const {
     register,
     handleSubmit,
     setValue,
+    getValues,
     watch,
     formState: { errors },
   } = useForm<CheckoutFormValues>({
@@ -67,11 +80,20 @@ export function CheckoutClient({
   useEffect(() => {
     if (!districtId) return
     startTransition(async () => {
-      const res = await listAreasByDistrictAction(districtId)
-      setAreas(res.areas as any)
-      setValue("areaId", "")
+      const [resAreas, resApts] = await Promise.all([
+        listAreasByDistrictAction(districtId),
+        listApartmentsByDistrictAction(districtId)
+      ])
+      setAreas((resAreas as any).areas)
+      setApartments((resApts as any).apartments)
+      
+      const currentAreaId = getValues("areaId")
+      const stillValid = (resAreas as any).areas.some((a: any) => a._id === currentAreaId)
+      if (!stillValid) {
+        setValue("areaId", "")
+      }
     })
-  }, [districtId, setValue])
+  }, [districtId, setValue, getValues])
 
   useEffect(() => {
     if (!mobile || mobile.length < 10) {
@@ -98,6 +120,56 @@ export function CheckoutClient({
     const itemCount = cart.items.length
     return { itemCount }
   }, [cart.items])
+
+  const isChennai = useMemo(() => {
+    if (!districtId || !districts) return false
+    const d = districts.find((x) => String(x._id) === String(districtId))
+    return d && d.name.toLowerCase() === "chennai"
+  }, [districtId, districts])
+
+  const filteredAreas = useMemo(() => {
+    if (!areaSearch) return areas
+    const q = areaSearch.toLowerCase()
+    return areas.filter((a: any) => a.name.toLowerCase().includes(q))
+  }, [areas, areaSearch])
+
+  const exactMatch = areas.some(
+    (a: any) => a.name.toLowerCase() === areaSearch.toLowerCase().trim()
+  )
+
+  const filteredApartments = useMemo(() => {
+    if (!apartmentSearch) return apartments
+    const q = apartmentSearch.toLowerCase()
+    return apartments.filter((a: any) => a.name.toLowerCase().includes(q))
+  }, [apartments, apartmentSearch])
+
+  const handleCreateArea = async () => {
+    if (!districtId || !areaSearch.trim()) return
+    startTransition(async () => {
+      try {
+        const res = await createAreaAction({
+          districtId,
+          name: areaSearch.trim(),
+        })
+        if ((res as any).error) {
+          toast.error((res as any).error)
+          return
+        }
+        const newArea = (res as any).area
+        setAreas((prev) =>
+          [...prev, newArea].sort((a: any, b: any) =>
+            a.name.localeCompare(b.name)
+          )
+        )
+        setValue("areaId", newArea._id)
+        setAreaSearch("")
+        setAreaOpen(false)
+        toast.success("Area added")
+      } catch {
+        toast.error("Failed to add area")
+      }
+    })
+  }
 
   const onSubmit = (data: CheckoutFormValues) => {
     setValue("countryCode", "+91")
@@ -142,7 +214,8 @@ export function CheckoutClient({
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
-            Delivery fee: {deliveryFee === 0 ? "Free" : `₹${deliveryFee.toFixed(2)}`}
+            Delivery fee:{" "}
+            {deliveryFee === 0 ? "Free" : `₹${deliveryFee.toFixed(2)}`}
           </div>
         </div>
       </Card>
@@ -241,43 +314,13 @@ export function CheckoutClient({
             <div className="grid gap-3">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <label className="text-sm font-medium">Door / Flat</label>
-                  <Input
-                    {...register("door")}
-                    placeholder="12A, Ground floor"
-                    disabled={isPending}
-                  />
-                  {errors.door && (
-                    <div className="text-xs text-destructive">
-                      {errors.door.message}
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">Street</label>
-                  <Input
-                    {...register("street")}
-                    placeholder="Main road, Gandhi nagar"
-                    disabled={isPending}
-                  />
-                  {errors.street && (
-                    <div className="text-xs text-destructive">
-                      {errors.street.message}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="grid gap-2">
                   <label className="text-sm font-medium">District</label>
                   <Select
                     onValueChange={(val) => setValue("districtId", val)}
                     value={watch("districtId")}
                     disabled={isPending}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select district" />
                     </SelectTrigger>
                     <SelectContent>
@@ -297,25 +340,171 @@ export function CheckoutClient({
 
                 <div className="grid gap-2">
                   <label className="text-sm font-medium">Area</label>
-                  <Select
-                    onValueChange={(val) => setValue("areaId", val)}
-                    value={watch("areaId")}
-                    disabled={isPending || !districtId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select area" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {areas.map((a) => (
-                        <SelectItem key={a._id} value={a._id}>
-                          {a.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={areaOpen} onOpenChange={setAreaOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={areaOpen}
+                        className="w-full justify-between font-normal"
+                        disabled={isPending || !districtId}
+                      >
+                        {watch("areaId")
+                          ? areas.find((a: any) => a._id === watch("areaId"))
+                              ?.name
+                          : "Select area"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[var(--radix-popover-trigger-width)] p-0"
+                      align="start"
+                    >
+                      <div className="p-2">
+                        <Input
+                          placeholder="Search areas..."
+                          value={areaSearch}
+                          onChange={(e) => setAreaSearch(e.target.value)}
+                          className="h-8 text-sm"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-[200px] overflow-y-auto px-1 pb-1">
+                        {filteredAreas.length > 0 ? (
+                          filteredAreas.map((a: any) => (
+                            <button
+                              key={a._id}
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                              onClick={() => {
+                                setValue("areaId", a._id)
+                                setAreaSearch("")
+                                setAreaOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={`h-4 w-4 ${watch("areaId") === a._id ? "opacity-100" : "opacity-0"}`}
+                              />
+                              {a.name}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-2 py-2 text-center text-xs text-muted-foreground">
+                            No areas found.
+                          </div>
+                        )}
+                        {areaSearch.trim() && !exactMatch && (
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-primary outline-none hover:bg-accent hover:text-accent-foreground"
+                            onClick={handleCreateArea}
+                            disabled={isPending}
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add &quot;{areaSearch.trim()}&quot;
+                          </button>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   {errors.areaId && (
                     <div className="text-xs text-destructive">
                       {errors.areaId.message}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Flat no, Block / Tower</label>
+                  <Input
+                    {...register("door")}
+                    placeholder="12A, Ground floor"
+                    disabled={isPending}
+                  />
+                  {errors.door && (
+                    <div className="text-xs text-destructive">
+                      {errors.door.message}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">
+                    {isChennai ? "Apartment" : "Street"}
+                  </label>
+                  {isChennai ? (
+                    <Popover
+                      open={apartmentOpen}
+                      onOpenChange={setApartmentOpen}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={apartmentOpen}
+                          className="w-full justify-between font-normal"
+                          disabled={isPending || !districtId}
+                        >
+                          {watch("street")
+                            ? apartments.find(
+                                (a: any) => a.name === watch("street")
+                              )?.name || watch("street")
+                            : "Select apartment"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[var(--radix-popover-trigger-width)] p-0"
+                        align="start"
+                      >
+                        <div className="p-2">
+                          <Input
+                            placeholder="Search apartments..."
+                            value={apartmentSearch}
+                            onChange={(e) => setApartmentSearch(e.target.value)}
+                            className="h-8 text-sm"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="max-h-[200px] overflow-y-auto px-1 pb-1">
+                          {filteredApartments.length > 0 ? (
+                            filteredApartments.map((a: any) => (
+                              <button
+                                key={a._id}
+                                type="button"
+                                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                                onClick={() => {
+                                  setValue("street", a.name)
+                                  setApartmentSearch("")
+                                  setApartmentOpen(false)
+                                }}
+                              >
+                                <Check
+                                  className={`h-4 w-4 ${watch("street") === a.name ? "opacity-100" : "opacity-0"}`}
+                                />
+                                {a.name}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-2 py-2 text-center text-xs text-muted-foreground">
+                              No apartments found.
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <Input
+                      {...register("street")}
+                      placeholder="Main road, Gandhi nagar"
+                      disabled={isPending}
+                    />
+                  )}
+                  {errors.street && (
+                    <div className="text-xs text-destructive">
+                      {errors.street.message}
                     </div>
                   )}
                 </div>

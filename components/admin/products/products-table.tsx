@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useMemo } from "react"
 import Image from "next/image"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+import { Loader2, Search } from "lucide-react"
 
 import {
   Table,
@@ -16,13 +16,24 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 import {
   EditProductButton,
   DeleteProductButton,
 } from "@/components/product-actions"
 import { InlineImageUpload } from "@/components/inline-image-upload"
-import { bulkUpdateProductStatusAction, updateProductVisibilityAction } from "@/server/actions/product"
+import {
+  bulkUpdateProductStatusAction,
+  updateProductVisibilityAction,
+} from "@/server/actions/product"
 
 export function ProductsTable({
   products,
@@ -33,10 +44,34 @@ export function ProductsTable({
 }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isPending, startTransition] = useTransition()
+  const [searchQuery, setSearchQuery] = useState("")
+  const [categoryFilter, setCategoryFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (
+        searchQuery &&
+        !p.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
+        return false
+      }
+      if (categoryFilter !== "all" && p.category !== categoryFilter) {
+        return false
+      }
+      if (statusFilter !== "all" && p.status !== statusFilter) {
+        return false
+      }
+      return true
+    })
+  }, [products, searchQuery, categoryFilter, statusFilter])
+
+  const hasActiveFilters =
+    searchQuery || categoryFilter !== "all" || statusFilter !== "all"
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(products.map((p) => p._id))
+      setSelectedIds(filteredProducts.map((p) => p._id))
     } else {
       setSelectedIds([])
     }
@@ -64,28 +99,19 @@ export function ProductsTable({
     })
   }
 
-  const handleVisibilityToggle = (id: string, currentVal: boolean) => {
-    startTransition(async () => {
-      const res = await updateProductVisibilityAction(id, !currentVal)
-      if (res.error) {
-        toast.error(res.error)
-      } else {
-        toast.success(`Home page visibility ${!currentVal ? "enabled" : "disabled"}!`)
-      }
-    })
-  }
-
   const allSelected =
-    products.length > 0 && selectedIds.length === products.length
+    filteredProducts.length > 0 &&
+    selectedIds.length === filteredProducts.length
   const someSelected =
-    selectedIds.length > 0 && selectedIds.length < products.length
+    selectedIds.length > 0 && selectedIds.length < filteredProducts.length
 
   return (
     <div className="space-y-4">
       {selectedIds.length > 0 && (
-        <div className="flex items-center gap-2 p-3 bg-muted/60 rounded-md border text-sm">
-          <span className="font-medium mr-2">
-            {selectedIds.length} product{selectedIds.length > 1 ? "s" : ""} selected
+        <div className="flex items-center gap-2 rounded-md border bg-muted/60 p-3 text-sm">
+          <span className="mr-2 font-medium">
+            {selectedIds.length} product{selectedIds.length > 1 ? "s" : ""}{" "}
+            selected
           </span>
           <Button
             variant="outline"
@@ -115,13 +141,63 @@ export function ProductsTable({
         </div>
       )}
 
-      <div className="rounded-md border overflow-x-auto no-scrollbar">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 bg-card pl-9"
+          />
+        </div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="h-9 w-full bg-card text-sm sm:w-[170px]">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="vegetable">Vegetables</SelectItem>
+            <SelectItem value="greens">Fresh Greens</SelectItem>
+            <SelectItem value="batter">Idli/Dosa Batter</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-9 w-full bg-card text-sm sm:w-[150px]">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="archived">Archived</SelectItem>
+          </SelectContent>
+        </Select>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 text-xs"
+            onClick={() => {
+              setSearchQuery("")
+              setCategoryFilter("all")
+              setStatusFilter("all")
+            }}
+          >
+            Clear filters
+          </Button>
+        )}
+      </div>
+
+      <div className="no-scrollbar overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-12 text-center">
                 <Checkbox
-                  checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                  checked={
+                    allSelected ? true : someSelected ? "indeterminate" : false
+                  }
                   onCheckedChange={handleSelectAll}
                 />
               </TableHead>
@@ -129,22 +205,30 @@ export function ProductsTable({
               <TableHead>Product Name</TableHead>
               <TableHead className="hidden lg:table-cell">Category</TableHead>
               <TableHead>Price</TableHead>
-              <TableHead className="hidden md:table-cell">Order Setup</TableHead>
-              <TableHead className="w-[80px] text-center">Home</TableHead>
-              <TableHead className="hidden sm:table-cell text-center">Status</TableHead>
+              <TableHead className="hidden md:table-cell">
+                Order Setup
+              </TableHead>
+              <TableHead className="hidden text-center sm:table-cell">
+                Status
+              </TableHead>
               <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.length === 0 ? (
+            {filteredProducts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center">
-                  No products found.
+                  {hasActiveFilters
+                    ? "No products match your filters."
+                    : "No products found."}
                 </TableCell>
               </TableRow>
             ) : (
-              products.map((product) => (
-                <TableRow key={product._id} data-state={selectedIds.includes(product._id) && "selected"}>
+              filteredProducts.map((product) => (
+                <TableRow
+                  key={product._id}
+                  data-state={selectedIds.includes(product._id) && "selected"}
+                >
                   <TableCell className="text-center">
                     <Checkbox
                       checked={selectedIds.includes(product._id)}
@@ -170,7 +254,7 @@ export function ProductsTable({
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
                       <span>{product.name}</span>
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground lg:hidden">
+                      <span className="text-[10px] tracking-wider text-muted-foreground uppercase lg:hidden">
                         {product.category}
                       </span>
                     </div>
@@ -180,35 +264,26 @@ export function ProductsTable({
                       </p>
                     )}
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell capitalize">
+                  <TableCell className="hidden capitalize lg:table-cell">
                     {product.category}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap font-semibold">
+                  <TableCell className="font-semibold whitespace-nowrap">
                     ₹{product.price.toFixed(2)}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <div className="flex items-center gap-1.5">
                       <Badge
                         variant="secondary"
-                        className="capitalize text-[10px] px-1.5 py-0 h-5"
+                        className="h-5 px-1.5 py-0 text-[10px] capitalize"
                       >
                         {product.orderQuantity.type}
                       </Badge>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      <span className="text-xs whitespace-nowrap text-muted-foreground">
                         ({product.orderQuantity.unit})
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex justify-center">
-                       <Checkbox 
-                         checked={product.showOnHomePage !== false}
-                         onCheckedChange={() => handleVisibilityToggle(product._id, product.showOnHomePage !== false)}
-                         disabled={isPending}
-                       />
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-center">
+                  <TableCell className="hidden text-center sm:table-cell">
                     <Badge
                       variant={
                         product.status === "active"

@@ -36,7 +36,7 @@ export function CallToAction() {
           Eat healthier, support locals, and taste the difference.
         </h2>
         <p className="mb-8 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-          Sign up today and get an exclusive 15% off your first fresh harvest delivery. 
+          Sign up today and get an exclusive 15% off your first fresh harvest delivery.
           No commitments, just pure organic goodness straight to your kitchen.
         </p>
         <Button size="lg" className="rounded-full px-8 h-14 text-base shadow-sm group">

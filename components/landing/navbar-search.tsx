@@ -198,9 +198,11 @@ export function NavbarSearch() {
                           {highlightMatch(item.name, query)}
                         </span>
                         <div className="flex items-center gap-1.5">
-                           <span className="text-xs font-medium text-primary">₹{item.price}</span>
-                           <span className="text-[10px] text-muted-foreground">•</span>
-                           <span className="text-[10px] uppercase font-bold text-muted-foreground">{item.orderQuantity?.unit || "unit"}</span>
+                             <span className="text-xs font-medium text-primary">₹{(item.price * (item.orderQuantity?.unit?.toLowerCase() === "kg" ? 0.25 : 1)).toFixed(0)}</span>
+                             <span className="text-[10px] text-muted-foreground">•</span>
+                             <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                               {item.orderQuantity?.unit?.toLowerCase() === "kg" ? "250g" : (item.orderQuantity?.unit || "unit")}
+                             </span>
                         </div>
                       </div>
                     </button>
@@ -279,8 +281,10 @@ export function NavbarSearch() {
                         {highlightMatch(item.name, query)}
                       </span>
                       <div className="flex items-center gap-2 mt-0.5">
-                         <span className="text-sm font-bold text-primary">₹{item.price}</span>
-                         <span className="text-xs text-muted-foreground">per {item.orderQuantity?.unit || "unit"}</span>
+                         <span className="text-sm font-bold text-primary">₹{(item.price * (item.orderQuantity?.unit?.toLowerCase() === "kg" ? 0.25 : 1)).toFixed(0)}</span>
+                         <span className="text-xs text-muted-foreground">
+                           for {item.orderQuantity?.unit?.toLowerCase() === "kg" ? "250g" : (item.orderQuantity?.unit || "unit")}
+                         </span>
                       </div>
                     </div>
                   </button>

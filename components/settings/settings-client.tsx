@@ -16,12 +16,16 @@ import {
   renameAreaAction,
   renameDistrictAction,
   bulkCreateAreasAction,
+  createApartmentAction,
+  deleteApartmentAction,
+  renameApartmentAction,
+  bulkCreateApartmentsAction,
 } from "@/server/actions/location-admin"
 import {
   updateDeliveryFeeAction,
   updateStoreProfileAction,
 } from "@/server/actions/setting"
-import { listAreasByDistrictAction } from "@/server/actions/location"
+import { listAreasByDistrictAction, listApartmentsByDistrictAction } from "@/server/actions/location"
 
 export function SettingsClient({
   settings,
@@ -53,19 +57,28 @@ export function SettingsClient({
     districts?.[0]?._id ? String(districts[0]._id) : ""
   )
   const [areas, setAreas] = useState<any[]>([])
+  const [apartments, setApartments] = useState<any[]>([])
 
   const [newDistrictName, setNewDistrictName] = useState("")
   const [newAreaName, setNewAreaName] = useState("")
   const [bulkAreaNames, setBulkAreaNames] = useState("")
 
+  const [newApartmentName, setNewApartmentName] = useState("")
+  const [bulkApartmentNames, setBulkApartmentNames] = useState("")
+
   useEffect(() => {
     if (!selectedDistrictId) {
       setAreas([])
+      setApartments([])
       return
     }
     startTransition(async () => {
-      const res = await listAreasByDistrictAction(selectedDistrictId)
-      setAreas(res.areas as any)
+      const [resAreas, resApts] = await Promise.all([
+        listAreasByDistrictAction(selectedDistrictId),
+        listApartmentsByDistrictAction(selectedDistrictId)
+      ])
+      setAreas((resAreas as any).areas)
+      setApartments((resApts as any).apartments)
     })
   }, [selectedDistrictId])
 
@@ -210,6 +223,77 @@ export function SettingsClient({
       else {
         toast.success(`Created ${(res as any).count} areas`)
         setBulkAreaNames("")
+        router.refresh()
+      }
+    })
+  }
+
+  const addApartment = () => {
+    if (!selectedDistrictId) {
+      toast.error("Select a district first")
+      return
+    }
+    startTransition(async () => {
+      const res = await createApartmentAction({
+        districtId: selectedDistrictId,
+        name: newApartmentName,
+      })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("Apartment created")
+        setNewApartmentName("")
+        router.refresh()
+      }
+    })
+  }
+
+  const handleRenameApartment = (id: string, currentName: string) => {
+    const name = window.prompt("Rename apartment", currentName)
+    if (!name) return
+    startTransition(async () => {
+      const res = await renameApartmentAction({ id, name })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("Apartment renamed")
+        router.refresh()
+      }
+    })
+  }
+
+  const handleRemoveApartment = (id: string) => {
+    if (!window.confirm("Delete this apartment?")) return
+    startTransition(async () => {
+      const res = await deleteApartmentAction({ id })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("Apartment deleted")
+        router.refresh()
+      }
+    })
+  }
+
+  const bulkAddApartments = () => {
+    if (!selectedDistrictId) {
+      toast.error("Select a district first")
+      return
+    }
+    const names = bulkApartmentNames
+      .split("\n")
+      .map((n) => n.trim())
+      .filter(Boolean)
+    if (names.length === 0) {
+      toast.error("Enter at least one apartment name")
+      return
+    }
+    startTransition(async () => {
+      const res = await bulkCreateApartmentsAction({
+        districtId: selectedDistrictId,
+        names,
+      })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success(`Created ${(res as any).count} apartments`)
+        setBulkApartmentNames("")
         router.refresh()
       }
     })
@@ -372,8 +456,9 @@ export function SettingsClient({
             </div>
           </Card>
 
-          <Card className="p-4">
-            <div className="font-medium">Areas</div>
+          <div className="flex flex-col gap-4">
+            <Card className="p-4">
+              <div className="font-medium">Areas</div>
             <div className="mt-1 text-sm text-muted-foreground">
               {selectedDistrictId
                 ? `For district: ${districtById.get(selectedDistrictId)?.name ?? ""}`
@@ -461,6 +546,97 @@ export function SettingsClient({
               )}
             </div>
           </Card>
+
+          <Card className="p-4">
+            <div className="font-medium">Apartments</div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              {selectedDistrictId
+                ? `For district: ${districtById.get(selectedDistrictId)?.name ?? ""}`
+                : "Select a district to manage apartments."}
+            </div>
+
+            <div className="mt-3 flex gap-2">
+              <Input
+                placeholder="New apartment"
+                value={newApartmentName}
+                onChange={(e) => setNewApartmentName(e.target.value)}
+                disabled={isPending || !selectedDistrictId}
+              />
+              <Button
+                onClick={addApartment}
+                disabled={isPending || !selectedDistrictId || !newApartmentName}
+              >
+                Add
+              </Button>
+            </div>
+
+            <div className="mt-3 grid gap-2">
+              <div className="text-xs font-medium text-muted-foreground">
+                Bulk add (one apartment per line)
+              </div>
+              <textarea
+                className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder={"Apartment A\nApartment B\nApartment C"}
+                value={bulkApartmentNames}
+                onChange={(e) => setBulkApartmentNames(e.target.value)}
+                disabled={isPending || !selectedDistrictId}
+              />
+              <div>
+                <Button
+                  onClick={bulkAddApartments}
+                  disabled={
+                    isPending || !selectedDistrictId || !bulkApartmentNames.trim()
+                  }
+                  variant="secondary"
+                  size="sm"
+                >
+                  Bulk Add
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-2">
+              {apartments.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  No apartments yet.
+                </div>
+              ) : (
+                apartments.map((a) => (
+                  <div
+                    key={a._id}
+                    className="rounded-md border px-3 py-2 text-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{a.name}</span>
+                      <span className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            handleRenameApartment(String(a._id), a.name)
+                          }
+                          disabled={isPending}
+                        >
+                          Rename
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleRemoveApartment(String(a._id))}
+                          disabled={isPending}
+                        >
+                          Delete
+                        </Button>
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+          </div>
         </div>
       </TabsContent>
     </Tabs>
