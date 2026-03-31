@@ -1,4 +1,4 @@
-import Link from "next/link"
+import { LocationAwareLink as Link } from "@/components/location-aware-link"
 
 import { Navbar } from "@/components/landing/navbar"
 import { Footer } from "@/components/landing/footer"

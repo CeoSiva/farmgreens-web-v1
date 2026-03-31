@@ -1,4 +1,4 @@
-import Link from "next/link"
+import { LocationAwareLink as Link } from "@/components/location-aware-link"
 import { Leaf, CreditCard, Wallet, Banknote, ShieldCheck } from "lucide-react"
 import Image from "next/image"
 

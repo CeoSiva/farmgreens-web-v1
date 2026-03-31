@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import { LocationAwareLink as Link } from "@/components/location-aware-link"
 import { useRouter } from "next/navigation"
 import { Search, Leaf } from "lucide-react"
 
@@ -70,7 +70,7 @@ export function Navbar() {
                   <ul className="grid w-[400px] gap-3 p-4 md:w-[600px] md:grid-cols-[.75fr_1fr] lg:w-[750px]">
                     <li className="row-span-3">
                       <NavigationMenuLink asChild>
-                        <a
+                        <Link
                           className="relative flex h-full w-full flex-col justify-end overflow-hidden rounded-md bg-muted p-6 no-underline outline-none select-none focus:shadow-md group"
                           href="/"
                         >
@@ -90,12 +90,12 @@ export function Navbar() {
                               Organic vegetables and greens straight from the farm.
                             </p>
                           </div>
-                        </a>
+                        </Link>
                       </NavigationMenuLink>
                     </li>
                     <li className="group/item">
                       <NavigationMenuLink asChild>
-                        <a
+                        <Link
                           href="/shop?category=vegetable"
                           className="flex items-start gap-4 space-y-1 rounded-md p-3 leading-none no-underline transition-all outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
@@ -110,12 +110,12 @@ export function Navbar() {
                               Seasonal and daily fresh veggies.
                             </p>
                           </div>
-                        </a>
+                        </Link>
                       </NavigationMenuLink>
                     </li>
                     <li className="group/item">
                       <NavigationMenuLink asChild>
-                        <a
+                        <Link
                           href="/shop?category=greens"
                           className="flex items-start gap-4 space-y-1 rounded-md p-3 leading-none no-underline transition-all outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
@@ -130,12 +130,12 @@ export function Navbar() {
                               Healthy leafy greens and herbs.
                             </p>
                           </div>
-                        </a>
+                        </Link>
                       </NavigationMenuLink>
                     </li>
                     <li className="group/item">
                       <NavigationMenuLink asChild>
-                        <a
+                        <Link
                           href="/shop?category=batter"
                           className="flex items-start gap-4 space-y-1 rounded-md p-3 leading-none no-underline transition-all outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                         >
@@ -150,7 +150,7 @@ export function Navbar() {
                               Freshly ground idli/dosa batters.
                             </p>
                           </div>
-                        </a>
+                        </Link>
                       </NavigationMenuLink>
                     </li>
                   </ul>

@@ -1,4 +1,4 @@
-import Link from "next/link"
+import { LocationAwareLink as Link } from "@/components/location-aware-link"
 import { ArrowRight } from "lucide-react"
 import { ProductCard, SerializedProduct } from "@/components/landing/product-card"
 import { Button } from "@/components/ui/button"

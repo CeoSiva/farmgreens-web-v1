@@ -1,11 +1,12 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useSearchParams } from "next/navigation"
+import { useLocationRouter } from "@/hooks/use-location-router"
 import { cn } from "@/lib/utils"
 
 export function CategoryChips() {
-  const router = useRouter()
+  const router = useLocationRouter()
   const searchParams = useSearchParams()
   const activeCategory = searchParams.get("category") || "All Products"
 

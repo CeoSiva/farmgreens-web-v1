@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useTransition } from "react"
 import { toast } from "sonner"
-import { useRouter } from "next/navigation"
+import { useLocationRouter } from "@/hooks/use-location-router"
 import { addToCartAction, clearCartAction } from "@/server/actions/cart"
 import { useCart } from "@/components/cart/cart-context"
 import { cn } from "@/lib/utils"
@@ -39,7 +39,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const imageUrl = product.imageUrl || "/placeholder-hero.png" // Temporary fallback
 
   const [isPending, startTransition] = useTransition()
-  const router = useRouter()
+  const router = useLocationRouter()
 
   const { isInCart, updateCart } = useCart()
   const inCart = isInCart(product._id)

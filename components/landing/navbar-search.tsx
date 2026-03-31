@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Search } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useLocationRouter } from "@/hooks/use-location-router"
 import Image from "next/image"
 
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,7 @@ import { searchProductsAction } from "@/server/actions/product"
 import { SerializedProduct } from "@/components/landing/product-card"
 
 export function NavbarSearch() {
-  const router = useRouter()
+  const router = useLocationRouter()
   const [query, setQuery] = React.useState("")
   const [suggestions, setSuggestions] = React.useState<SerializedProduct[]>([])
   const [isOpen, setIsOpen] = React.useState(false)

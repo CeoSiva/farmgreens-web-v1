@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import Link from "next/link"
+import { LocationAwareLink as Link } from "@/components/location-aware-link"
 import { useMemo, useTransition } from "react"
 import { toast } from "sonner"
 

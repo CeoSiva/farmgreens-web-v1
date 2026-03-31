@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState, useTransition } from "react"
-import Link from "next/link"
+import { LocationAwareLink as Link } from "@/components/location-aware-link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"

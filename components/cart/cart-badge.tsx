@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useLocationRouter } from "@/hooks/use-location-router"
 import { ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCart } from "@/components/cart/cart-context"
 
 export function CartBadge() {
-  const router = useRouter()
+  const router = useLocationRouter()
   const { items } = useCart()
   const count = items.length
 
