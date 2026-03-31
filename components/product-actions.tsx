@@ -37,7 +37,7 @@ import {
 import { toast } from "sonner"
 import Papa from "papaparse"
 
-export function AddProductButton() {
+export function AddProductButton({ districts }: { districts: any[] }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -56,7 +56,7 @@ export function AddProductButton() {
           </SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-6">
-          <ProductForm onSuccess={() => setOpen(false)} />
+          <ProductForm districts={districts} onSuccess={() => setOpen(false)} />
         </div>
       </SheetContent>
     </Sheet>
@@ -65,8 +65,10 @@ export function AddProductButton() {
 
 export function EditProductButton({
   product,
+  districts,
 }: {
   product: ProductFormValues & { _id: string }
+  districts: any[]
 }) {
   const [open, setOpen] = useState(false)
 
@@ -86,7 +88,7 @@ export function EditProductButton({
           </SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-6">
-          <ProductForm initialData={product} onSuccess={() => setOpen(false)} />
+          <ProductForm districts={districts} initialData={product} onSuccess={() => setOpen(false)} />
         </div>
       </SheetContent>
     </Sheet>

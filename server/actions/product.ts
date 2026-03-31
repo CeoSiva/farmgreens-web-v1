@@ -6,7 +6,20 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  bulkUpdateProductsStatus
 } from "@/lib/data/product";
+
+export async function bulkUpdateProductStatusAction(ids: string[], status: "active" | "draft" | "archived") {
+  try {
+    if (!ids || ids.length === 0) return { error: "No products selected" };
+    await bulkUpdateProductsStatus(ids, status);
+    revalidatePath("/fmg-admin/products");
+    return { success: true };
+  } catch (error) {
+    console.error("Bulk Update Products Error:", error);
+    return { error: "Failed to update products status" };
+  }
+}
 
 export async function createProductAction(formData: ProductFormValues) {
   try {
@@ -15,7 +28,7 @@ export async function createProductAction(formData: ProductFormValues) {
       return { error: "Invalid product data data" };
     }
 
-    const newProduct = await createProduct(parsed.data);
+    const newProduct = await createProduct(parsed.data as any);
     
     // Convert Mongoose Doc to plain object safely handling ObjectIds and Dates
     const plainProduct = JSON.parse(JSON.stringify(newProduct));
@@ -39,7 +52,7 @@ export async function updateProductAction(
       return { error: "Invalid product data" };
     }
 
-    const updatedProduct = await updateProduct(id, parsed.data);
+    const updatedProduct = await updateProduct(id, parsed.data as any);
     
     if (!updatedProduct) {
       return { error: "Product not found" };

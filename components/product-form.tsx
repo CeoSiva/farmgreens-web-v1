@@ -22,17 +22,27 @@ import { ImageUpload } from "@/components/image-upload";
 
 interface ProductFormProps {
   initialData?: ProductFormValues & { _id: string };
+  districts?: any[];
   onSuccess?: () => void;
 }
 
-export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
+export function ProductForm({ initialData, districts = [], onSuccess }: ProductFormProps) {
   const [isPending, startTransition] = useTransition();
+
+  // Helper to prefill custom pricing for all districts
+  const defaultCustomPricing = districts.map((d: any) => {
+    const existing = initialData?.customPricing?.find(cp => cp.districtId === d._id);
+    return {
+      districtId: d._id,
+      price: existing ? existing.price : (initialData?.price || 0)
+    };
+  });
 
   const form = useForm<ProductFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(ProductSchema) as any,
     defaultValues: initialData
-      ? { ...initialData, category: initialData.category || "vegetable" }
+      ? { ...initialData, category: initialData.category || "vegetable", customPricing: defaultCustomPricing }
       : {
           name: "",
           category: "vegetable",
@@ -43,18 +53,27 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
             type: "weight",
             unit: "kg",
           },
+          customPricing: defaultCustomPricing,
           imageUrl: "",
         },
   });
 
   const onSubmit: SubmitHandler<ProductFormValues> = (data) => {
+    // Strip out custom pricing overrides that are empty or 0 (which Zod coerces)
+    const cleanData = { ...data };
+    if (cleanData.customPricing) {
+      cleanData.customPricing = cleanData.customPricing.filter((cp) => 
+        cp && cp.price !== undefined && cp.price !== null && cp.price > 0
+      );
+    }
+
     startTransition(async () => {
       try {
         let result;
         if (initialData?._id) {
-          result = await updateProductAction(initialData._id, data);
+          result = await updateProductAction(initialData._id, cleanData);
         } else {
-          result = await createProductAction(data);
+          result = await createProductAction(cleanData);
         }
 
         if (result.error) {
@@ -133,6 +152,26 @@ export function ProductForm({ initialData, onSuccess }: ProductFormProps) {
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Pricing Configuration */}
+        <div className="space-y-4 border p-4 rounded-lg bg-muted/50">
+          <h4 className="font-medium text-sm border-b pb-2 mb-2">District-Wise Pricing Overrides (Optional)</h4>
+          <p className="text-xs text-muted-foreground mb-4">Set specific prices for different areas. If left missing, it will use the default price above.</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {districts.map((district, index) => (
+              <div key={district._id} className="space-y-2">
+                <Label className="text-xs truncate" title={district.name}>{district.name} Price (₹)</Label>
+                <input type="hidden" {...form.register(`customPricing.${index}.districtId` as const)} value={district._id} />
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  {...form.register(`customPricing.${index}.price` as const)} 
+                />
+              </div>
+            ))}
+          </div>
+          {errors.customPricing && <p className="text-sm text-red-500 mt-2">Please check custom pricing values.</p>}
         </div>
 
         <div className="space-y-4 border p-4 rounded-lg bg-muted/50">

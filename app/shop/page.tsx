@@ -8,9 +8,12 @@ export const dynamic = "force-dynamic"
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ category?: string; search?: string }>
+  searchParams?: Promise<{ category?: string; search?: string; district?: string }>
 }) {
-  const rawProducts = await getProducts()
+  const sp = (await searchParams) ?? {}
+  const districtSlug = sp.district
+
+  const rawProducts = await getProducts(districtSlug)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const products = rawProducts.map((p: any) => ({
@@ -27,7 +30,6 @@ export default async function ShopPage({
     updatedAt: p.updatedAt.toISOString(),
   }))
 
-  const sp = (await searchParams) ?? {}
   const initialCategory = sp.category ?? "all"
   const initialSearch = sp.search ?? ""
 

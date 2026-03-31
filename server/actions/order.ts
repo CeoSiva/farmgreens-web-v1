@@ -36,8 +36,14 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
 
     if (cart.items.length === 0) return { error: "Cart is empty" }
 
+    const district = await getDistrictById(parsed.data.districtId)
+    const area = await getAreaById(parsed.data.areaId)
+
+    if (!district) return { error: "Invalid district" }
+    if (!area) return { error: "Invalid area" }
+
     const ids = cart.items.map((i) => i.productId)
-    const products = await getProductsByIds(ids)
+    const products = await getProductsByIds(ids, (district as any).name)
 
     const byId = new Map(products.map((p: any) => [p._id.toString(), p]))
 
@@ -63,12 +69,6 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
     const freeDeliveryThreshold = Number((settings as any).freeDeliveryThreshold ?? 500)
     const deliveryFee = subtotal >= freeDeliveryThreshold ? 0 : baseDeliveryFee
     const total = subtotal + deliveryFee
-
-    const district = await getDistrictById(parsed.data.districtId)
-    const area = await getAreaById(parsed.data.areaId)
-
-    if (!district) return { error: "Invalid district" }
-    if (!area) return { error: "Invalid area" }
 
     let customerId: any = undefined
 

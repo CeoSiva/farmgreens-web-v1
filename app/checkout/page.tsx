@@ -8,7 +8,14 @@ import { getSettings } from "@/lib/data/setting"
 
 export const dynamic = "force-dynamic"
 
-export default async function CheckoutPage() {
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ district?: string }>
+}) {
+  const sp = (await searchParams) ?? {}
+  const districtSlug = sp.district
+
   const { cart } = await getCartAction()
   const settings = await getSettings()
   const baseDeliveryFee = Number((settings as any).deliveryFee ?? 0)
@@ -17,7 +24,7 @@ export default async function CheckoutPage() {
 
   // Compute subtotal on the server for checkout display
   const ids = cart.items.map((i: any) => i.productId)
-  const productsRaw = await getProductsByIds(ids)
+  const productsRaw = await getProductsByIds(ids, districtSlug)
   const byId = new Map(productsRaw.map((p: any) => [p._id.toString(), p]))
   const subtotal = cart.items.reduce((acc: number, it: any) => {
     const p = byId.get(it.productId)

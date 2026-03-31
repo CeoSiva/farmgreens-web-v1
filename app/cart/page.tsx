@@ -8,13 +8,20 @@ import { getSettings } from "@/lib/data/setting"
 
 export const dynamic = "force-dynamic"
 
-export default async function CartPage() {
+export default async function CartPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ district?: string }>
+}) {
+  const sp = (await searchParams) ?? {}
+  const districtSlug = sp.district
+
   const { cart } = await getCartAction()
   const ids = cart.items.map((i) => i.productId)
   const settings = await getSettings()
   const deliveryFee = Number((settings as any).deliveryFee ?? 0)
   const freeDeliveryThreshold = Number((settings as any).freeDeliveryThreshold ?? 500)
-  const productsRaw = await getProductsByIds(ids)
+  const productsRaw = await getProductsByIds(ids, districtSlug)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const products = productsRaw.map((p: any) => ({
@@ -30,7 +37,7 @@ export default async function CartPage() {
     updatedAt: p.updatedAt?.toISOString?.() ?? "",
   }))
 
-  const allProductsRaw = await getProducts()
+  const allProductsRaw = await getProducts(districtSlug)
   const recommendedRaw = allProductsRaw
     .filter((p: any) => p.status === "active" && !ids.includes(p._id.toString()))
     .slice(0, 10)

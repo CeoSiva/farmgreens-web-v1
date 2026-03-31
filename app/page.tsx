@@ -18,8 +18,11 @@ export default async function Page({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  // Fetch real products from the database
-  const rawProducts = await getProducts()
+  const sp = await searchParams;
+  const districtSlug = typeof sp.district === 'string' ? sp.district : undefined;
+
+  // Fetch real products from the database with location-based pricing applied
+  const rawProducts = await getProducts(districtSlug)
   
   // Serialize documents for Server Component -> Client Component prop passing
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

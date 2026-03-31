@@ -10,6 +10,7 @@ export interface IProduct extends Document {
     type: 'weight' | 'count';
     unit: string;
   };
+  customPricing?: { districtId: mongoose.Types.ObjectId; price: number }[];
   imageUrl?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -53,6 +54,12 @@ const productSchema: Schema<IProduct> = new Schema(
         trim: true,
       },
     },
+    customPricing: [
+      {
+        districtId: { type: Schema.Types.ObjectId, ref: 'District', required: true },
+        price: { type: Number, required: true, min: 0 },
+      },
+    ],
     imageUrl: {
       type: String,
     },
@@ -62,7 +69,10 @@ const productSchema: Schema<IProduct> = new Schema(
   }
 );
 
-// Prevent mongoose from compiling the model multiple times during Next.js hot reloads
-const ProductModel: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', productSchema);
+// Prevent mongoose from compiling the model multiple times during Next.js hot reloads but force custom pricing changes to compile
+if (mongoose.models.Product) {
+  delete mongoose.models.Product;
+}
+const ProductModel: Model<IProduct> = mongoose.model<IProduct>('Product', productSchema);
 
 export default ProductModel;
