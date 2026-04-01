@@ -1,39 +1,44 @@
-import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import mongoose, { Schema, Document, Model, Types } from "mongoose"
 
-export type OrderStatus = "placed" | "confirmed" | "dispatched" | "delivered" | "cancelled";
+export type OrderStatus =
+  | "placed"
+  | "confirmed"
+  | "dispatched"
+  | "delivered"
+  | "cancelled"
 
 export interface IOrderItem {
-  productId: Types.ObjectId;
-  name: string;
-  price: number;
-  qty: number;
-  unit: string;
+  productId: Types.ObjectId
+  name: string
+  price: number
+  qty: number
+  unit: string
 }
 
 export interface IOrder extends Document {
-  orderNumber: string;
-  status: OrderStatus;
-  paymentMethod: "cod";
+  orderNumber: string
+  status: OrderStatus
+  paymentMethod: "cod"
   customer: {
-    customerId?: Types.ObjectId;
-    name: string;
-    mobile: string;
-    countryCode: string;
-  };
+    customerId?: Types.ObjectId
+    name: string
+    mobile: string
+    countryCode: string
+  }
   shippingAddress: {
-    door: string;
-    street: string;
-    districtId?: Types.ObjectId;
-    areaId?: Types.ObjectId;
-    districtName: string;
-    areaName: string;
-  };
-  items: IOrderItem[];
-  subtotal: number;
-  deliveryFee: number;
-  total: number;
-  createdAt: Date;
-  updatedAt: Date;
+    door: string
+    street: string
+    districtId?: Types.ObjectId
+    areaId?: Types.ObjectId
+    districtName: string
+    areaName: string
+  }
+  items: IOrderItem[]
+  subtotal: number
+  deliveryFee: number
+  total: number
+  createdAt: Date
+  updatedAt: Date
 }
 
 const orderItemSchema = new Schema<IOrderItem>(
@@ -45,7 +50,7 @@ const orderItemSchema = new Schema<IOrderItem>(
     unit: { type: String, required: true, trim: true },
   },
   { _id: false }
-);
+)
 
 const orderSchema: Schema<IOrder> = new Schema(
   {
@@ -76,9 +81,9 @@ const orderSchema: Schema<IOrder> = new Schema(
     total: { type: Number, required: true, min: 0 },
   },
   { timestamps: true }
-);
+)
 
 const OrderModel: Model<IOrder> =
-  mongoose.models.Order || mongoose.model<IOrder>("Order", orderSchema);
+  mongoose.models.Order || mongoose.model<IOrder>("Order", orderSchema)
 
-export default OrderModel;
+export default OrderModel

@@ -66,7 +66,9 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
     const settings = await getSettings()
     const subtotal = items.reduce((acc, it) => acc + it.price * it.qty, 0)
     const baseDeliveryFee = Number((settings as any).deliveryFee ?? 0)
-    const freeDeliveryThreshold = Number((settings as any).freeDeliveryThreshold ?? 500)
+    const freeDeliveryThreshold = Number(
+      (settings as any).freeDeliveryThreshold ?? 500
+    )
     const deliveryFee = subtotal >= freeDeliveryThreshold ? 0 : baseDeliveryFee
     const total = subtotal + deliveryFee
 
