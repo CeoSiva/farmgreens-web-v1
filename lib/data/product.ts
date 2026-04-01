@@ -132,6 +132,22 @@ export async function bulkUpdateProductsStatus(
   return ProductModel.updateMany({ _id: { $in: ids } }, { status }).lean()
 }
 
+export async function bulkUpdateProductAvailability(
+  ids: string[],
+  unavailableDistricts: string[]
+) {
+  await connectDB()
+  return ProductModel.updateMany(
+    { _id: { $in: ids } },
+    {
+      $set: {
+        availableInAllDistricts: unavailableDistricts.length === 0,
+        unavailableDistricts,
+      },
+    }
+  ).lean()
+}
+
 export async function searchProducts(
   query: string,
   districtSlug?: string,

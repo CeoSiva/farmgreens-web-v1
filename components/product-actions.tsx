@@ -33,9 +33,12 @@ import { ProductSchema, ProductFormValues } from "@/lib/schemas/product"
 import {
   deleteProductAction,
   createProductAction,
+  bulkUpdateProductAvailabilityAction,
 } from "@/server/actions/product"
 import { toast } from "sonner"
 import Papa from "papaparse"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 
 export function AddProductButton({ districts }: { districts: any[] }) {
   const [open, setOpen] = useState(false)
@@ -88,7 +91,11 @@ export function EditProductButton({
           </SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-6">
-          <ProductForm districts={districts} initialData={product} onSuccess={() => setOpen(false)} />
+          <ProductForm
+            districts={districts}
+            initialData={product}
+            onSuccess={() => setOpen(false)}
+          />
         </div>
       </SheetContent>
     </Sheet>
@@ -228,5 +235,120 @@ export function BulkUploadProductsButton() {
         </Button>
       </label>
     </div>
+  )
+}
+
+export function BulkAvailabilityButton({
+  selectedIds,
+  districts,
+  onDone,
+}: {
+  selectedIds: string[]
+  districts: any[]
+  onDone: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  const [availableInAll, setAvailableInAll] = useState(true)
+  const [unavailableSet, setUnavailableSet] = useState<Set<string>>(new Set())
+
+  const handleApply = () => {
+    startTransition(async () => {
+      const res = await bulkUpdateProductAvailabilityAction(
+        selectedIds,
+        availableInAll ? [] : Array.from(unavailableSet)
+      )
+      if (res.error) {
+        toast.error(res.error)
+      } else {
+        toast.success(
+          `Updated availability for ${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""}`
+        )
+        setOpen(false)
+        setAvailableInAll(true)
+        setUnavailableSet(new Set())
+        onDone()
+      }
+    })
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="sm" disabled={selectedIds.length === 0}>
+          Bulk Availability
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-md">
+        <SheetHeader className="mb-4">
+          <SheetTitle>Bulk Update District Availability</SheetTitle>
+          <SheetDescription>
+            Apply district availability to {selectedIds.length} selected product
+            {selectedIds.length > 1 ? "s" : ""}.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="space-y-4 px-4 pb-6">
+          <div className="flex items-center space-x-2 rounded-lg border bg-card p-4">
+            <Checkbox
+              id="bulk-avail-all"
+              checked={availableInAll}
+              onCheckedChange={(checked) => {
+                setAvailableInAll(!!checked)
+                if (checked) setUnavailableSet(new Set())
+              }}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label
+                htmlFor="bulk-avail-all"
+                className="cursor-pointer text-sm leading-none font-medium"
+              >
+                Available in all districts
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Products will be visible on all district routes.
+              </p>
+            </div>
+          </div>
+          {!availableInAll && (
+            <div className="grid grid-cols-2 gap-3">
+              {districts.map((district: any) => {
+                const isUnavailable = unavailableSet.has(district._id)
+                return (
+                  <div
+                    key={district._id}
+                    className="flex items-center space-x-2 rounded-lg border bg-card p-3"
+                  >
+                    <Checkbox
+                      id={`bulk-avail-${district._id}`}
+                      checked={!isUnavailable}
+                      onCheckedChange={(checked) => {
+                        const next = new Set(unavailableSet)
+                        if (checked) {
+                          next.delete(district._id)
+                        } else {
+                          next.add(district._id)
+                        }
+                        setUnavailableSet(next)
+                      }}
+                    />
+                    <Label
+                      htmlFor={`bulk-avail-${district._id}`}
+                      className="cursor-pointer text-sm leading-none"
+                    >
+                      {district.name}
+                    </Label>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          <Button className="w-full" onClick={handleApply} disabled={isPending}>
+            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Apply to {selectedIds.length} product
+            {selectedIds.length > 1 ? "s" : ""}
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

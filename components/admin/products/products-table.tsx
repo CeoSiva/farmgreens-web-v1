@@ -28,6 +28,7 @@ import {
 import {
   EditProductButton,
   DeleteProductButton,
+  BulkAvailabilityButton,
 } from "@/components/product-actions"
 import { InlineImageUpload } from "@/components/inline-image-upload"
 import {
@@ -137,6 +138,11 @@ export function ProductsTable({
           >
             Set Archived
           </Button>
+          <BulkAvailabilityButton
+            selectedIds={selectedIds}
+            districts={districts}
+            onDone={() => setSelectedIds([])}
+          />
           {isPending && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
         </div>
       )}

@@ -7,6 +7,7 @@ import {
   updateProduct,
   deleteProduct,
   bulkUpdateProductsStatus,
+  bulkUpdateProductAvailability,
   migrateProductAvailability,
 } from "@/lib/data/product"
 
@@ -143,5 +144,22 @@ export async function migrateProductAvailabilityAction() {
   } catch (error) {
     console.error("Migrate Product Availability Error:", error)
     return { error: "Failed to migrate product availability" }
+  }
+}
+
+export async function bulkUpdateProductAvailabilityAction(
+  ids: string[],
+  unavailableDistricts: string[]
+) {
+  try {
+    if (!ids || ids.length === 0) return { error: "No products selected" }
+    await bulkUpdateProductAvailability(ids, unavailableDistricts)
+    revalidatePath("/fmg-admin/products")
+    revalidatePath("/")
+    revalidatePath("/shop")
+    return { success: true }
+  } catch (error) {
+    console.error("Bulk Update Product Availability Error:", error)
+    return { error: "Failed to update product availability" }
   }
 }
