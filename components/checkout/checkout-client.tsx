@@ -10,7 +10,10 @@ import { Check, ChevronsUpDown, Plus } from "lucide-react"
 import type { Cart } from "@/lib/cart"
 import { CheckoutSchema, type CheckoutFormValues } from "@/lib/schemas/checkout"
 import { findCustomerByMobileAction } from "@/server/actions/customer"
-import { listAreasByDistrictAction, listApartmentsByDistrictAction } from "@/server/actions/location"
+import {
+  listAreasByDistrictAction,
+  listApartmentsByDistrictAction,
+} from "@/server/actions/location"
 import { createAreaAction } from "@/server/actions/location-admin"
 import { placeOrderAction } from "@/server/actions/order"
 
@@ -82,13 +85,15 @@ export function CheckoutClient({
     startTransition(async () => {
       const [resAreas, resApts] = await Promise.all([
         listAreasByDistrictAction(districtId),
-        listApartmentsByDistrictAction(districtId)
+        listApartmentsByDistrictAction(districtId),
       ])
       setAreas((resAreas as any).areas)
       setApartments((resApts as any).apartments)
-      
+
       const currentAreaId = getValues("areaId")
-      const stillValid = (resAreas as any).areas.some((a: any) => a._id === currentAreaId)
+      const stillValid = (resAreas as any).areas.some(
+        (a: any) => a._id === currentAreaId
+      )
       if (!stillValid) {
         setValue("areaId", "")
       }
@@ -286,7 +291,7 @@ export function CheckoutClient({
                           setValue("door", a.door)
                           setValue("street", a.street)
                           setValue("districtId", String(a.districtId))
-                          setValue("areaId", String(a.areaId))
+                          setValue("areaId", a.areaId ? String(a.areaId) : "")
                           toast.success("Filled from saved address")
                         }}
                       >
@@ -314,110 +319,9 @@ export function CheckoutClient({
             <div className="grid gap-3">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <label className="text-sm font-medium">District</label>
-                  <Select
-                    onValueChange={(val) => setValue("districtId", val)}
-                    value={watch("districtId")}
-                    disabled={isPending}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select district" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {districts.map((d) => (
-                        <SelectItem key={d._id} value={d._id}>
-                          {d.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.districtId && (
-                    <div className="text-xs text-destructive">
-                      {errors.districtId.message}
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">Area</label>
-                  <Popover open={areaOpen} onOpenChange={setAreaOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={areaOpen}
-                        className="w-full justify-between font-normal"
-                        disabled={isPending || !districtId}
-                      >
-                        {watch("areaId")
-                          ? areas.find((a: any) => a._id === watch("areaId"))
-                              ?.name
-                          : "Select area"}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="w-[var(--radix-popover-trigger-width)] p-0"
-                      align="start"
-                    >
-                      <div className="p-2">
-                        <Input
-                          placeholder="Search areas..."
-                          value={areaSearch}
-                          onChange={(e) => setAreaSearch(e.target.value)}
-                          className="h-8 text-sm"
-                          autoFocus
-                        />
-                      </div>
-                      <div className="max-h-[200px] overflow-y-auto px-1 pb-1">
-                        {filteredAreas.length > 0 ? (
-                          filteredAreas.map((a: any) => (
-                            <button
-                              key={a._id}
-                              type="button"
-                              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-                              onClick={() => {
-                                setValue("areaId", a._id)
-                                setAreaSearch("")
-                                setAreaOpen(false)
-                              }}
-                            >
-                              <Check
-                                className={`h-4 w-4 ${watch("areaId") === a._id ? "opacity-100" : "opacity-0"}`}
-                              />
-                              {a.name}
-                            </button>
-                          ))
-                        ) : (
-                          <div className="px-2 py-2 text-center text-xs text-muted-foreground">
-                            No areas found.
-                          </div>
-                        )}
-                        {areaSearch.trim() && !exactMatch && (
-                          <button
-                            type="button"
-                            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-primary outline-none hover:bg-accent hover:text-accent-foreground"
-                            onClick={handleCreateArea}
-                            disabled={isPending}
-                          >
-                            <Plus className="h-4 w-4" />
-                            Add &quot;{areaSearch.trim()}&quot;
-                          </button>
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                  {errors.areaId && (
-                    <div className="text-xs text-destructive">
-                      {errors.areaId.message}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">Flat no, Block / Tower</label>
+                  <label className="text-sm font-medium">
+                    Flat no, Block / Tower
+                  </label>
                   <Input
                     {...register("door")}
                     placeholder="12A, Ground floor"
@@ -505,6 +409,113 @@ export function CheckoutClient({
                   {errors.street && (
                     <div className="text-xs text-destructive">
                       {errors.street.message}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">District</label>
+                  <Select
+                    onValueChange={(val) => setValue("districtId", val)}
+                    value={watch("districtId")}
+                    disabled={isPending}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select district" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {districts.map((d) => (
+                        <SelectItem key={d._id} value={d._id}>
+                          {d.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.districtId && (
+                    <div className="text-xs text-destructive">
+                      {errors.districtId.message}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">
+                    Area{isChennai ? " (optional)" : ""}
+                  </label>
+                  <Popover open={areaOpen} onOpenChange={setAreaOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={areaOpen}
+                        className="w-full justify-between font-normal"
+                        disabled={isPending || !districtId}
+                      >
+                        {watch("areaId")
+                          ? areas.find((a: any) => a._id === watch("areaId"))
+                              ?.name
+                          : isChennai
+                            ? "Select area (optional)"
+                            : "Select area"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[var(--radix-popover-trigger-width)] p-0"
+                      align="start"
+                    >
+                      <div className="p-2">
+                        <Input
+                          placeholder="Search areas..."
+                          value={areaSearch}
+                          onChange={(e) => setAreaSearch(e.target.value)}
+                          className="h-8 text-sm"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="max-h-[200px] overflow-y-auto px-1 pb-1">
+                        {filteredAreas.length > 0 ? (
+                          filteredAreas.map((a: any) => (
+                            <button
+                              key={a._id}
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                              onClick={() => {
+                                setValue("areaId", a._id)
+                                setAreaSearch("")
+                                setAreaOpen(false)
+                              }}
+                            >
+                              <Check
+                                className={`h-4 w-4 ${watch("areaId") === a._id ? "opacity-100" : "opacity-0"}`}
+                              />
+                              {a.name}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-2 py-2 text-center text-xs text-muted-foreground">
+                            No areas found.
+                          </div>
+                        )}
+                        {areaSearch.trim() && !exactMatch && (
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-primary outline-none hover:bg-accent hover:text-accent-foreground"
+                            onClick={handleCreateArea}
+                            disabled={isPending}
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add &quot;{areaSearch.trim()}&quot;
+                          </button>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  {errors.areaId && !isChennai && (
+                    <div className="text-xs text-destructive">
+                      {errors.areaId.message}
                     </div>
                   )}
                 </div>

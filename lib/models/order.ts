@@ -31,7 +31,7 @@ export interface IOrder extends Document {
     districtId?: Types.ObjectId
     areaId?: Types.ObjectId
     districtName: string
-    areaName: string
+    areaName?: string
   }
   items: IOrderItem[]
   subtotal: number
@@ -73,7 +73,7 @@ const orderSchema: Schema<IOrder> = new Schema(
       districtId: { type: Schema.Types.ObjectId, ref: "District" },
       areaId: { type: Schema.Types.ObjectId, ref: "Area" },
       districtName: { type: String, required: true, trim: true },
-      areaName: { type: String, required: true, trim: true },
+      areaName: { type: String, trim: true },
     },
     items: { type: [orderItemSchema], required: true },
     subtotal: { type: Number, required: true, min: 0 },

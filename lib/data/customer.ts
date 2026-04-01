@@ -17,7 +17,7 @@ export async function upsertCustomerByMobile(data: {
     door: string
     street: string
     districtId: string
-    areaId: string
+    areaId?: string
     isDefault?: boolean
   }
 }): Promise<ICustomer> {
@@ -32,36 +32,36 @@ export async function upsertCustomerByMobile(data: {
   }
 
   if (data.address) {
-    const addrMatch = {
+    const addrMatch: any = {
       door: data.address.door,
       street: data.address.street,
       districtId: data.address.districtId,
-      areaId: data.address.areaId,
+    }
+    if (data.address.areaId) {
+      addrMatch.areaId = data.address.areaId
     }
 
     // Check if customer already has a matching address
     const existing = await CustomerModel.findOne({
       mobile: data.mobile,
       addresses: {
-        $elemMatch: {
-          door: addrMatch.door,
-          street: addrMatch.street,
-          districtId: addrMatch.districtId,
-          areaId: addrMatch.areaId,
-        },
+        $elemMatch: addrMatch,
       },
     })
 
     if (!existing) {
+      const newAddr: any = {
+        label: data.address.label,
+        door: data.address.door,
+        street: data.address.street,
+        districtId: data.address.districtId,
+        isDefault: data.address.isDefault ?? true,
+      }
+      if (data.address.areaId) {
+        newAddr.areaId = data.address.areaId
+      }
       update.$push = {
-        addresses: {
-          label: data.address.label,
-          door: data.address.door,
-          street: data.address.street,
-          districtId: data.address.districtId,
-          areaId: data.address.areaId,
-          isDefault: data.address.isDefault ?? true,
-        },
+        addresses: newAddr,
       }
     }
   }

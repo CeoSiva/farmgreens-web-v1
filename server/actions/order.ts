@@ -37,10 +37,11 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
     if (cart.items.length === 0) return { error: "Cart is empty" }
 
     const district = await getDistrictById(parsed.data.districtId)
-    const area = await getAreaById(parsed.data.areaId)
+    const area = parsed.data.areaId
+      ? await getAreaById(parsed.data.areaId)
+      : null
 
     if (!district) return { error: "Invalid district" }
-    if (!area) return { error: "Invalid area" }
 
     const ids = cart.items.map((i) => i.productId)
     const products = await getProductsByIds(ids, (district as any).name)
@@ -83,7 +84,7 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
           door: parsed.data.door,
           street: parsed.data.street,
           districtId: parsed.data.districtId,
-          areaId: parsed.data.areaId,
+          areaId: parsed.data.areaId || undefined,
           isDefault: true,
         },
       })
@@ -106,9 +107,9 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
         door: parsed.data.door,
         street: parsed.data.street,
         districtId: parsed.data.districtId as any,
-        areaId: parsed.data.areaId as any,
+        areaId: area ? (area as any)._id : undefined,
         districtName: (district as any).name,
-        areaName: (area as any).name,
+        areaName: area ? (area as any).name : undefined,
       },
       items,
       subtotal,
