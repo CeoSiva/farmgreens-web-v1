@@ -332,103 +332,6 @@ export function CheckoutClient({
             <div className="grid gap-3">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <label className="text-sm font-medium">
-                    Flat no, Block / Tower
-                  </label>
-                  <Input
-                    {...register("door")}
-                    placeholder="12A, Ground floor"
-                    disabled={isPending}
-                  />
-                  {errors.door && (
-                    <div className="text-xs text-destructive">
-                      {errors.door.message}
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">
-                    {isChennai ? "Apartment" : "Street"}
-                  </label>
-                  {isChennai ? (
-                    <Popover
-                      open={apartmentOpen}
-                      onOpenChange={setApartmentOpen}
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={apartmentOpen}
-                          className="w-full justify-between font-normal"
-                          disabled={isPending || !districtId}
-                        >
-                          {watch("street")
-                            ? apartments.find(
-                                (a: any) => a.name === watch("street")
-                              )?.name || watch("street")
-                            : "Select apartment"}
-                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        className="w-[var(--radix-popover-trigger-width)] p-0"
-                        align="start"
-                      >
-                        <div className="p-2">
-                          <Input
-                            placeholder="Search apartments..."
-                            value={apartmentSearch}
-                            onChange={(e) => setApartmentSearch(e.target.value)}
-                            className="h-8 text-sm"
-                            autoFocus
-                          />
-                        </div>
-                        <div className="max-h-[200px] overflow-y-auto px-1 pb-1">
-                          {filteredApartments.length > 0 ? (
-                            filteredApartments.map((a: any) => (
-                              <button
-                                key={a._id}
-                                type="button"
-                                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-                                onClick={() => {
-                                  setValue("street", a.name)
-                                  setApartmentSearch("")
-                                  setApartmentOpen(false)
-                                }}
-                              >
-                                <Check
-                                  className={`h-4 w-4 ${watch("street") === a.name ? "opacity-100" : "opacity-0"}`}
-                                />
-                                {a.name}
-                              </button>
-                            ))
-                          ) : (
-                            <div className="px-2 py-2 text-center text-xs text-muted-foreground">
-                              No apartments found.
-                            </div>
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  ) : (
-                    <Input
-                      {...register("street")}
-                      placeholder="Main road, Gandhi nagar"
-                      disabled={isPending}
-                    />
-                  )}
-                  {errors.street && (
-                    <div className="text-xs text-destructive">
-                      {errors.street.message}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="grid gap-2">
                   <label className="text-sm font-medium">District</label>
                   <Select
                     onValueChange={(val) => setValue("districtId", val)}
@@ -529,6 +432,103 @@ export function CheckoutClient({
                   {errors.areaId && !isChennai && (
                     <div className="text-xs text-destructive">
                       {errors.areaId.message}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">
+                    {isChennai ? "Apartment" : "Street"}
+                  </label>
+                  {isChennai ? (
+                    <Popover
+                      open={apartmentOpen}
+                      onOpenChange={setApartmentOpen}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={apartmentOpen}
+                          className="w-full justify-between font-normal"
+                          disabled={isPending || !districtId}
+                        >
+                          {watch("street")
+                            ? apartments.find(
+                                (a: any) => a.name === watch("street")
+                              )?.name || watch("street")
+                            : "Select apartment"}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="w-[var(--radix-popover-trigger-width)] p-0"
+                        align="start"
+                      >
+                        <div className="p-2">
+                          <Input
+                            placeholder="Search apartments..."
+                            value={apartmentSearch}
+                            onChange={(e) => setApartmentSearch(e.target.value)}
+                            className="h-8 text-sm"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="max-h-[200px] overflow-y-auto px-1 pb-1">
+                          {filteredApartments.length > 0 ? (
+                            filteredApartments.map((a: any) => (
+                              <button
+                                key={a._id}
+                                type="button"
+                                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                                onClick={() => {
+                                  setValue("street", a.name)
+                                  setApartmentSearch("")
+                                  setApartmentOpen(false)
+                                }}
+                              >
+                                <Check
+                                  className={`h-4 w-4 ${watch("street") === a.name ? "opacity-100" : "opacity-0"}`}
+                                />
+                                {a.name}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-2 py-2 text-center text-xs text-muted-foreground">
+                              No apartments found.
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  ) : (
+                    <Input
+                      {...register("street")}
+                      placeholder="Main road, Gandhi nagar"
+                      disabled={isPending}
+                    />
+                  )}
+                  {errors.street && (
+                    <div className="text-xs text-destructive">
+                      {errors.street.message}
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">
+                    Flat no, Block / Tower
+                  </label>
+                  <Input
+                    {...register("door")}
+                    placeholder="12A, Ground floor"
+                    disabled={isPending}
+                  />
+                  {errors.door && (
+                    <div className="text-xs text-destructive">
+                      {errors.door.message}
                     </div>
                   )}
                 </div>
