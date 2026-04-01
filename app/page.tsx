@@ -18,8 +18,8 @@ export default async function Page({
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const sp = await searchParams;
-  const districtSlug = typeof sp.district === 'string' ? sp.district : undefined;
+  const sp = await searchParams
+  const districtSlug = typeof sp.district === "string" ? sp.district : undefined
 
   // Fetch real products from the database with location-based pricing applied
   const rawProducts = await getProducts(districtSlug)
@@ -43,23 +43,36 @@ export default async function Page({
 
   const categoriesToRender = [
     { key: "greens", title: "Leafy Greens", link: "/shop?category=greens" },
-    { key: "vegetable", title: "Fresh Vegetables", link: "/shop?category=vegetable" },
-    { key: "batter", title: "Idli & Dosa Batter", link: "/shop?category=batter" },
-  ];
+    {
+      key: "vegetable",
+      title: "Fresh Vegetables",
+      link: "/shop?category=vegetable",
+    },
+    {
+      key: "batter",
+      title: "Idli & Dosa Batter",
+      link: "/shop?category=batter",
+    },
+  ]
 
   return (
-    <div className="flex min-h-screen flex-col w-full">
+    <div className="flex min-h-screen w-full flex-col">
       {/* 1. Header/Navigation */}
       <Navbar />
 
-      <main className="flex-1 w-full">
+      <main className="w-full flex-1">
         {/* 2. Hero Section */}
         <Hero />
 
         {/* 4. Product Grids by Category */}
         <div className="flex flex-col gap-2 md:gap-4">
           {categoriesToRender.map((cat) => {
-            const catProducts = allProducts.filter(p => p.category === cat.key && p.showOnHomePage !== false).slice(0, 10);
+            const catProducts = allProducts
+              .filter(
+                (p) => p.category === cat.key && p.showOnHomePage !== false
+              )
+              .sort((a, b) => a.price - b.price)
+              .slice(0, 10)
             return catProducts.length > 0 ? (
               <ProductGrid
                 key={cat.key}
@@ -67,7 +80,7 @@ export default async function Page({
                 products={catProducts}
                 seeAllLink={cat.link}
               />
-            ) : null;
+            ) : null
           })}
         </div>
 
