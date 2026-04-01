@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useTransition } from "react"
 import { toast } from "sonner"
 import { useLocationRouter } from "@/hooks/use-location-router"
+import { LocationAwareLink as Link } from "@/components/location-aware-link"
 import { addToCartAction, clearCartAction } from "@/server/actions/cart"
 import { useCart } from "@/components/cart/cart-context"
 import { cn } from "@/lib/utils"
@@ -52,7 +53,9 @@ export function ProductCard({ product }: ProductCardProps) {
     ? "1 piece" 
     : formatQuantity(defaultQty, product.orderQuantity.unit)
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     startTransition(async () => {
       try {
         const res = await addToCartAction(product._id, defaultQty)
@@ -79,7 +82,9 @@ export function ProductCard({ product }: ProductCardProps) {
     })
   }
 
-  const handleBuyNow = () => {
+  const handleBuyNow = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     startTransition(async () => {
       try {
         await clearCartAction()
@@ -108,7 +113,8 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <>
       {/* MOBILE / ZEPTO STYLE CARD (Visible only on mobile) */}
-      <Card className="md:hidden group flex flex-col relative overflow-hidden rounded-xl border border-border/50 bg-background shadow-xs transition-all duration-200 hover:shadow-md p-0 gap-0">
+      <Link href={`/product/${product._id}`} className="md:hidden block">
+        <Card className="group flex flex-col relative overflow-hidden rounded-xl border border-border/50 bg-background shadow-xs transition-all duration-200 hover:shadow-md p-0 gap-0">
         <div className="absolute top-0 right-0 z-10 rounded-bl-lg bg-orange-500/90 backdrop-blur-sm px-1.5 py-0.5 text-[8px] font-bold text-white shadow-sm">
           FRESH
         </div>
@@ -159,10 +165,12 @@ export function ProductCard({ product }: ProductCardProps) {
             </Button>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </Link>
 
       {/* DESKTOP / ORIGINAL STYLE CARD (Visible only on tablet and desktop) */}
-      <Card className="hidden md:flex group flex-col relative overflow-hidden rounded-2xl border-border/50 shadow-sm transition-all duration-200 hover:shadow-md p-0 gap-0">
+      <Link href={`/product/${product._id}`} className="hidden md:block">
+        <Card className="flex group flex-col relative overflow-hidden rounded-2xl border-border/50 shadow-sm transition-all duration-200 hover:shadow-md p-0 gap-0">
         <div className="relative md:h-56 lg:h-64 w-full overflow-hidden bg-muted/20">
           <Image
             src={imageUrl}
@@ -220,7 +228,8 @@ export function ProductCard({ product }: ProductCardProps) {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </Card>
+      </Link>
     </>
   )
 }

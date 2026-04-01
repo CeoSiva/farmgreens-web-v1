@@ -351,7 +351,7 @@ export function ProductForm({
           {!availableInAll && (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
               {districts.map((district: any) => {
-                const isAvailable = !unavailableSet.has(district._id)
+                const isUnavailable = unavailableSet.has(district._id)
                 return (
                   <div
                     key={district._id}
@@ -359,7 +359,7 @@ export function ProductForm({
                   >
                     <Checkbox
                       id={`avail-${district._id}`}
-                      checked={isAvailable}
+                      checked={!isUnavailable}
                       onCheckedChange={(checked) => {
                         const next = new Set(unavailableSet)
                         if (checked) {

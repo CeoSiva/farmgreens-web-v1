@@ -2,6 +2,21 @@ import { connectDB } from "../db"
 import ProductModel, { IProduct } from "../models/product"
 import DistrictModel from "../models/district"
 
+// Migration: Ensure all existing products have availability fields set
+export async function migrateProductAvailability(): Promise<number> {
+  await connectDB()
+  const result = await ProductModel.updateMany(
+    { availableInAllDistricts: { $exists: false } },
+    {
+      $set: {
+        availableInAllDistricts: true,
+        unavailableDistricts: [],
+      },
+    }
+  )
+  return result.modifiedCount
+}
+
 // Helper function to filter out products not available in the given district
 async function applyDistrictAvailability(
   products: IProduct[],
@@ -16,10 +31,7 @@ async function applyDistrictAvailability(
 
   const districtId = district._id.toString()
   return products.filter((p) => {
-    if (p.availableInAllDistricts === false) return false
-    if (p.unavailableDistricts?.some((id) => id.toString() === districtId))
-      return false
-    return true
+    return !p.unavailableDistricts?.some((id) => id.toString() === districtId)
   })
 }
 
