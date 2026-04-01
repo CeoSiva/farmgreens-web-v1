@@ -1,6 +1,9 @@
 import { getProducts } from "@/lib/data/product"
 import { listDistricts } from "@/lib/data/location"
-import { AddProductButton, BulkUploadProductsButton } from "@/components/product-actions"
+import {
+  AddProductButton,
+  BulkUploadProductsButton,
+} from "@/components/product-actions"
 import { ProductsTable } from "@/components/admin/products/products-table"
 
 export const dynamic = "force-dynamic"
@@ -8,7 +11,7 @@ export const dynamic = "force-dynamic"
 export default async function ProductsPage() {
   const [rawProducts, dbDistricts] = await Promise.all([
     getProducts(undefined, true),
-    listDistricts()
+    listDistricts(),
   ])
 
   const districts = JSON.parse(JSON.stringify(dbDistricts))
@@ -21,12 +24,16 @@ export default async function ProductsPage() {
     price: p.price,
     status: p.status,
     orderQuantity: p.orderQuantity,
-    customPricing: p.customPricing?.map((cp: any) => ({
-      districtId: cp.districtId.toString(),
-      price: cp.price,
-    })) || [],
+    customPricing:
+      p.customPricing?.map((cp: any) => ({
+        districtId: cp.districtId.toString(),
+        price: cp.price,
+      })) || [],
     imageUrl: p.imageUrl,
     showOnHomePage: p.showOnHomePage,
+    availableInAllDistricts: p.availableInAllDistricts ?? true,
+    unavailableDistricts:
+      p.unavailableDistricts?.map((id: any) => id.toString()) || [],
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   }))

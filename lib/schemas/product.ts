@@ -1,9 +1,9 @@
-import { z } from "zod";
+import { z } from "zod"
 
 export const ProductOrderQuantitySchema = z.object({
   type: z.enum(["weight", "count"]),
   unit: z.string().min(1, "Unit is required"),
-});
+})
 
 export const ProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
@@ -22,6 +22,8 @@ export const ProductSchema = z.object({
     .optional(),
   imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   showOnHomePage: z.boolean().default(true),
-});
+  availableInAllDistricts: z.boolean().default(true),
+  unavailableDistricts: z.array(z.string()).optional(),
+})
 
-export type ProductFormValues = z.infer<typeof ProductSchema>;
+export type ProductFormValues = z.infer<typeof ProductSchema>

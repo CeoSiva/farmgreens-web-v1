@@ -1,20 +1,22 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Schema, Document, Model } from "mongoose"
 
 export interface IProduct extends Document {
-  name: string;
-  category: 'vegetable' | 'batter' | 'greens';
-  description?: string;
-  price: number;
-  status: 'active' | 'draft' | 'archived';
+  name: string
+  category: "vegetable" | "batter" | "greens"
+  description?: string
+  price: number
+  status: "active" | "draft" | "archived"
   orderQuantity: {
-    type: 'weight' | 'count';
-    unit: string;
-  };
-  customPricing?: { districtId: mongoose.Types.ObjectId; price: number }[];
-  imageUrl?: string;
-  showOnHomePage: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+    type: "weight" | "count"
+    unit: string
+  }
+  customPricing?: { districtId: mongoose.Types.ObjectId; price: number }[]
+  imageUrl?: string
+  showOnHomePage: boolean
+  availableInAllDistricts: boolean
+  unavailableDistricts: mongoose.Types.ObjectId[]
+  createdAt: Date
+  updatedAt: Date
 }
 
 const productSchema: Schema<IProduct> = new Schema(
@@ -26,7 +28,7 @@ const productSchema: Schema<IProduct> = new Schema(
     },
     category: {
       type: String,
-      enum: ['vegetable', 'batter', 'greens'],
+      enum: ["vegetable", "batter", "greens"],
       required: true,
     },
     description: {
@@ -40,13 +42,13 @@ const productSchema: Schema<IProduct> = new Schema(
     },
     status: {
       type: String,
-      enum: ['active', 'draft', 'archived'],
-      default: 'active',
+      enum: ["active", "draft", "archived"],
+      default: "active",
     },
     orderQuantity: {
       type: {
         type: String,
-        enum: ['weight', 'count'],
+        enum: ["weight", "count"],
         required: true,
       },
       unit: {
@@ -57,7 +59,11 @@ const productSchema: Schema<IProduct> = new Schema(
     },
     customPricing: [
       {
-        districtId: { type: Schema.Types.ObjectId, ref: 'District', required: true },
+        districtId: {
+          type: Schema.Types.ObjectId,
+          ref: "District",
+          required: true,
+        },
         price: { type: Number, required: true, min: 0 },
       },
     ],
@@ -68,16 +74,29 @@ const productSchema: Schema<IProduct> = new Schema(
       type: Boolean,
       default: true,
     },
+    availableInAllDistricts: {
+      type: Boolean,
+      default: true,
+    },
+    unavailableDistricts: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "District",
+      },
+    ],
   },
   {
     timestamps: true,
   }
-);
+)
 
 // Prevent mongoose from compiling the model multiple times during Next.js hot reloads but force custom pricing changes to compile
 if (mongoose.models.Product) {
-  delete mongoose.models.Product;
+  delete mongoose.models.Product
 }
-const ProductModel: Model<IProduct> = mongoose.model<IProduct>('Product', productSchema);
+const ProductModel: Model<IProduct> = mongoose.model<IProduct>(
+  "Product",
+  productSchema
+)
 
-export default ProductModel;
+export default ProductModel
