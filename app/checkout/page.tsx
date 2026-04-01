@@ -19,7 +19,9 @@ export default async function CheckoutPage({
   const { cart } = await getCartAction()
   const settings = await getSettings()
   const baseDeliveryFee = Number((settings as any).deliveryFee ?? 0)
-  const freeDeliveryThreshold = Number((settings as any).freeDeliveryThreshold ?? 500)
+  const freeDeliveryThreshold = Number(
+    (settings as any).freeDeliveryThreshold ?? 500
+  )
   const { districts } = await listDistrictsAction()
 
   // Compute subtotal on the server for checkout display
@@ -29,26 +31,28 @@ export default async function CheckoutPage({
   const subtotal = cart.items.reduce((acc: number, it: any) => {
     const p = byId.get(it.productId)
     if (!p) return acc
-    return acc + (p.price * it.qty)
+    return acc + p.price * it.qty
   }, 0)
 
-  const effectiveDeliveryFee = subtotal >= freeDeliveryThreshold ? 0 : baseDeliveryFee
+  const effectiveDeliveryFee =
+    subtotal >= freeDeliveryThreshold ? 0 : baseDeliveryFee
 
   return (
-    <div className="flex min-h-screen flex-col w-full">
+    <div className="flex min-h-screen w-full flex-col">
       <Navbar />
-      <main className="flex-1 w-full px-4 py-10 md:px-8 lg:px-16 xl:px-24">
+      <main className="w-full flex-1 px-4 py-10 md:px-8 lg:px-16 xl:px-24">
         <div className="mx-auto max-w-4xl">
           <h1 className="text-2xl font-semibold tracking-tight">Checkout</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="mt-1 text-sm text-muted-foreground">
             Enter delivery details and place your order.
           </p>
 
           <div className="mt-6">
-            <CheckoutClient 
-              cart={cart} 
-              districts={districts as any} 
-              deliveryFee={effectiveDeliveryFee} 
+            <CheckoutClient
+              cart={cart}
+              districts={districts as any}
+              deliveryFee={effectiveDeliveryFee}
+              districtSlug={districtSlug}
             />
           </div>
         </div>

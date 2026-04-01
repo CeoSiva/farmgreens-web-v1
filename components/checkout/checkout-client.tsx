@@ -39,11 +39,13 @@ export function CheckoutClient({
   cart,
   districts,
   deliveryFee,
+  districtSlug,
 }: {
   cart: Cart
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   districts: any[]
   deliveryFee: number
+  districtSlug?: string
 }) {
   const [isPending, startTransition] = useTransition()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -99,6 +101,17 @@ export function CheckoutClient({
       }
     })
   }, [districtId, setValue, getValues])
+
+  // Auto-set district from URL slug (e.g., /chennai/checkout)
+  useEffect(() => {
+    if (!districtSlug || districtId) return
+    const match = districts.find(
+      (d: any) => d.name.toLowerCase() === districtSlug.toLowerCase()
+    )
+    if (match) {
+      setValue("districtId", match._id)
+    }
+  }, [districtSlug, districts, setValue, districtId])
 
   useEffect(() => {
     if (!mobile || mobile.length < 10) {
