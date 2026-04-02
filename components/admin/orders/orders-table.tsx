@@ -346,34 +346,58 @@ export function OrdersTable({ data }: { data: any[] }) {
   }
 
   const handleExport = (includeMobile: boolean) => {
-    const exportData = table.getFilteredRowModel().rows.flatMap((r) => {
-      const o = r.original
-      return o.items.map((it: any) => {
-        const isWeight = it.unit?.toLowerCase() === "kg"
-        const exportQty = isWeight ? it.qty * 1000 : it.qty
-        const exportUnit = isWeight ? "g" : it.unit
+    const rows = table.getFilteredRowModel().rows
 
-        const rowData: Record<string, string> = {
-          Date: new Date(o.createdAt).toLocaleString(),
-          "Order Number": o.orderNumber,
-          "Customer Name": o.customer.name,
-        }
-        if (includeMobile) {
-          rowData["Mobile"] = o.customer.mobile
-        }
-        Object.assign(rowData, {
-          Address: `${o.shippingAddress.door}, ${o.shippingAddress.street}`,
-          Area: o.shippingAddress.areaName,
-          District: o.shippingAddress.districtName,
-          Product: it.name,
-          Qty: exportQty,
-          Unit: exportUnit,
-          Price: (it.price * it.qty).toFixed(2),
-          Status: o.status,
-        })
-        return rowData
+    // Find the maximum number of items across all orders (sets column count)
+    const maxItems = rows.reduce(
+      (max, r) => Math.max(max, r.original.items?.length ?? 0),
+      0
+    )
+
+    const exportData = rows.map((r) => {
+      const o = r.original
+      const items: any[] = o.items || []
+
+      // Fixed leading columns
+      const rowData: Record<string, string | number> = {
+        Date: new Date(o.createdAt).toLocaleString(),
+        "Order Number": o.orderNumber,
+        "Customer Name": o.customer.name,
+      }
+      if (includeMobile) {
+        rowData["Mobile"] = o.customer.mobile
+      }
+      Object.assign(rowData, {
+        Address: `${o.shippingAddress.door}, ${o.shippingAddress.street}`,
+        Area: o.shippingAddress.areaName ?? "",
+        District: o.shippingAddress.districtName ?? "",
       })
+
+      // Dynamic product columns — one group per slot, using numbered keys to avoid overwrites
+      for (let i = 0; i < maxItems; i++) {
+        const it = items[i]
+        const n = i + 1
+        if (it) {
+          const isWeight = it.unit?.toLowerCase() === "kg"
+          const unitLabel = isWeight ? "g" : it.unit
+          const qtyVal = isWeight ? it.qty * 1000 : it.qty
+
+          rowData[`Product ${n}`] = it.name
+          rowData[`Qty ${n}`] = `${qtyVal}${unitLabel}`
+          rowData[`Price ${n}`] = (it.price * it.qty).toFixed(2)
+        } else {
+          rowData[`Product ${n}`] = ""
+          rowData[`Qty ${n}`] = ""
+          rowData[`Price ${n}`] = ""
+        }
+      }
+
+      // Fixed trailing column
+      rowData["Status"] = o.status
+
+      return rowData
     })
+
     downloadCSV(
       exportData,
       `orders-export-${new Date().toISOString().split("T")[0]}.csv`

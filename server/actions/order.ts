@@ -15,6 +15,7 @@ import { getAreaById, getDistrictById } from "@/lib/data/location"
 import { upsertCustomerByMobile } from "@/lib/data/customer"
 import { createOrder } from "@/lib/data/order"
 import { getSettings } from "@/lib/data/setting"
+import { sendOrderConfirmationWhatsApp } from "@/lib/gupshup"
 
 function generateOrderNumber() {
   const d = new Date()
@@ -116,6 +117,27 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
       deliveryFee,
       total,
     } as any)
+
+    // Send WhatsApp order confirmation (non-blocking — failure won't break the order)
+    try {
+      await sendOrderConfirmationWhatsApp({
+        customerName: parsed.data.name,
+        customerPhone: `${parsed.data.countryCode.replace("+", "")}${parsed.data.mobile}`,
+        orderId: orderNumber,
+        items: items.map((it: any) => ({
+          name: it.name,
+          qty: it.qty,
+          price: it.price,
+          unit: it.unit,
+        })),
+        subtotal,
+        shipping: deliveryFee,
+        totalPaid: total,
+      })
+      console.log(`[Gupshup] Order confirmation WhatsApp sent for order ${orderNumber}`)
+    } catch (err) {
+      console.error("[Gupshup] WhatsApp notification failed:", err)
+    }
 
     cookieStore.set(CART_COOKIE_NAME, serializeCartCookie(emptyCart()), {
       httpOnly: true,
