@@ -35,6 +35,30 @@ async function applyDistrictAvailability(
   })
 }
 
+// Flag products with isAvailable based on district (keeps all products, does not filter)
+async function flagDistrictAvailability(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  products: any[],
+  districtSlug?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[]> {
+  if (!districtSlug || products.length === 0)
+    return products.map((p) => ({ ...p, isAvailable: true }))
+
+  const district = await DistrictModel.findOne({
+    name: { $regex: new RegExp(`^${districtSlug}$`, "i") },
+  }).lean()
+  if (!district) return products.map((p) => ({ ...p, isAvailable: true }))
+
+  const districtId = district._id.toString()
+  return products.map((p) => ({
+    ...p,
+    isAvailable: !p.unavailableDistricts?.some(
+      (id: any) => id.toString() === districtId
+    ),
+  }))
+}
+
 // Helper function to resolve the correct price for a product based on the district
 async function applyDistrictPricing(
   products: IProduct[],
@@ -62,16 +86,17 @@ async function applyDistrictPricing(
 export async function getProducts(
   districtSlug?: string,
   admin = false
-): Promise<IProduct[]> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[]> {
   await connectDB()
   const filter = admin ? {} : { status: "active" }
   const products = await ProductModel.find(filter)
     .sort({ createdAt: -1 })
     .lean()
-  const available = admin
-    ? products
-    : await applyDistrictAvailability(products as IProduct[], districtSlug)
-  return applyDistrictPricing(available as IProduct[], districtSlug)
+  const flagged = admin
+    ? products.map((p) => ({ ...p, isAvailable: true }))
+    : await flagDistrictAvailability(products as IProduct[], districtSlug)
+  return applyDistrictPricing(flagged as IProduct[], districtSlug)
 }
 
 export async function getProductsByIds(
@@ -91,16 +116,19 @@ export async function getProductsByIds(
 export async function getProductById(
   id: string,
   districtSlug?: string
-): Promise<IProduct | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any | null> {
   await connectDB()
   const product = await ProductModel.findById(id).lean()
   if (!product) return null
-  const available = await applyDistrictAvailability(
+  const flagged = await flagDistrictAvailability(
     [product as IProduct],
     districtSlug
   )
-  if (available.length === 0) return null
-  const resolved = await applyDistrictPricing(available, districtSlug)
+  const resolved = await applyDistrictPricing(
+    flagged as IProduct[],
+    districtSlug
+  )
   return resolved[0] || null
 }
 

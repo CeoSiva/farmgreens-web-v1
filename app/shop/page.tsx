@@ -8,7 +8,11 @@ export const dynamic = "force-dynamic"
 export default async function ShopPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ category?: string; search?: string; district?: string }>
+  searchParams?: Promise<{
+    category?: string
+    search?: string
+    district?: string
+  }>
 }) {
   const sp = (await searchParams) ?? {}
   const districtSlug = sp.district
@@ -26,6 +30,7 @@ export default async function ShopPage({
     status: p.status,
     orderQuantity: p.orderQuantity,
     imageUrl: p.imageUrl,
+    isAvailable: p.isAvailable ?? true,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   }))
@@ -34,10 +39,14 @@ export default async function ShopPage({
   const initialSearch = sp.search ?? ""
 
   return (
-    <div className="flex min-h-screen flex-col w-full">
+    <div className="flex min-h-screen w-full flex-col">
       <Navbar />
-      <main className="flex-1 w-full">
-        <ShopClient products={products} initialCategory={initialCategory} initialSearch={initialSearch} />
+      <main className="w-full flex-1">
+        <ShopClient
+          products={products}
+          initialCategory={initialCategory}
+          initialSearch={initialSearch}
+        />
       </main>
       <Footer />
     </div>

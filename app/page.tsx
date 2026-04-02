@@ -37,6 +37,7 @@ export default async function Page({
     orderQuantity: p.orderQuantity,
     imageUrl: p.imageUrl,
     showOnHomePage: p.showOnHomePage,
+    isAvailable: p.isAvailable ?? true,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
   }))
@@ -71,7 +72,11 @@ export default async function Page({
               .filter(
                 (p) => p.category === cat.key && p.showOnHomePage !== false
               )
-              .sort((a, b) => a.price - b.price)
+              .sort((a, b) => {
+                if (a.isAvailable !== b.isAvailable)
+                  return a.isAvailable ? -1 : 1
+                return a.price - b.price
+              })
               .slice(0, 10)
             return catProducts.length > 0 ? (
               <ProductGrid

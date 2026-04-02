@@ -29,6 +29,7 @@ export default async function ProductDetailPage({
     status: raw.status,
     orderQuantity: raw.orderQuantity,
     imageUrl: raw.imageUrl,
+    isAvailable: raw.isAvailable ?? true,
     createdAt: raw.createdAt?.toISOString() || new Date().toISOString(),
     updatedAt: raw.updatedAt?.toISOString() || new Date().toISOString(),
   }

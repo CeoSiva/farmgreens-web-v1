@@ -67,13 +67,16 @@ import { DateRange } from "react-day-picker"
 
 export function OrdersTable({ data }: { data: any[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
-    items: false,
-    doorStreet: false,
-    createdAt: false,
-    select: true,
-  })
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    []
+  )
+  const [columnVisibility, setColumnVisibility] =
+    React.useState<VisibilityState>({
+      items: false,
+      doorStreet: false,
+      createdAt: false,
+      select: true,
+    })
   const [rowSelection, setRowSelection] = React.useState({})
   const [globalFilter, setGlobalFilter] = React.useState("")
   const [selectedOrder, setSelectedOrder] = React.useState<any | null>(null)
@@ -98,7 +101,10 @@ export function OrdersTable({ data }: { data: any[] }) {
       id: "select",
       header: ({ table }) => (
         <Checkbox
-          checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
           className="translate-y-[2px]"
@@ -118,7 +124,9 @@ export function OrdersTable({ data }: { data: any[] }) {
     {
       accessorKey: "orderNumber",
       header: "Order #",
-      cell: ({ row }) => <div className="font-medium">{row.getValue("orderNumber")}</div>,
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("orderNumber")}</div>
+      ),
     },
     {
       accessorKey: "name",
@@ -128,7 +136,9 @@ export function OrdersTable({ data }: { data: any[] }) {
         return (
           <div className="flex flex-col">
             <span className="font-medium">{order.customer.name}</span>
-            <span className="text-xs text-muted-foreground">{order.customer.mobile}</span>
+            <span className="text-xs text-muted-foreground">
+              {order.customer.mobile}
+            </span>
           </div>
         )
       },
@@ -141,9 +151,14 @@ export function OrdersTable({ data }: { data: any[] }) {
         return (
           <div className="max-w-[150px] space-y-0.5">
             {items.map((it: any, i: number) => (
-              <div key={i} className="text-[11px] leading-tight flex justify-between gap-2">
+              <div
+                key={i}
+                className="flex justify-between gap-2 text-[11px] leading-tight"
+              >
                 <span className="truncate">{it.name}</span>
-                <span className="font-bold whitespace-nowrap">x{formatQuantity(it.qty, it.unit)}</span>
+                <span className="font-bold whitespace-nowrap">
+                  x{formatQuantity(it.qty, it.unit)}
+                </span>
               </div>
             ))}
           </div>
@@ -170,7 +185,7 @@ export function OrdersTable({ data }: { data: any[] }) {
       id: "areaName",
       header: "Area",
       cell: ({ row }) => (
-        <div className="truncate max-w-[120px] text-xs font-medium">
+        <div className="max-w-[120px] truncate text-xs font-medium">
           {row.getValue("areaName")}
         </div>
       ),
@@ -180,7 +195,7 @@ export function OrdersTable({ data }: { data: any[] }) {
       id: "districtName",
       header: "City",
       cell: ({ row }) => (
-        <div className="truncate max-w-[120px] text-xs font-medium text-muted-foreground">
+        <div className="max-w-[120px] truncate text-xs font-medium text-muted-foreground">
           {row.getValue("districtName")}
         </div>
       ),
@@ -190,7 +205,9 @@ export function OrdersTable({ data }: { data: any[] }) {
       header: () => <div className="text-right">Total</div>,
       cell: ({ row }) => {
         const amount = parseFloat(row.getValue("total"))
-        return <div className="text-right font-medium">₹{amount.toFixed(2)}</div>
+        return (
+          <div className="text-right font-medium">₹{amount.toFixed(2)}</div>
+        )
       },
     },
     {
@@ -199,10 +216,16 @@ export function OrdersTable({ data }: { data: any[] }) {
       cell: ({ row }) => {
         const status = row.getValue("status") as string
         return (
-          <Badge variant="secondary" className={cn("capitalize", 
-            status === 'dispatched' && "bg-blue-50 text-blue-700 border-blue-200",
-            status === 'delivered' && "bg-emerald-50 text-emerald-700 border-emerald-200"
-          )}>
+          <Badge
+            variant="secondary"
+            className={cn(
+              "capitalize",
+              status === "dispatched" &&
+                "border-blue-200 bg-blue-50 text-blue-700",
+              status === "delivered" &&
+                "border-emerald-200 bg-emerald-50 text-emerald-700"
+            )}
+          >
             {status}
           </Badge>
         )
@@ -213,7 +236,7 @@ export function OrdersTable({ data }: { data: any[] }) {
       header: "Date",
       cell: ({ row }) => {
         return (
-          <div className="text-xs text-muted-foreground whitespace-nowrap px-2">
+          <div className="px-2 text-xs whitespace-nowrap text-muted-foreground">
             {new Date(row.getValue("createdAt")).toLocaleDateString()}
           </div>
         )
@@ -228,7 +251,8 @@ export function OrdersTable({ data }: { data: any[] }) {
 
         const updateStatus = async (status: string) => {
           const res = await updateOrderStatusAction(order._id, status as any)
-          if ((res as any).success) toast.success(`Order ${order.orderNumber} updated to ${status}`)
+          if ((res as any).success)
+            toast.success(`Order ${order.orderNumber} updated to ${status}`)
           else toast.error("Failed to update order")
         }
 
@@ -242,10 +266,12 @@ export function OrdersTable({ data }: { data: any[] }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-[180px]">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => {
-                setSelectedOrder(order)
-                setIsDrawerOpen(true)
-              }}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedOrder(order)
+                  setIsDrawerOpen(true)
+                }}
+              >
                 <Eye className="mr-2 h-4 w-4" /> View Details
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -300,15 +326,19 @@ export function OrdersTable({ data }: { data: any[] }) {
         order.shippingAddress.areaName.toLowerCase().includes(value) ||
         order.shippingAddress.districtName.toLowerCase().includes(value)
       )
-    }
+    },
   })
 
-  const selectedIds = table.getFilteredSelectedRowModel().rows.map(r => r.original._id)
+  const selectedIds = table
+    .getFilteredSelectedRowModel()
+    .rows.map((r) => r.original._id)
 
   const handleBulkUpdate = async (status: string) => {
     const res = await bulkUpdateOrderStatusAction(selectedIds, status as any)
     if ((res as any).success) {
-      toast.success(`Successfully updated ${selectedIds.length} orders to ${status}`)
+      toast.success(
+        `Successfully updated ${selectedIds.length} orders to ${status}`
+      )
       table.resetRowSelection()
     } else {
       toast.error("Failed to update orders")
@@ -316,41 +346,51 @@ export function OrdersTable({ data }: { data: any[] }) {
   }
 
   const handleExport = (includeMobile: boolean) => {
-    const exportData = table.getFilteredRowModel().rows.map(r => {
+    const exportData = table.getFilteredRowModel().rows.flatMap((r) => {
       const o = r.original
-      const rowData: Record<string, string> = {
-        "Date": new Date(o.createdAt).toLocaleString(),
-        "Order Number": o.orderNumber,
-        "Customer Name": o.customer.name,
-      }
-      if (includeMobile) {
-        rowData["Mobile"] = o.customer.mobile
-      }
-      
-      Object.assign(rowData, {
-        "Address": `${o.shippingAddress.door}, ${o.shippingAddress.street}`,
-        "Area": o.shippingAddress.areaName,
-        "District": o.shippingAddress.districtName,
-        "Items": o.items.map((it: any) => `${it.name} (${formatQuantity(it.qty, it.unit)})`).join(", "),
-        "Total": o.total,
-        "Status": o.status,
+      return o.items.map((it: any) => {
+        const isWeight = it.unit?.toLowerCase() === "kg"
+        const exportQty = isWeight ? it.qty * 1000 : it.qty
+        const exportUnit = isWeight ? "g" : it.unit
+
+        const rowData: Record<string, string> = {
+          Date: new Date(o.createdAt).toLocaleString(),
+          "Order Number": o.orderNumber,
+          "Customer Name": o.customer.name,
+        }
+        if (includeMobile) {
+          rowData["Mobile"] = o.customer.mobile
+        }
+        Object.assign(rowData, {
+          Address: `${o.shippingAddress.door}, ${o.shippingAddress.street}`,
+          Area: o.shippingAddress.areaName,
+          District: o.shippingAddress.districtName,
+          Product: it.name,
+          Qty: exportQty,
+          Unit: exportUnit,
+          Price: (it.price * it.qty).toFixed(2),
+          Status: o.status,
+        })
+        return rowData
       })
-      return rowData
     })
-    downloadCSV(exportData, `orders-export-${new Date().toISOString().split('T')[0]}.csv`)
+    downloadCSV(
+      exportData,
+      `orders-export-${new Date().toISOString().split("T")[0]}.csv`
+    )
   }
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col sm:grid sm:grid-cols-2 lg:flex lg:flex-row gap-3 flex-1">
+        <div className="flex flex-1 flex-col gap-3 sm:grid sm:grid-cols-2 lg:flex lg:flex-row">
           <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search orders, mobile, area..."
               value={globalFilter ?? ""}
               onChange={(event) => setGlobalFilter(event.target.value)}
-              className="pl-9 h-10 lg:h-9 bg-card"
+              className="h-10 bg-card pl-9 lg:h-9"
             />
           </div>
           <DatePickerWithRange date={date} setDate={setDate} />
@@ -358,7 +398,11 @@ export function OrdersTable({ data }: { data: any[] }) {
         <div className="flex flex-wrap items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="lg" className="h-10 lg:h-9 flex-1 sm:flex-none">
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-10 flex-1 sm:flex-none lg:h-9"
+              >
                 <Download className="mr-2 h-4 w-4" /> Export
               </Button>
             </DropdownMenuTrigger>
@@ -372,10 +416,14 @@ export function OrdersTable({ data }: { data: any[] }) {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Select 
-            onValueChange={(val) => table.getColumn("status")?.setFilterValue(val === "all" ? "" : val)}
+          <Select
+            onValueChange={(val) =>
+              table
+                .getColumn("status")
+                ?.setFilterValue(val === "all" ? "" : val)
+            }
           >
-            <SelectTrigger className="w-full sm:w-[150px] h-10 lg:h-9 text-sm bg-card">
+            <SelectTrigger className="h-10 w-full bg-card text-sm sm:w-[150px] lg:h-9">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
@@ -392,27 +440,44 @@ export function OrdersTable({ data }: { data: any[] }) {
 
       {/* Bulk Actions Bar */}
       {selectedIds.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl bg-primary/5 p-4 border border-primary/10 animate-in fade-in slide-in-from-top-2">
-          <span className="text-sm font-bold text-primary whitespace-nowrap">
+        <div className="flex animate-in flex-col items-start gap-4 rounded-xl border border-primary/10 bg-primary/5 p-4 fade-in slide-in-from-top-2 sm:flex-row sm:items-center">
+          <span className="text-sm font-bold whitespace-nowrap text-primary">
             {selectedIds.length} orders selected
           </span>
-          <div className="hidden sm:block h-4 w-px bg-primary/20" />
+          <div className="hidden h-4 w-px bg-primary/20 sm:block" />
           <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mr-1">Bulk:</span>
-            <Button size="sm" variant="secondary" className="h-7 text-xs font-bold hover:bg-blue-100 hover:text-blue-700" onClick={() => handleBulkUpdate("confirmed")}>
+            <span className="mr-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+              Bulk:
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 text-xs font-bold hover:bg-blue-100 hover:text-blue-700"
+              onClick={() => handleBulkUpdate("confirmed")}
+            >
               Confirm
             </Button>
-            <Button size="sm" variant="secondary" className="h-7 text-xs font-bold hover:bg-orange-100 hover:text-orange-700" onClick={() => handleBulkUpdate("dispatched")}>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 text-xs font-bold hover:bg-orange-100 hover:text-orange-700"
+              onClick={() => handleBulkUpdate("dispatched")}
+            >
               Dispatch
             </Button>
-            <Button size="sm" variant="secondary" className="h-7 text-xs font-bold hover:bg-green-100 hover:text-green-700" onClick={() => handleBulkUpdate("delivered")}>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 text-xs font-bold hover:bg-green-100 hover:text-green-700"
+              onClick={() => handleBulkUpdate("delivered")}
+            >
               Deliver
             </Button>
           </div>
         </div>
       )}
 
-      <div className="rounded-md border bg-card overflow-x-auto no-scrollbar">
+      <div className="no-scrollbar overflow-x-auto rounded-md border bg-card">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -445,20 +510,32 @@ export function OrdersTable({ data }: { data: any[] }) {
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} onClick={(e) => {
-                      // Prevent drawer opening when clicking actions or checkboxes
-                      if (cell.column.id === "actions" || cell.column.id === "select") {
-                        e.stopPropagation()
-                      }
-                    }}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <TableCell
+                      key={cell.id}
+                      onClick={(e) => {
+                        // Prevent drawer opening when clicking actions or checkboxes
+                        if (
+                          cell.column.id === "actions" ||
+                          cell.column.id === "select"
+                        ) {
+                          e.stopPropagation()
+                        }
+                      }}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
                   No orders found.
                 </TableCell>
               </TableRow>
@@ -492,10 +569,10 @@ export function OrdersTable({ data }: { data: any[] }) {
         </div>
       </div>
 
-      <OrderDetailsDrawer 
-        order={selectedOrder} 
-        open={isDrawerOpen} 
-        onOpenChange={setIsDrawerOpen} 
+      <OrderDetailsDrawer
+        order={selectedOrder}
+        open={isDrawerOpen}
+        onOpenChange={setIsDrawerOpen}
       />
     </div>
   )
