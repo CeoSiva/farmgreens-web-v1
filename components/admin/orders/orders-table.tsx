@@ -379,11 +379,21 @@ export function OrdersTable({ data }: { data: any[] }) {
         const n = i + 1
         if (it) {
           const isWeight = it.unit?.toLowerCase() === "kg"
-          const unitLabel = isWeight ? "g" : it.unit
-          const qtyVal = isWeight ? it.qty * 1000 : it.qty
-
-          rowData[`Product ${n}`] = it.name
-          rowData[`Qty ${n}`] = `${qtyVal}${unitLabel}`
+          
+          if (isWeight) {
+            // For weight-based products, use 250g units
+            const multiplier = it.qty * 4 // Assuming it.qty is in kgs (1kg = 4 * 250g)
+            rowData[`Product ${n}`] = `${it.name} - 250g`
+            rowData[`Qty ${n}`] = multiplier
+          } else {
+            // For other products, check if we should hide the unit (bunch/batch)
+            const unit = it.unit?.toLowerCase()
+            const shouldHideUnit = unit === "bunch" || unit === "batch"
+            
+            rowData[`Product ${n}`] = it.name
+            rowData[`Qty ${n}`] = shouldHideUnit ? it.qty : `${it.qty}${it.unit}`
+          }
+          
           rowData[`Price ${n}`] = (it.price * it.qty).toFixed(2)
         } else {
           rowData[`Product ${n}`] = ""
