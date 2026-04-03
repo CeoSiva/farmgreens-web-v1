@@ -76,6 +76,7 @@ export function CheckoutClient({
       areaId: "",
       countryCode: "+91",
       saveDetails: true,
+      whatsappOptIn: true,
     },
   })
 
@@ -538,17 +539,30 @@ export function CheckoutClient({
 
           <Separator />
 
-          {/* Save details */}
-          <div className="flex items-center gap-2">
-            <Checkbox
-              checked={watch("saveDetails")}
-              onCheckedChange={(v) => setValue("saveDetails", Boolean(v))}
-              disabled={isPending}
-              id="saveDetails"
-            />
-            <label htmlFor="saveDetails" className="text-sm">
-              Save my details for next time
-            </label>
+          {/* Save details & Notifications */}
+          <div className="grid gap-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={watch("saveDetails")}
+                onCheckedChange={(v) => setValue("saveDetails", Boolean(v))}
+                disabled={isPending}
+                id="saveDetails"
+              />
+              <label htmlFor="saveDetails" className="text-sm">
+                Save my details for next time
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={watch("whatsappOptIn")}
+                onCheckedChange={(v) => setValue("whatsappOptIn", Boolean(v))}
+                disabled={isPending}
+                id="whatsappOptIn"
+              />
+              <label htmlFor="whatsappOptIn" className="text-sm cursor-pointer select-none">
+                Send me order updates by WhatsApp
+              </label>
+            </div>
           </div>
 
           <Button type="submit" disabled={isPending} size="lg">

@@ -24,6 +24,7 @@ export interface IOrder extends Document {
     name: string
     mobile: string
     countryCode: string
+    whatsappOptIn: boolean
   }
   shippingAddress: {
     door: string
@@ -66,6 +67,7 @@ const orderSchema: Schema<IOrder> = new Schema(
       name: { type: String, required: true, trim: true },
       mobile: { type: String, required: true, trim: true },
       countryCode: { type: String, required: true, trim: true },
+      whatsappOptIn: { type: Boolean, default: true },
     },
     shippingAddress: {
       door: { type: String, required: true, trim: true },

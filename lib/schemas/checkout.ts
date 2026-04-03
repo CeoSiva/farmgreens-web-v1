@@ -13,6 +13,7 @@ export const CheckoutSchema = z.object({
   districtId: z.string().min(1, "District is required"),
   areaId: z.string().optional(),
   saveDetails: z.boolean(),
+  whatsappOptIn: z.boolean(),
 })
 
 export type CheckoutFormValues = z.infer<typeof CheckoutSchema>

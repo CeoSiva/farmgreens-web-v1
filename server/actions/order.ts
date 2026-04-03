@@ -103,6 +103,7 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
         name: parsed.data.name,
         mobile: parsed.data.mobile,
         countryCode: parsed.data.countryCode,
+        whatsappOptIn: parsed.data.whatsappOptIn,
       },
       shippingAddress: {
         door: parsed.data.door,
@@ -118,25 +119,29 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
       total,
     } as any)
 
-    // Send WhatsApp order confirmation (non-blocking — failure won't break the order)
-    try {
-      await sendOrderConfirmationWhatsApp({
-        customerName: parsed.data.name,
-        customerPhone: `${parsed.data.countryCode.replace("+", "")}${parsed.data.mobile}`,
-        orderId: orderNumber,
-        items: items.map((it: any) => ({
-          name: it.name,
-          qty: it.qty,
-          price: it.price,
-          unit: it.unit,
-        })),
-        subtotal,
-        shipping: deliveryFee,
-        totalPaid: total,
-      })
-      console.log(`[Gupshup] Order confirmation WhatsApp sent for order ${orderNumber}`)
-    } catch (err) {
-      console.error("[Gupshup] WhatsApp notification failed:", err)
+    // Send WhatsApp order confirmation if opted in
+    if (parsed.data.whatsappOptIn) {
+      try {
+        await sendOrderConfirmationWhatsApp({
+          customerName: parsed.data.name,
+          customerPhone: `${parsed.data.countryCode.replace("+", "")}${parsed.data.mobile}`,
+          orderId: orderNumber,
+          items: items.map((it: any) => ({
+            name: it.name,
+            qty: it.qty,
+            price: it.price,
+            unit: it.unit,
+          })),
+          subtotal,
+          shipping: deliveryFee,
+          totalPaid: total,
+        })
+        console.log(`[Gupshup] Order confirmation WhatsApp sent for order ${orderNumber}`)
+      } catch (err) {
+        console.error("[Gupshup] WhatsApp notification failed:", err)
+      }
+    } else {
+      console.log(`[Gupshup] Skipped WhatsApp notification for order ${orderNumber} (User opted out)`)
     }
 
     cookieStore.set(CART_COOKIE_NAME, serializeCartCookie(emptyCart()), {
