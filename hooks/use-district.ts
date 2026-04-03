@@ -10,6 +10,7 @@ const reservedPaths = [
   "assets", 
   "images", 
   "shop", 
+  "product",
   "cart", 
   "checkout", 
   "order-confirmed",

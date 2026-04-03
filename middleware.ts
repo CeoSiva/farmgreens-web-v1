@@ -28,6 +28,7 @@ export async function middleware(request: NextRequest) {
     "assets", 
     "images", 
     "shop", 
+    "product",
     "cart", 
     "checkout", 
     "order-confirmed",

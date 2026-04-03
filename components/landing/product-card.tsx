@@ -46,7 +46,12 @@ export function ProductCard({ product }: ProductCardProps) {
 
   // Default quantity logic: 250g for kg products, 1 unit/piece otherwise
   const isKgProduct = product.orderQuantity.unit.toLowerCase() === "kg"
-  const defaultQty = isKgProduct ? 0.25 : 1
+  const isBatter = 
+    product.category?.toLowerCase() === "batters" || 
+    product.category?.toLowerCase() === "batter"
+  
+  // Batters default to 1kg, other kg products default to 250g (0.25), everything else to 1
+  const defaultQty = isKgProduct && !isBatter ? 0.25 : 1
   const displayPrice = product.price * defaultQty
   const displayQuantityText =
     product.orderQuantity.type === "count"

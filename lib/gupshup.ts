@@ -72,7 +72,7 @@ export async function sendOrderConfirmationWhatsApp(
 
   const totalPaid = `₹${params.totalPaid.toFixed(2)}`
 
-  const messagePayload = {
+  const templatePayload = {
     id: templateId,
     params: [
       params.customerName,
@@ -84,15 +84,12 @@ export async function sendOrderConfirmationWhatsApp(
   }
 
   const body = new URLSearchParams({
-    channel: "whatsapp",
     source: sourceNumber,
     destination,
-    "src.name": appName,
-    disablePreview: "false",
-    message: JSON.stringify(messagePayload),
+    template: JSON.stringify(templatePayload),
   })
 
-  const response = await fetch("https://api.gupshup.io/wa/api/v1/msg", {
+  const response = await fetch("https://api.gupshup.io/sm/api/v1/template/msg", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
