@@ -62,9 +62,16 @@ export function CustomersTable({ data }: { data: any[] }) {
             <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
               <User className="h-4 w-4" />
             </div>
-            <div className="flex flex-col">
-              <span className="font-semibold">{customer.name}</span>
-              <span className="text-xs text-muted-foreground">{customer.mobile}</span>
+            <div className="flex flex-col gap-1">
+              <span className="font-semibold leading-none">{customer.name}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{customer.mobile}</span>
+                {customer.whatsappOptIn && (
+                  <Badge variant="outline" className="text-[9px] h-4 px-1.5 bg-green-500/10 text-green-600 border-green-500/20 font-medium">
+                    WhatsApp
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         )

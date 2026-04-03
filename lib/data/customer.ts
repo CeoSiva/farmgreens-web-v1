@@ -12,6 +12,7 @@ export async function upsertCustomerByMobile(data: {
   mobile: string
   countryCode: string
   name: string
+  whatsappOptIn?: boolean
   address?: {
     label?: string
     door: string
@@ -29,6 +30,10 @@ export async function upsertCustomerByMobile(data: {
       countryCode: data.countryCode,
       name: data.name,
     },
+  }
+
+  if (data.whatsappOptIn !== undefined) {
+    update.$set.whatsappOptIn = data.whatsappOptIn
   }
 
   if (data.address) {

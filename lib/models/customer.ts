@@ -14,6 +14,7 @@ export interface ICustomer extends Document {
   countryCode: string
   name: string
   addresses: ICustomerAddress[]
+  whatsappOptIn: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -43,6 +44,7 @@ const customerSchema: Schema<ICustomer> = new Schema(
     countryCode: { type: String, required: true, trim: true, default: "+91" },
     name: { type: String, required: true, trim: true },
     addresses: { type: [customerAddressSchema], default: [] },
+    whatsappOptIn: { type: Boolean, default: true },
   },
   { timestamps: true }
 )

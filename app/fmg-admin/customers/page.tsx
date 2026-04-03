@@ -1,6 +1,7 @@
 import { searchCustomers } from "@/lib/data/admin"
 import { Button } from "@/components/ui/button"
 import { CustomersTable } from "@/components/admin/customers/customers-table"
+import { BulkUploadButton } from "@/components/admin/customers/bulk-upload-button"
 import Link from "next/link"
 
 export const dynamic = "force-dynamic"
@@ -33,9 +34,12 @@ export default async function CustomersAdminPage() {
             Customers saved from checkout.
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/">View site</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <BulkUploadButton />
+          <Button asChild variant="outline">
+            <Link href="/">View site</Link>
+          </Button>
+        </div>
       </div>
 
       <CustomersTable data={customers} />

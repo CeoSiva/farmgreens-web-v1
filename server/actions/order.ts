@@ -81,6 +81,7 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
         mobile: parsed.data.mobile,
         countryCode: parsed.data.countryCode,
         name: parsed.data.name,
+        whatsappOptIn: parsed.data.whatsappOptIn,
         address: {
           door: parsed.data.door,
           street: parsed.data.street,

@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import { updateCustomerAdminAction } from "@/server/actions/customer"
 
 export function CustomerDetailsDrawer({
@@ -78,8 +79,13 @@ export function CustomerDetailsDrawer({
             <Hash className="h-4 w-4" />
             <span className="text-xs font-mono uppercase tracking-tighter">Customer ID</span>
           </div>
-          <SheetTitle className="text-2xl font-bold">
+          <SheetTitle className="text-2xl font-bold flex items-center gap-2">
             {customer.name}
+            {customer.whatsappOptIn && (
+              <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-green-500/10 text-green-600 border-green-500/20 font-medium">
+                WhatsApp Opted
+              </Badge>
+            )}
           </SheetTitle>
           <SheetDescription>
             View and edit customer profile information.
