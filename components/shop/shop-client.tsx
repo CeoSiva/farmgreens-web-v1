@@ -38,14 +38,23 @@ export function ShopClient({
   const [searchQuery, setSearchQuery] = useState(initialSearch)
 
   const filtered = useMemo(() => {
-    return products.filter((p) => {
-      const matchesCategory = category === "all" || p.category === category
-      const matchesSearch = 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-      
-      return matchesCategory && matchesSearch
-    })
+    return products
+      .filter((p) => {
+        const matchesCategory = category === "all" || p.category === category
+        const matchesSearch = 
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (p.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+        
+        return matchesCategory && matchesSearch
+      })
+      .sort((a, b) => {
+        // 1. Availability first
+        if (a.isAvailable !== b.isAvailable) {
+          return a.isAvailable ? -1 : 1
+        }
+        // 2. Then Price (Ascending)
+        return a.price - b.price
+      })
   }, [category, searchQuery, products])
 
   return (

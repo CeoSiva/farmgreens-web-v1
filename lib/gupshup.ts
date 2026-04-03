@@ -46,21 +46,18 @@ export async function sendOrderConfirmationWhatsApp(
 
   const destination = normalizePhone(params.customerPhone)
 
-  // Build the items list string: "• Spinach x250g\n• Tomato x2"
+  // Build the items list string — newlines are NOT allowed inside WhatsApp template variables
   const itemsList = params.items
     .map((it) => {
       const unit = it.unit?.toLowerCase()
       const isWeight = unit === "kg"
       const qtyDisplay = isWeight ? `${it.qty * 1000}g` : `x${it.qty}`
-      return `• ${it.name} ${qtyDisplay}`
+      return `${it.name} ${qtyDisplay} – ₹${(it.price * it.qty).toFixed(0)}`
     })
-    .join("\n")
+    .join(", ")
 
-  // Build the price breakdown string
+  // Build the price breakdown string — newlines are NOT allowed inside WhatsApp template variables
   const priceLines: string[] = [`Subtotal: ₹${params.subtotal.toFixed(2)}`]
-  if (params.discount && params.discount > 0) {
-    priceLines.push(`Discount: -₹${params.discount.toFixed(2)}`)
-  }
   if (params.shipping !== undefined) {
     priceLines.push(
       params.shipping === 0
@@ -68,10 +65,14 @@ export async function sendOrderConfirmationWhatsApp(
         : `Delivery: ₹${params.shipping.toFixed(2)}`
     )
   }
-  const priceBreakdown = priceLines.join("\n")
+  if (params.discount && params.discount > 0) {
+    priceLines.push(`Discount: -₹${params.discount.toFixed(2)}`)
+  }
+  const priceBreakdown = priceLines.join(", ")
 
   const totalPaid = `₹${params.totalPaid.toFixed(2)}`
 
+  // Template payload — id + params only; no isHSM needed for /template/msg endpoint
   const templatePayload = {
     id: templateId,
     params: [
@@ -83,13 +84,14 @@ export async function sendOrderConfirmationWhatsApp(
     ],
   }
 
+  // Use the dedicated template endpoint with `template` key (not `message`)
   const body = new URLSearchParams({
     source: sourceNumber,
     destination,
     template: JSON.stringify(templatePayload),
   })
 
-  const response = await fetch("https://api.gupshup.io/sm/api/v1/template/msg", {
+  const response = await fetch("https://api.gupshup.io/wa/api/v1/template/msg", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
