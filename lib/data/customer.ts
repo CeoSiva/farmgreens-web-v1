@@ -34,6 +34,11 @@ export async function upsertCustomerByMobile(data: {
 
   if (data.whatsappOptIn !== undefined) {
     update.$set.whatsappOptIn = data.whatsappOptIn
+    if (data.whatsappOptIn) {
+      update.$set.optedInAt = new Date()
+    } else {
+      update.$set.optedOutAt = new Date()
+    }
   }
 
   if (data.address) {

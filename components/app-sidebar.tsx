@@ -13,7 +13,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, ListIcon, ChartBarIcon, FolderIcon, Settings2Icon } from "lucide-react"
+import { LayoutDashboardIcon, ListIcon, ChartBarIcon, FolderIcon, Settings2Icon, MegaphoneIcon } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -50,6 +50,13 @@ const data = {
       url: "/fmg-admin/orders",
       icon: (
         <FolderIcon />
+      ),
+    },
+    {
+      title: "Campaigns",
+      url: "/fmg-admin/campaigns",
+      icon: (
+        <MegaphoneIcon />
       ),
     },
     {
