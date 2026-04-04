@@ -66,7 +66,6 @@ export function TemplateBrowser({ onSelect }: Props) {
         Browse Gupshup Templates
       </Button>
 
-      {/* Setup hint displayed inline when auth fails */}
       {errorHint && !open && (
         <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950 dark:border-amber-800 p-3 text-xs text-amber-800 dark:text-amber-200 space-y-1">
           <p className="font-semibold">⚙️ Setup required to browse templates:</p>
