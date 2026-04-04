@@ -8,6 +8,8 @@ import { connectDB } from "@/lib/db"
 import CampaignModel from "@/lib/models/campaign"
 import CampaignRecipientModel from "@/lib/models/campaign-recipient"
 import CustomerModel from "@/lib/models/customer"
+import OrderModel from "@/lib/models/order"
+import DistrictModel from "@/lib/models/district"
 import { sendCampaignWhatsApp, buildCustomerFilter, TargetFilter } from "@/lib/gupshup-campaign"
 
 const BATCH_SIZE = 50
@@ -22,16 +24,40 @@ function sleep(ms: number) {
 async function fetchTargetCustomers(targetFilter: TargetFilter) {
   const filter = buildCustomerFilter(targetFilter) as any
 
-  // Handle city filter — match against addresses.districtId via a known mapping
-  // Note: districtName is not on the customer directly, so city filter falls back to all opted-in
-  if (filter._cityFilter) {
-    const city: string = filter._cityFilter
+  // Handle city filter — look up district by name, then query customers by districtId
+  if (filter._cityFilter !== undefined) {
+    const cityName: string = filter._cityFilter
     delete filter._cityFilter
-    // Simple string match in a denormalized field (if present) or fall back
-    // The bulk-upload stores address but districtName isn't queryable here easily;
-    // We add a best-effort fallback by skipping city filter at query level and letting
-    // campaign creation give an estimated count — admins are responsible for accurate city setup.
-    console.warn(`[Campaign] City filter "${city}" used — returning all opted-in customers.`)
+
+    const district = await DistrictModel.findOne({
+      name: { $regex: new RegExp(`^${cityName}$`, "i") },
+    })
+
+    if (district) {
+      filter["addresses.districtId"] = district._id
+    } else {
+      console.warn(`[Campaign] City "${cityName}" not found in districts. Returning all opted-in.`)
+    }
+  }
+
+  // Handle high_value filter — aggregate orders to find customers who spent >= threshold
+  if (filter._highValueFilter !== undefined) {
+    const minSpend: number = filter._highValueFilter
+    delete filter._highValueFilter
+
+    const highValueCustomerIds = await OrderModel.aggregate([
+      {
+        $group: {
+          _id: "$customer.customerId",
+          totalSpent: { $sum: "$total" },
+        },
+      },
+      { $match: { totalSpent: { $gte: minSpend }, _id: { $ne: null } } },
+      { $project: { _id: 1 } },
+    ])
+
+    const ids = highValueCustomerIds.map((r: any) => r._id)
+    filter._id = { $in: ids }
   }
 
   return CustomerModel.find(filter)
@@ -116,7 +142,14 @@ export async function executeCampaign(campaignId: string): Promise<void> {
 
       const phone = `${customer.countryCode?.replace("+", "") ?? "91"}${customer.mobile}`
 
+      if (!campaign.templateId) {
+        throw new Error("[Campaign] No templateId defined for this campaign.")
+      }
+
       try {
+        // Detailed log for debugging template ID issue
+        console.log(`[Campaign] Sending to ${phone} using templateId: ${campaign.templateId}`)
+
         const result = await sendCampaignWhatsApp({
           phone,
           templateId: campaign.templateId,

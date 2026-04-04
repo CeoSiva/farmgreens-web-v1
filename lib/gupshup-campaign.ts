@@ -38,9 +38,15 @@ export async function sendCampaignWhatsApp({
   const body = new URLSearchParams({
     source: sourceNumber,
     destination,
-    "src.name": appName,
     template: JSON.stringify(templatePayload),
   })
+
+  // Log full request payload for debugging
+  console.log("[Campaign] Sending with payload:", JSON.stringify({
+    source: sourceNumber,
+    destination,
+    templatePayload,
+  }))
 
   const res = await fetch("https://api.gupshup.io/wa/api/v1/template/msg", {
     method: "POST",
@@ -55,24 +61,42 @@ export async function sendCampaignWhatsApp({
   let data: any = {}
   try { data = JSON.parse(text) } catch { /* non-JSON response */ }
 
-  console.log("[Campaign]", JSON.stringify({ destination, status: res.status, data }))
+  // Log full response for debugging
+  console.log("[Campaign] Send response:", JSON.stringify({
+    destination,
+    templateId,
+    httpStatus: res.status,
+    data,
+  }))
 
   if (!res.ok || data?.status === "error") {
     throw new Error(
-      `[Campaign] Failed to send. Status: ${res.status}. Response: ${text}`
+      `[Campaign] Send failed. HTTP ${res.status}. templateId=${templateId}. Response: ${text}`
     )
   }
 
-  return { messageId: data.messageId ?? data.message?.id ?? "", status: data.status ?? "submitted" }
+  // Gupshup can return messageId in different locations depending on API version
+  const messageId =
+    data?.messageId ??
+    data?.message?.id ??
+    data?.response?.messageId ??
+    ""
+
+  if (!messageId) {
+    console.warn("[Campaign] Warning: empty messageId in Gupshup response. Webhook tracking will not work.", JSON.stringify(data))
+  }
+
+  return { messageId, status: data.status ?? "submitted" }
 }
 
 // ─── Audience Targeting Filter ────────────────────────────────────────────────
 
 export type TargetFilter = {
-  type: "all" | "new_customers" | "high_value" | "city"
+  type: "all" | "new_customers" | "high_value" | "city" | "manual"
   minSpend?: number
   city?: string
   daysSinceJoined?: number
+  customerIds?: string[] // for manual selection
 }
 
 export function buildCustomerFilter(targetFilter: TargetFilter): object {
@@ -90,16 +114,20 @@ export function buildCustomerFilter(targetFilter: TargetFilter): object {
     }
 
     case "high_value":
-      // Assumes a `totalSpent` field on Customer (or use order aggregation).
-      // Falls back to returning all opted-in customers if field not present.
-      return { ...base, totalSpent: { $gte: targetFilter.minSpend ?? 0 } }
+      // Signal for engine to use order aggregation — returns a marker object
+      return { ...base, _highValueFilter: targetFilter.minSpend ?? 0 }
 
     case "city":
-      // Match districtName stored in the customer's default address.
-      // We do a case-insensitive match on the `addresses.districtName` field,
-      // but since districtName is not denormalized we return a signal object
-      // that campaign-engine.ts can interpret to do an aggregation lookup.
-      return { ...base, "_cityFilter": targetFilter.city }
+      // Signal for engine to do district lookup — returns a marker object
+      return { ...base, _cityFilter: targetFilter.city ?? "" }
+
+    case "manual":
+      // Direct customer ID list
+      if (targetFilter.customerIds && targetFilter.customerIds.length > 0) {
+        const { Types } = require("mongoose")
+        return { ...base, _id: { $in: targetFilter.customerIds.map((id: string) => new Types.ObjectId(id)) } }
+      }
+      return base
 
     default:
       return base

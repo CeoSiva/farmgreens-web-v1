@@ -11,14 +11,23 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
+    // Log all incoming webhook events for debugging
+    console.log("[Webhook] Received:", JSON.stringify(body))
+
+    // Gupshup wraps events differently depending on the event type:
+    // - Delivery events: body.payload.id, body.payload.type
+    // - Message events: body.payload.payload.id, body.payload.type
+    const payload = body?.payload ?? body
+    const eventType: string = payload?.type ?? ""
+    const messageId: string = payload?.id ?? payload?.payload?.id ?? ""
+    const source: string = payload?.source ?? payload?.sender?.phone ?? ""
+
     // 8C. Handle opt-out reply text
-    if (body?.payload?.type === "text") {
-      const text = (body?.payload?.payload?.text ?? "").toLowerCase().trim()
+    if (eventType === "text" || payload?.payload?.type === "text") {
+      const text = (payload?.payload?.text ?? payload?.text ?? "").toLowerCase().trim()
       if (OPT_OUT_KEYWORDS.includes(text)) {
-        const rawPhone: string = body?.payload?.source ?? ""
-        const digits = rawPhone.replace(/\D/g, "")
-        const mobile = digits.startsWith("91") && digits.length === 12
-          ? digits.slice(2) : digits
+        const digits = source.replace(/\D/g, "")
+        const mobile = digits.startsWith("91") && digits.length === 12 ? digits.slice(2) : digits
 
         await connectDB()
         await CustomerModel.findOneAndUpdate(
@@ -30,10 +39,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const messageId: string | undefined = body?.payload?.id
-    const eventType: string | undefined = body?.payload?.type
-
     if (!messageId || !eventType) {
+      console.log("[Webhook] No messageId or eventType, ignoring.")
       return NextResponse.json({ ok: true }, { status: 200 })
     }
 
@@ -41,6 +48,7 @@ export async function POST(req: NextRequest) {
 
     const recipient = await CampaignRecipientModel.findOne({ gupshupMessageId: messageId })
     if (!recipient) {
+      console.log(`[Webhook] No campaign recipient found for messageId: ${messageId}`)
       return NextResponse.json({ ok: true }, { status: 200 })
     }
 
