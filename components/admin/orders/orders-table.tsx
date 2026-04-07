@@ -345,67 +345,83 @@ export function OrdersTable({ data }: { data: any[] }) {
     }
   }
 
+  const formatExportAddress = (door?: string, street?: string) => {
+    const apartmentPattern =
+      /\b(apartment|apartments|apt|tower|block|residency|residence|phase|flat)\b/i
+    const normalizedDoor = String(door ?? "").trim()
+    const normalizedStreet = String(street ?? "").trim()
+    const formattedStreet = apartmentPattern.test(normalizedStreet)
+      ? normalizedStreet.toUpperCase()
+      : normalizedStreet
+    return `${normalizedDoor}, ${formattedStreet}`
+  }
+
   const handleExport = (includeMobile: boolean) => {
     const rows = table.getFilteredRowModel().rows
+    const ITEMS_PER_EXPORT_ROW = 5
+    const exportData: Record<string, string | number>[] = []
 
-    // Find the maximum number of items across all orders (sets column count)
-    const maxItems = rows.reduce(
-      (max, r) => Math.max(max, r.original.items?.length ?? 0),
-      0
-    )
-
-    const exportData = rows.map((r) => {
+    rows.forEach((r) => {
       const o = r.original
-      const items: any[] = o.items || []
+      const items = Array.isArray(o.items) ? o.items : []
 
-      // Fixed leading columns
-      const rowData: Record<string, string | number> = {
-        Date: new Date(o.createdAt).toLocaleString(),
-        "Order Number": o.orderNumber,
-        "Customer Name": o.customer.name,
-      }
-      if (includeMobile) {
-        rowData["Mobile"] = o.customer.mobile
-      }
-      Object.assign(rowData, {
-        Address: `${o.shippingAddress.door}, ${o.shippingAddress.street}`,
-        Area: o.shippingAddress.areaName ?? "",
-        District: o.shippingAddress.districtName ?? "",
-      })
+      // Keep one row even when items are empty.
+      const chunkCount = Math.max(1, Math.ceil(items.length / ITEMS_PER_EXPORT_ROW))
 
-      // Dynamic product columns — one group per slot, using numbered keys to avoid overwrites
-      for (let i = 0; i < maxItems; i++) {
-        const it = items[i]
-        const n = i + 1
-        if (it) {
-          const isWeight = it.unit?.toLowerCase() === "kg"
-          
-          if (isWeight) {
-            // For weight-based products, use 250g units
-            const multiplier = it.qty * 4 // Assuming it.qty is in kgs (1kg = 4 * 250g)
-            rowData[`Product ${n}`] = `${it.name} - 250g`
-            rowData[`Qty ${n}`] = multiplier
-          } else {
-            // For other products, check if we should hide the unit (bunch/batch)
-            const unit = it.unit?.toLowerCase()
-            const shouldHideUnit = unit === "bunch" || unit === "batch"
-            
-            rowData[`Product ${n}`] = it.name
-            rowData[`Qty ${n}`] = shouldHideUnit ? it.qty : `${it.qty}${it.unit}`
-          }
-          
-          rowData[`Price ${n}`] = (it.price * it.qty).toFixed(2)
-        } else {
-          rowData[`Product ${n}`] = ""
-          rowData[`Qty ${n}`] = ""
-          rowData[`Price ${n}`] = ""
+      for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
+        const chunkStart = chunkIndex * ITEMS_PER_EXPORT_ROW
+        const chunk = items.slice(chunkStart, chunkStart + ITEMS_PER_EXPORT_ROW)
+
+        // Fixed metadata columns (repeated on every chunk row).
+        const rowData: Record<string, string | number> = {
+          Date: new Date(o.createdAt).toLocaleString(),
+          "Order Number": o.orderNumber,
+          "Customer Name": o.customer.name,
         }
+
+        if (includeMobile) {
+          rowData["Mobile"] = o.customer.mobile
+        }
+
+        Object.assign(rowData, {
+          Address: formatExportAddress(
+            o.shippingAddress?.door,
+            o.shippingAddress?.street
+          ),
+          Area: o.shippingAddress.areaName ?? "",
+          District: o.shippingAddress.districtName ?? "",
+        })
+
+        // Fixed product columns (1..5) for every row.
+        for (let i = 0; i < ITEMS_PER_EXPORT_ROW; i++) {
+          const it = chunk[i]
+          const n = i + 1
+
+          if (it) {
+            const isWeight = it.unit?.toLowerCase() === "kg"
+
+            if (isWeight) {
+              const multiplier = it.qty * 4
+              rowData[`Product ${n}`] = `${it.name} - 250g`
+              rowData[`Qty ${n}`] = multiplier
+            } else {
+              const unit = it.unit?.toLowerCase()
+              const shouldHideUnit = unit === "bunch" || unit === "batch"
+              rowData[`Product ${n}`] = it.name
+              rowData[`Qty ${n}`] = shouldHideUnit ? it.qty : `${it.qty}${it.unit}`
+            }
+
+            rowData[`Price ${n}`] = (it.price * it.qty).toFixed(2)
+          } else {
+            rowData[`Product ${n}`] = ""
+            rowData[`Qty ${n}`] = ""
+            rowData[`Price ${n}`] = ""
+          }
+        }
+
+        rowData["Status"] = o.status
+        exportData.push(rowData)
       }
-
-      // Fixed trailing column
-      rowData["Status"] = o.status
-
-      return rowData
     })
 
     downloadCSV(
