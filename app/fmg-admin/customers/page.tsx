@@ -22,6 +22,7 @@ export default async function CustomersAdminPage() {
     orderCount: c.orderCount,
     areaName: c.areaName,
     districtName: c.districtName,
+    whatsappOptIn: c.whatsappOptIn,
     updatedAt: c.updatedAt instanceof Date ? c.updatedAt.toISOString() : (c.updatedAt?.toISOString?.() ?? ""),
   }))
 
