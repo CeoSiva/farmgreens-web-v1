@@ -82,6 +82,9 @@ export function OrdersTable({ data }: { data: any[] }) {
   const [selectedOrder, setSelectedOrder] = React.useState<any | null>(null)
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false)
   const [date, setDate] = React.useState<DateRange | undefined>(undefined)
+  const [cityFilter, setCityFilter] = React.useState("all")
+  const [areaFilter, setAreaFilter] = React.useState("all")
+  const [valueBucketFilter, setValueBucketFilter] = React.useState("all")
 
   // Filter data by date range
   const filteredData = React.useMemo(() => {
@@ -95,6 +98,58 @@ export function OrdersTable({ data }: { data: any[] }) {
       return isWithinInterval(orderDate, { start, end })
     })
   }, [data, date])
+
+  const normalizeLocation = (value: unknown) => {
+    const text = String(value ?? "").trim()
+    return text.length > 0 ? text : "Unknown"
+  }
+
+  const cityOptions = React.useMemo(() => {
+    return Array.from(
+      new Set(filteredData.map((order) => normalizeLocation(order.shippingAddress?.districtName)))
+    ).sort((a, b) => a.localeCompare(b))
+  }, [filteredData])
+
+  const areaOptions = React.useMemo(() => {
+    const source =
+      cityFilter === "all"
+        ? filteredData
+        : filteredData.filter(
+            (order) =>
+              normalizeLocation(order.shippingAddress?.districtName) === cityFilter
+          )
+    return Array.from(
+      new Set(source.map((order) => normalizeLocation(order.shippingAddress?.areaName)))
+    ).sort((a, b) => a.localeCompare(b))
+  }, [filteredData, cityFilter])
+
+  const matchesValueBucket = (total: number, bucket: string) => {
+    if (bucket === "lt250") return total < 250
+    if (bucket === "250to500") return total >= 250 && total <= 500
+    if (bucket === "500to1000") return total > 500 && total <= 1000
+    if (bucket === "gt1000") return total > 1000
+    return true
+  }
+
+  const structuredFilteredData = React.useMemo(() => {
+    return filteredData.filter((order) => {
+      const orderCity = normalizeLocation(order.shippingAddress?.districtName)
+      const orderArea = normalizeLocation(order.shippingAddress?.areaName)
+      const total = Number(order.total ?? 0)
+
+      const matchesCity = cityFilter === "all" || orderCity === cityFilter
+      const matchesArea = areaFilter === "all" || orderArea === areaFilter
+      const matchesValue = valueBucketFilter === "all" || matchesValueBucket(total, valueBucketFilter)
+
+      return matchesCity && matchesArea && matchesValue
+    })
+  }, [filteredData, cityFilter, areaFilter, valueBucketFilter])
+
+  const activeStructuredFiltersCount = [
+    cityFilter !== "all",
+    areaFilter !== "all",
+    valueBucketFilter !== "all",
+  ].filter(Boolean).length
 
   const columns: ColumnDef<any>[] = [
     {
@@ -296,7 +351,7 @@ export function OrdersTable({ data }: { data: any[] }) {
   ]
 
   const table = useReactTable({
-    data: filteredData,
+    data: structuredFilteredData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -318,16 +373,33 @@ export function OrdersTable({ data }: { data: any[] }) {
       const value = filterValue.toLowerCase()
       const order = row.original
       return (
-        order.orderNumber.toLowerCase().includes(value) ||
-        order.customer.name.toLowerCase().includes(value) ||
-        order.customer.mobile.toLowerCase().includes(value) ||
-        order.shippingAddress.door.toLowerCase().includes(value) ||
-        order.shippingAddress.street.toLowerCase().includes(value) ||
-        order.shippingAddress.areaName.toLowerCase().includes(value) ||
-        order.shippingAddress.districtName.toLowerCase().includes(value)
+        String(order.orderNumber ?? "").toLowerCase().includes(value) ||
+        String(order.customer?.name ?? "").toLowerCase().includes(value) ||
+        String(order.customer?.mobile ?? "").toLowerCase().includes(value) ||
+        String(order.shippingAddress?.door ?? "").toLowerCase().includes(value) ||
+        String(order.shippingAddress?.street ?? "").toLowerCase().includes(value) ||
+        String(order.shippingAddress?.areaName ?? "").toLowerCase().includes(value) ||
+        String(order.shippingAddress?.districtName ?? "").toLowerCase().includes(value)
       )
     },
   })
+
+  const statusSummary = React.useMemo(() => {
+    const summary = {
+      placed: 0,
+      confirmed: 0,
+      dispatched: 0,
+      delivered: 0,
+      cancelled: 0,
+    }
+    table.getFilteredRowModel().rows.forEach((row) => {
+      const status = String(row.original.status ?? "")
+      if (status in summary) {
+        summary[status as keyof typeof summary] += 1
+      }
+    })
+    return summary
+  }, [table])
 
   const selectedIds = table
     .getFilteredSelectedRowModel()
@@ -430,6 +502,12 @@ export function OrdersTable({ data }: { data: any[] }) {
     )
   }
 
+  const handleClearStructuredFilters = () => {
+    setCityFilter("all")
+    setAreaFilter("all")
+    setValueBucketFilter("all")
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -485,6 +563,78 @@ export function OrdersTable({ data }: { data: any[] }) {
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={cityFilter} onValueChange={setCityFilter}>
+            <SelectTrigger className="h-10 w-full bg-card text-sm sm:w-[150px] lg:h-9">
+              <SelectValue placeholder="All Cities" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Cities</SelectItem>
+              {cityOptions.map((city) => (
+                <SelectItem key={city} value={city}>
+                  {city}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={areaFilter} onValueChange={setAreaFilter}>
+            <SelectTrigger className="h-10 w-full bg-card text-sm sm:w-[170px] lg:h-9">
+              <SelectValue placeholder="All Areas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Areas</SelectItem>
+              {areaOptions.map((area) => (
+                <SelectItem key={area} value={area}>
+                  {area}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={valueBucketFilter} onValueChange={setValueBucketFilter}>
+            <SelectTrigger className="h-10 w-full bg-card text-sm sm:w-[180px] lg:h-9">
+              <SelectValue placeholder="All Order Values" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Order Values</SelectItem>
+              <SelectItem value="lt250">&lt; 250</SelectItem>
+              <SelectItem value="250to500">250 - 500</SelectItem>
+              <SelectItem value="500to1000">500 - 1000</SelectItem>
+              <SelectItem value="gt1000">&gt; 1000</SelectItem>
+            </SelectContent>
+          </Select>
+          <Badge variant="secondary">Filters: {activeStructuredFiltersCount}</Badge>
+          <Badge variant="outline">Results: {table.getFilteredRowModel().rows.length}</Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9"
+            onClick={handleClearStructuredFilters}
+            disabled={activeStructuredFiltersCount === 0}
+          >
+            Clear Filters
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+        <div className="rounded-md border bg-card p-3 text-xs">
+          <p className="text-muted-foreground">Placed</p>
+          <p className="text-lg font-semibold">{statusSummary.placed}</p>
+        </div>
+        <div className="rounded-md border bg-card p-3 text-xs">
+          <p className="text-muted-foreground">Confirmed</p>
+          <p className="text-lg font-semibold">{statusSummary.confirmed}</p>
+        </div>
+        <div className="rounded-md border bg-card p-3 text-xs">
+          <p className="text-muted-foreground">Dispatched</p>
+          <p className="text-lg font-semibold">{statusSummary.dispatched}</p>
+        </div>
+        <div className="rounded-md border bg-card p-3 text-xs">
+          <p className="text-muted-foreground">Delivered</p>
+          <p className="text-lg font-semibold">{statusSummary.delivered}</p>
+        </div>
+        <div className="rounded-md border bg-card p-3 text-xs">
+          <p className="text-muted-foreground">Cancelled</p>
+          <p className="text-lg font-semibold">{statusSummary.cancelled}</p>
         </div>
       </div>
 
