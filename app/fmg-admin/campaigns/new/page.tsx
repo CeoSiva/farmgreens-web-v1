@@ -49,6 +49,29 @@ export default function CreateCampaignPage() {
   const [sendTiming, setSendTiming] = useState<"now" | "later">("now")
   const [scheduledAt, setScheduledAt] = useState("")
 
+  const step1Issues: string[] = []
+  if (!name.trim()) step1Issues.push("Campaign name is required.")
+  if (!templateId.trim()) step1Issues.push("Template ID is required.")
+  if (!params.some((p) => p.trim().length > 0)) {
+    step1Issues.push("Add at least one template parameter or dynamic variable.")
+  }
+
+  const step2Issues: string[] = []
+  if (filterType === "manual" && selectedCustomers.length === 0) {
+    step2Issues.push("Select at least one customer for manual targeting.")
+  }
+  if (filterType === "city" && !city.trim()) {
+    step2Issues.push("District / city name is required for city targeting.")
+  }
+  if (filterType === "high_value" && !minSpend.trim()) {
+    step2Issues.push("Minimum spend is required for high-value targeting.")
+  }
+
+  const step3Issues: string[] = []
+  if (sendTiming === "later" && !scheduledAt) {
+    step3Issues.push("Scheduled date and time is required when sending later.")
+  }
+
   const updateParam = (i: number, val: string) => {
     const updated = [...params]
     updated[i] = val
@@ -217,6 +240,17 @@ export default function CreateCampaignPage() {
                     toast.success(`Template "${t.name}" selected`)
                   }}
                 />
+
+                {step1Issues.length > 0 && (
+                  <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                    <p className="font-medium">Before continuing:</p>
+                    <ul className="mt-1 list-disc pl-4">
+                      {step1Issues.map((issue) => (
+                        <li key={issue}>{issue}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -263,6 +297,11 @@ export default function CreateCampaignPage() {
                   Enter values for each <code className="bg-muted px-1 rounded">{"{{n}}"}</code> placeholder in your template. Use{" "}
                   <code className="bg-muted px-1 rounded">{"{{customerName}}"}</code> to personalize.
                 </p>
+                {previewMessage().includes("{{") && (
+                  <p className="text-xs text-amber-600 dark:text-amber-300">
+                    Preview still contains unresolved placeholders. Fill or intentionally keep dynamic variables before sending.
+                  </p>
+                )}
 
                 <div className="space-y-2">
                   {params.map((p, i) => (
@@ -419,7 +458,22 @@ export default function CreateCampaignPage() {
                     ~<strong>{estimatedReach.toLocaleString()}</strong> customers
                   </p>
                 )}
+                {estimatedReach === null && (
+                  <Badge variant="outline" className="text-xs">
+                    Reach not calculated
+                  </Badge>
+                )}
               </div>
+              {step2Issues.length > 0 && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                  <p className="font-medium">Audience setup needs attention:</p>
+                  <ul className="mt-1 list-disc pl-4">
+                    {step2Issues.map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -513,6 +567,11 @@ export default function CreateCampaignPage() {
                   />
                 </div>
               )}
+              {step3Issues.length > 0 && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                  {step3Issues[0]}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -550,7 +609,10 @@ export default function CreateCampaignPage() {
         {step < 3 ? (
           <Button
             onClick={() => setStep(step + 1)}
-            disabled={step === 1 && (!name || !templateId)}
+            disabled={
+              (step === 1 && step1Issues.length > 0) ||
+              (step === 2 && step2Issues.length > 0)
+            }
           >
             Next <ArrowRight className="ml-1 h-4 w-4" />
           </Button>

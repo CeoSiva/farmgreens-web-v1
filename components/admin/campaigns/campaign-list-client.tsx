@@ -37,6 +37,7 @@ export function CampaignListClient() {
   const router = useRouter()
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [loading, setLoading] = useState(true)
+  const [actionPendingId, setActionPendingId] = useState<string | null>(null)
 
   const fetchCampaigns = useCallback(async () => {
     try {
@@ -67,14 +68,26 @@ export function CampaignListClient() {
     action: "send" | "stop" | "pause" | "resume",
     method: "POST" | "PATCH"
   ) => {
+    const isHighImpact = action === "send" || action === "stop"
+    if (isHighImpact) {
+      const confirmed = window.confirm(
+        action === "send"
+          ? "Send this campaign now?"
+          : "Stop this campaign? This action cannot be undone."
+      )
+      if (!confirmed) return
+    }
     try {
+      setActionPendingId(id)
       const res = await fetch(`/api/admin/campaigns/${id}/${action}`, { method })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       toast.success(data.message ?? "Done")
-      fetchCampaigns()
+      await fetchCampaigns()
     } catch (err: any) {
       toast.error(err.message ?? "Action failed")
+    } finally {
+      setActionPendingId(null)
     }
   }
 
@@ -101,7 +114,7 @@ export function CampaignListClient() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={fetchCampaigns}>
+          <Button variant="ghost" size="icon" onClick={fetchCampaigns} disabled={actionPendingId !== null}>
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Button asChild>
@@ -163,7 +176,18 @@ export function CampaignListClient() {
                 </TableRow>
               ) : (
                 campaigns.map((c) => (
-                  <TableRow key={c._id}>
+                  <TableRow
+                    key={c._id}
+                    className={
+                      c.status === "running"
+                        ? "border-l-2 border-l-green-500"
+                        : c.status === "paused"
+                        ? "border-l-2 border-l-yellow-500"
+                        : Number(c.failedCount) > 0
+                        ? "border-l-2 border-l-red-500"
+                        : ""
+                    }
+                  >
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell>
                       <CampaignStatusBadge status={c.status} />
@@ -182,7 +206,11 @@ export function CampaignListClient() {
                         ({c.readRate}%)
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">{c.failedCount.toLocaleString()}</TableCell>
+                    <TableCell className="text-right">
+                      <span className={Number(c.failedCount) > 0 ? "font-semibold text-red-600" : ""}>
+                        {c.failedCount.toLocaleString()}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {c.startedAt
                         ? new Date(c.startedAt).toLocaleDateString()
@@ -197,6 +225,7 @@ export function CampaignListClient() {
                           size="icon"
                           title="View"
                           onClick={() => router.push(`/fmg-admin/campaigns/${c._id}`)}
+                          disabled={actionPendingId === c._id}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -206,6 +235,7 @@ export function CampaignListClient() {
                             size="icon"
                             title="Send Now"
                             onClick={() => handleAction(c._id, "send", "POST")}
+                            disabled={actionPendingId === c._id}
                           >
                             <Play className="h-4 w-4 text-green-600" />
                           </Button>
@@ -216,6 +246,7 @@ export function CampaignListClient() {
                             size="icon"
                             title="Pause"
                             onClick={() => handleAction(c._id, "pause", "PATCH")}
+                            disabled={actionPendingId === c._id}
                           >
                             <Pause className="h-4 w-4 text-yellow-600" />
                           </Button>
@@ -226,6 +257,7 @@ export function CampaignListClient() {
                             size="icon"
                             title="Resume"
                             onClick={() => handleAction(c._id, "resume", "PATCH")}
+                            disabled={actionPendingId === c._id}
                           >
                             <Play className="h-4 w-4 text-blue-600" />
                           </Button>
@@ -236,6 +268,7 @@ export function CampaignListClient() {
                             size="icon"
                             title="Stop"
                             onClick={() => handleAction(c._id, "stop", "PATCH")}
+                            disabled={actionPendingId === c._id}
                           >
                             <Square className="h-4 w-4 text-red-600" />
                           </Button>

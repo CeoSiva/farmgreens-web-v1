@@ -40,6 +40,7 @@ export function CampaignDetailClient({ id }: { id: string }) {
   const [recipientPage, setRecipientPage] = useState(1)
   const [totalRecipientPages, setTotalRecipientPages] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [actionPending, setActionPending] = useState(false)
 
   const fetchDetail = useCallback(async () => {
     try {
@@ -74,14 +75,27 @@ export function CampaignDetailClient({ id }: { id: string }) {
   }, [campaign?.status, fetchDetail, fetchRecipients])
 
   const handleAction = async (action: string, method: "POST" | "PATCH") => {
+    const isHighImpact = action === "send" || action === "stop"
+    if (isHighImpact) {
+      const confirmed = window.confirm(
+        action === "send"
+          ? "Send this campaign now?"
+          : "Stop this campaign? This cannot be undone."
+      )
+      if (!confirmed) return
+    }
     try {
+      setActionPending(true)
       const res = await fetch(`/api/admin/campaigns/${id}/${action}`, { method })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       toast.success(data.message ?? "Done")
-      fetchDetail()
+      await fetchDetail()
+      await fetchRecipients()
     } catch (err: any) {
       toast.error(err.message ?? "Action failed")
+    } finally {
+      setActionPending(false)
     }
   }
 
@@ -110,6 +124,10 @@ export function CampaignDetailClient({ id }: { id: string }) {
   if (!campaign) return <p className="p-6 text-muted-foreground">Campaign not found.</p>
 
   const pct = (n: number, d: number) => d > 0 ? `${((n / d) * 100).toFixed(0)}%` : "0%"
+  const recipientStatusCounts = recipients.reduce<Record<string, number>>((acc, r) => {
+    acc[r.status] = (acc[r.status] ?? 0) + 1
+    return acc
+  }, {})
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-6 lg:p-8">
@@ -131,31 +149,36 @@ export function CampaignDetailClient({ id }: { id: string }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => { fetchDetail(); fetchRecipients() }}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => { fetchDetail(); fetchRecipients() }}
+            disabled={actionPending}
+          >
             <RefreshCw className="h-4 w-4" />
           </Button>
           {campaign.status === "running" && (
             <>
-              <Button variant="outline" size="sm" onClick={() => handleAction("pause", "PATCH")}>
+              <Button variant="outline" size="sm" onClick={() => handleAction("pause", "PATCH")} disabled={actionPending}>
                 <Pause className="mr-1 h-3 w-3" /> Pause
               </Button>
-              <Button variant="destructive" size="sm" onClick={() => handleAction("stop", "PATCH")}>
+              <Button variant="destructive" size="sm" onClick={() => handleAction("stop", "PATCH")} disabled={actionPending}>
                 <Square className="mr-1 h-3 w-3" /> Stop
               </Button>
             </>
           )}
           {campaign.status === "paused" && (
             <>
-              <Button variant="outline" size="sm" onClick={() => handleAction("resume", "PATCH")}>
+              <Button variant="outline" size="sm" onClick={() => handleAction("resume", "PATCH")} disabled={actionPending}>
                 <Play className="mr-1 h-3 w-3" /> Resume
               </Button>
-              <Button variant="destructive" size="sm" onClick={() => handleAction("stop", "PATCH")}>
+              <Button variant="destructive" size="sm" onClick={() => handleAction("stop", "PATCH")} disabled={actionPending}>
                 <Square className="mr-1 h-3 w-3" /> Stop
               </Button>
             </>
           )}
           {["draft", "scheduled"].includes(campaign.status) && (
-            <Button size="sm" onClick={() => handleAction("send", "POST")}>
+            <Button size="sm" onClick={() => handleAction("send", "POST")} disabled={actionPending}>
               <Play className="mr-1 h-3 w-3" /> Send Now
             </Button>
           )}
@@ -246,6 +269,11 @@ export function CampaignDetailClient({ id }: { id: string }) {
                 onClick={() => { setStatusFilter(s); setRecipientPage(1) }}
               >
                 {s}
+                {s !== "all" && (
+                  <span className="ml-1 rounded bg-muted px-1 text-[10px]">
+                    {recipientStatusCounts[s] ?? 0}
+                  </span>
+                )}
               </Button>
             ))}
           </div>
@@ -317,7 +345,12 @@ export function CampaignDetailClient({ id }: { id: string }) {
                   <TableRow key={i}>
                     <TableCell className="font-mono text-xs">{r.phone}</TableCell>
                     <TableCell>{r.customerName}</TableCell>
-                    <TableCell className="text-xs text-destructive">{r.errorMessage ?? "—"}</TableCell>
+                    <TableCell
+                      className="max-w-[340px] truncate text-xs text-destructive"
+                      title={r.errorMessage ?? "—"}
+                    >
+                      {r.errorMessage ?? "—"}
+                    </TableCell>
                     <TableCell className="text-xs">{new Date(r.createdAt).toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
