@@ -39,36 +39,66 @@ export interface ICombo extends Document {
   updatedAt: Date
 }
 
+// Plain-object version for .lean() results — no Document instance methods
+export interface IComboPlain {
+  _id: Types.ObjectId
+  name: string
+  description?: string
+  imageUrl?: string
+  isActive: boolean
+  pricingMode: "fixed" | "percent_discount" | "per_item"
+  fixedPrice?: number
+  discountPercent?: number
+  displayOrder: number
+  availableInAllDistricts: boolean
+  unavailableDistricts: Types.ObjectId[]
+  slots: ComboSlot[]
+  createdAt: Date
+  updatedAt: Date
+}
+
 // ─── Schema ────────────────────────────────────────────────────────────────────
 
-const comboSlotFixedSchema = new Schema(
+/**
+ * Merged slot schema — both "fixed" and "choice" fields coexist on the same
+ * subdocument. Custom per-slot validators enforce the discriminated union rules
+ * so that a "fixed" slot always has productId/qty and a "choice" slot always
+ * has candidateProductIds/pickCount.
+ */
+const comboSlotSchema = new Schema(
   {
-    type: { type: String, enum: ["fixed"], required: true },
-    productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
-    qty: { type: Number, required: true, min: 0.25 },
+    type: { type: String, enum: ["fixed", "choice"], required: true },
+    // "fixed" fields
+    productId: { type: Schema.Types.ObjectId, ref: "Product" },
+    qty: { type: Number, min: 0.25 },
     customPrice: { type: Number, min: 0 },
-  },
-  { _id: false }
-)
-
-const comboSlotChoiceSchema = new Schema(
-  {
-    type: { type: String, enum: ["choice"], required: true },
-    pickCount: { type: Number, required: true, min: 1 },
-    candidateProductIds: {
-      type: [Schema.Types.ObjectId],
-      ref: "Product",
-      required: true,
-      validate: [
-        {
-          validator: (v: Types.ObjectId[]) => v.length > 0,
-          msg: "choice slot must have at least one candidate product",
-        },
-      ],
-    },
+    // "choice" fields
+    pickCount: { type: Number, min: 1 },
+    candidateProductIds: { type: [Schema.Types.ObjectId], ref: "Product" },
     label: { type: String, trim: true },
   },
-  { _id: false }
+  {
+    _id: false,
+    validate: {
+      validator: function (this: mongoose.Types.Subdocument, v: unknown) {
+        const t = this.get("type")
+        if (t === "fixed") {
+          return this.get("productId") != null && this.get("qty") != null
+        }
+        if (t === "choice") {
+          const ids = this.get("candidateProductIds")
+          return (
+            Array.isArray(ids) &&
+            ids.length > 0 &&
+            this.get("pickCount") != null
+          )
+        }
+        return false
+      },
+      message:
+        "Slot validation failed: 'fixed' slots require productId and qty; 'choice' slots require candidateProductIds (min 1) and pickCount.",
+    },
+  }
 )
 
 const comboSchema = new Schema(
@@ -118,7 +148,7 @@ const comboSchema = new Schema(
       },
     ],
     slots: {
-      type: [comboSlotFixedSchema, comboSlotChoiceSchema],
+      type: [comboSlotSchema],
       required: true,
       validate: [
         {

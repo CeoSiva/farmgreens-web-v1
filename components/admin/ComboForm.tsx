@@ -173,6 +173,7 @@ function MultiProductSelect({
   products: ProductOption[]
 }) {
   const [search, setSearch] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
 
   const toggle = (id: string) => {
     if (values.includes(id)) {
@@ -182,42 +183,87 @@ function MultiProductSelect({
     }
   }
 
+  const addAll = (ids: string[]) => {
+    const newIds = ids.filter((id) => !values.includes(id))
+    onChange([...values, ...newIds])
+  }
+
   const selectedProducts = products.filter((p) => values.includes(p._id))
-  const filtered = products.filter(
-    (p) =>
-      !values.includes(p._id) &&
-      p.name.toLowerCase().includes(search.toLowerCase())
-  )
+
+  // Products visible in the list (not yet selected, match search + category)
+  const visible = products.filter((p) => {
+    if (values.includes(p._id)) return false
+    if (selectedCategory !== "all" && p.category !== selectedCategory)
+      return false
+    if (search && !p.name.toLowerCase().includes(search.toLowerCase()))
+      return false
+    return true
+  })
 
   return (
     <div className="space-y-2">
-      <Input
-        placeholder="Search products to add..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="h-8"
-      />
-      {search && filtered.length > 0 && (
+      {/* Filters row */}
+      <div className="flex items-center gap-2">
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="h-8 w-[170px] text-xs">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="vegetable">Vegetables</SelectItem>
+            <SelectItem value="greens">Fresh Greens</SelectItem>
+            <SelectItem value="batter">Idli/Dosa Batter</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input
+          placeholder="Search products..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 flex-1"
+        />
+      </div>
+
+      {/* Select all visible button */}
+      {visible.length > 0 && (
+        <button
+          type="button"
+          onClick={() => addAll(visible.map((p) => p._id))}
+          className="w-full rounded border border-dashed border-muted-foreground/40 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-muted-foreground/60 hover:bg-muted/50 hover:text-foreground"
+        >
+          Select all {visible.length} visible product
+          {visible.length !== 1 ? "s" : ""}
+        </button>
+      )}
+
+      {/* Visible product list */}
+      {visible.length > 0 && (
         <div className="max-h-40 divide-y overflow-y-auto rounded-md border bg-card">
-          {filtered.slice(0, 15).map((p) => (
+          {visible.slice(0, 15).map((p) => (
             <button
               key={p._id}
               type="button"
-              onClick={() => {
-                toggle(p._id)
-                setSearch("")
-              }}
+              onClick={() => toggle(p._id)}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/50"
             >
               <Plus className="h-3 w-3 shrink-0 text-muted-foreground" />
-              <span>{p.name}</span>
-              <span className="ml-auto text-xs text-muted-foreground capitalize">
+              <span className="truncate">{p.name}</span>
+              <span className="ml-auto shrink-0 text-xs text-muted-foreground capitalize">
                 ({p.category})
               </span>
             </button>
           ))}
         </div>
       )}
+
+      {visible.length === 0 && (
+        <p className="py-1 text-xs text-muted-foreground">
+          {search || selectedCategory !== "all"
+            ? "No products match the current filters"
+            : "All products have been selected"}
+        </p>
+      )}
+
+      {/* Selected badges */}
       {selectedProducts.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {selectedProducts.map((p) => (
@@ -238,9 +284,10 @@ function MultiProductSelect({
           ))}
         </div>
       )}
+
       {values.length === 0 && (
         <p className="text-xs text-muted-foreground">
-          Search and click products above to add them
+          Select a category and search to add products
         </p>
       )}
     </div>
