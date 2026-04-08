@@ -2,6 +2,36 @@
 
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
+import mongoose from "mongoose"
+
+/** Safely converts any value to a mongoose ObjectId. Handles strings, objects with _id, and existing ObjectIds. */
+function toObjectId(val: unknown): mongoose.Types.ObjectId {
+  if (val instanceof mongoose.Types.ObjectId) return val
+  if (typeof val === "object" && val !== null && "_id" in val)
+    return toObjectId((val as { _id: unknown })._id)
+  if (typeof val === "string") {
+    try {
+      return new mongoose.Types.ObjectId(val)
+    } catch (err) {
+      console.error(
+        "[toObjectId] invalid string val:",
+        JSON.stringify(val),
+        "length:",
+        val.length
+      )
+      return new mongoose.Types.ObjectId()
+    }
+  }
+  console.error(
+    "[toObjectId] UNKNOWN type:",
+    typeof val,
+    "value:",
+    String(val),
+    "constructor:",
+    val?.constructor?.name
+  )
+  return new mongoose.Types.ObjectId()
+}
 
 import { CheckoutSchema, CheckoutFormValues } from "@/lib/schemas/checkout"
 import {
@@ -77,10 +107,10 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
       // Combo line items — finalPrice is already resolved at cart add-time
       ...comboItems.map((i) => ({
         itemType: "combo",
-        comboId: i.comboId,
+        comboId: toObjectId(i.comboId),
         comboName: i.comboName,
         selections: i.selections.map((s) => ({
-          productId: s.productId,
+          productId: toObjectId(s.productId),
           productName: s.productName,
           qty: s.qty,
           unitPrice: s.unitPrice,

@@ -58,32 +58,31 @@ export interface IOrder extends Document {
   updatedAt: Date
 }
 
-const orderProductItemSchema = new Schema(
+/** Merged order item schema — both "product" and "combo" shapes coexist. */
+const mergedOrderItemSchema = new Schema(
   {
-    itemType: { type: String, enum: ["product"], required: true },
-    productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
-    name: { type: String, required: true, trim: true },
-    price: { type: Number, required: true, min: 0 },
-    qty: { type: Number, required: true, min: 0.25 },
-    unit: { type: String, required: true, trim: true },
-  },
-  { _id: false }
-)
-
-const orderComboItemSchema = new Schema(
-  {
-    itemType: { type: String, enum: ["combo"], required: true },
-    comboId: { type: Schema.Types.ObjectId, ref: "Combo", required: true },
-    comboName: { type: String, required: true, trim: true },
+    itemType: { type: String, enum: ["product", "combo"], required: true },
+    // "product" fields
+    productId: { type: Schema.Types.ObjectId, ref: "Product" },
+    name: { type: String, trim: true },
+    price: { type: Number, min: 0 },
+    qty: { type: Number, min: 0.25 },
+    unit: { type: String, trim: true },
+    // "combo" fields
+    comboId: { type: Schema.Types.ObjectId, ref: "Combo" },
+    comboName: { type: String, trim: true },
     selections: [
       {
-        productId: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+        productId: {
+          type: Schema.Types.ObjectId,
+          ref: "Product",
+          required: true,
+        },
         productName: { type: String, required: true, trim: true },
         qty: { type: Number, required: true, min: 0.25 },
         unitPrice: { type: Number, required: true, min: 0 },
       },
     ],
-    price: { type: Number, required: true, min: 0 },
   },
   { _id: false }
 )
@@ -113,7 +112,7 @@ const orderSchema = new Schema(
       areaName: { type: String, trim: true },
     },
     items: {
-      type: [orderProductItemSchema, orderComboItemSchema],
+      type: [mergedOrderItemSchema],
       required: true,
     },
     subtotal: { type: Number, required: true, min: 0 },

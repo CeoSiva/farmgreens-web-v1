@@ -68,7 +68,11 @@ export default async function ShopPage({
       if (slot.type === "fixed") {
         return {
           type: "fixed" as const,
-          productId: slot.productId?._id?.toString() ?? "",
+          productId:
+            slot.productId?._id?.toString() ??
+            (typeof slot.productId === "string"
+              ? slot.productId
+              : (slot.productId?.toString() ?? "")),
           productName: slot.productId?.name ?? "Unknown Product",
           productPrice: slot.productId?.price ?? 0,
           productImageUrl: slot.productId?.imageUrl,
@@ -81,10 +85,15 @@ export default async function ShopPage({
           pickCount: slot.pickCount,
           label: slot.label,
           candidateProducts: (slot.candidateProductIds ?? []).map((p: any) => ({
-            productId: p?._id?.toString() ?? "",
-            productName: p?.name ?? "Unknown Product",
-            productPrice: p?.price ?? 0,
-            productImageUrl: p?.imageUrl,
+            productId:
+              p?._id?.toString() ??
+              (typeof p === "string" ? p : (p?.toString() ?? "")),
+            productName:
+              typeof p === "string"
+                ? "Unknown Product"
+                : (p?.name ?? "Unknown Product"),
+            productPrice: typeof p === "string" ? 0 : (p?.price ?? 0),
+            productImageUrl: typeof p === "string" ? undefined : p?.imageUrl,
           })),
         }
       }

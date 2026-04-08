@@ -123,6 +123,12 @@ export function ComboPickerModal({
     productId: string,
     pickCount: number
   ) => {
+    console.error(
+      "[Picker toggle] productId:",
+      typeof productId,
+      productId,
+      JSON.stringify(productId)
+    )
     setSelections((prev) => {
       const next = new Map(prev)
       const current = next.get(slotIndex) || []
@@ -158,6 +164,18 @@ export function ComboPickerModal({
           unitPrice: number
         }> = []
 
+        console.error(
+          "[Picker handleConfirm] selections Map entries:",
+          Array.from(selections.entries()).map(([k, v]) => ({
+            slotIndex: k,
+            values: v.map((x) => ({
+              type: typeof x,
+              val: x,
+              str: JSON.stringify(x),
+            })),
+          }))
+        )
+
         // Fixed slots first
         combo.slots.forEach((slot, slotIndex) => {
           if (slot.type === "fixed") {
@@ -177,10 +195,21 @@ export function ComboPickerModal({
           const selectedIds = selections.get(slotIndex) || []
 
           selectedIds.forEach((productId) => {
+            console.error(
+              "[Picker confirm] productId:",
+              typeof productId,
+              productId,
+              JSON.stringify(productId)
+            )
             const product = slot.candidateProducts.find(
               (p) => p.productId === productId
             )
             if (product) {
+              console.error(
+                "[Picker confirm] found product:",
+                product.productId,
+                typeof product.productId
+              )
               allSelections.push({
                 slotIndex,
                 productId: product.productId,
@@ -277,13 +306,19 @@ export function ComboPickerModal({
                           key={product.productId}
                           type="button"
                           disabled={isDisabled}
-                          onClick={() =>
+                          onClick={() => {
+                            console.error(
+                              "[Picker onClick] product.productId:",
+                              typeof product.productId,
+                              product.productId,
+                              JSON.stringify(product.productId)
+                            )
                             handleToggleProduct(
                               slotIndex,
                               product.productId,
                               slot.pickCount
                             )
-                          }
+                          }}
                           className={`relative flex flex-col items-center gap-1 rounded-lg border p-2 text-left transition-all ${
                             isSelected
                               ? "border-green-500 bg-green-50 dark:bg-green-950/30"
