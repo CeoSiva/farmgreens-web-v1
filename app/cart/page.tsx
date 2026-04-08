@@ -17,7 +17,12 @@ export default async function CartPage({
   const districtSlug = sp.district
 
   const { cart } = await getCartAction()
-  const ids = cart.items.map((i) => i.productId)
+  // Only extract product IDs from product items (not combo items)
+  const productItems = cart.items.filter(
+    (i): i is { type: "product"; productId: string; qty: number } =>
+      i.type === "product"
+  )
+  const ids = productItems.map((i) => i.productId)
   const settings = await getSettings()
   const deliveryFee = Number((settings as any).deliveryFee ?? 0)
   const freeDeliveryThreshold = Number(

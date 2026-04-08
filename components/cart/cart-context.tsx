@@ -1,6 +1,12 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react"
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react"
 import { CartItem } from "@/lib/cart"
 
 interface CartContextType {
@@ -26,7 +32,9 @@ export function CartProvider({
 
   const isInCart = useCallback(
     (productId: string) => {
-      return items.some((item) => item.productId === productId)
+      return items.some(
+        (item) => item.type === "product" && item.productId === productId
+      )
     },
     [items]
   )
@@ -43,7 +51,8 @@ export function CartProvider({
     }
 
     window.addEventListener("cart-updated" as any, handleCartUpdate)
-    return () => window.removeEventListener("cart-updated" as any, handleCartUpdate)
+    return () =>
+      window.removeEventListener("cart-updated" as any, handleCartUpdate)
   }, [])
 
   return (

@@ -24,7 +24,9 @@ export default async function OrderConfirmedPage({
 
   let imageMap: Map<string, string> = new Map()
   if (order) {
-    const productIds = order.items.map((item: any) => item.productId.toString())
+    const productIds = order.items
+      .filter((item: any) => item.itemType === "product" && item.productId)
+      .map((item: any) => item.productId.toString())
     const products = await getProductsByIds(productIds)
     for (const p of products) {
       if (p.imageUrl) imageMap.set(p._id.toString(), p.imageUrl)
@@ -132,7 +134,12 @@ export default async function OrderConfirmedPage({
                 </div>
                 <div className="space-y-3">
                   {order.items.map((item: any, idx: number) => {
-                    const imgUrl = imageMap.get(item.productId.toString())
+                    const isCombo = item.itemType === "combo"
+                    const itemName = isCombo ? item.comboName : item.name
+                    const imgUrl =
+                      !isCombo && item.productId
+                        ? imageMap.get(item.productId.toString())
+                        : undefined
                     return (
                       <div
                         key={idx}
@@ -142,7 +149,7 @@ export default async function OrderConfirmedPage({
                           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md border">
                             <Image
                               src={imgUrl}
-                              alt={item.name}
+                              alt={itemName}
                               fill
                               className="object-cover"
                             />
@@ -154,18 +161,37 @@ export default async function OrderConfirmedPage({
                         )}
                         <div className="flex flex-1 items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium">{item.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              ₹{item.price.toFixed(2)} / {item.unit}
-                            </p>
+                            <p className="text-sm font-medium">{itemName}</p>
+                            {!isCombo && (
+                              <p className="text-xs text-muted-foreground">
+                                ₹{item.price.toFixed(2)} / {item.unit}
+                              </p>
+                            )}
                           </div>
                           <div className="text-right">
-                            <p className="text-xs font-medium text-muted-foreground">
-                              × {formatQuantity(item.qty, item.unit)}
-                            </p>
-                            <p className="text-sm font-bold">
-                              ₹{(item.price * item.qty).toFixed(2)}
-                            </p>
+                            {isCombo ? (
+                              <>
+                                <p className="text-xs font-medium text-muted-foreground">
+                                  × 1
+                                </p>
+                                <p className="text-sm font-bold">
+                                  ₹{item.price.toFixed(2)}
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-xs font-medium text-muted-foreground">
+                                  ×{" "}
+                                  {formatQuantity(
+                                    item.qty,
+                                    item.unit || "unit"
+                                  )}
+                                </p>
+                                <p className="text-sm font-bold">
+                                  ₹{(item.price * item.qty).toFixed(2)}
+                                </p>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
