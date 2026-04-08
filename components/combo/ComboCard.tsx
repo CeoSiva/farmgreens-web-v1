@@ -10,8 +10,10 @@ import { useLocationRouter } from "@/hooks/use-location-router"
 import { addComboToCartAction } from "@/server/actions/cart"
 import { useCart } from "@/components/cart/cart-context"
 import { ComboPickerModal } from "./ComboPickerModal"
+import { ComboImageModal } from "./ComboImageModal"
 import { formatQuantity } from "@/lib/utils/format"
 import { cn } from "@/lib/utils"
+import { ZoomIn } from "lucide-react"
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -149,6 +151,7 @@ export function ComboCard({ combo, districtId }: ComboCardProps) {
   const router = useLocationRouter()
   const { updateCart } = useCart()
   const [isPickerOpen, setIsPickerOpen] = useState(false)
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false)
 
   const imageUrl = combo.imageUrl || "/placeholder-hero.png"
   const hasChoiceSlots = combo.slots.some((s) => s.type === "choice")
@@ -249,13 +252,19 @@ export function ComboCard({ combo, districtId }: ComboCardProps) {
       <div className="block md:hidden">
         <Card className="group relative flex flex-col gap-0 overflow-hidden rounded-xl border border-border/50 bg-background p-0 shadow-xs transition-all duration-200 hover:shadow-md">
           <div className="relative h-28 w-full overflow-hidden">
-            <Image
-              src={imageUrl}
-              alt={combo.name}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-              sizes="(max-width: 768px) 50vw, 33vw"
-            />
+            <button
+              type="button"
+              className="relative h-28 w-full overflow-hidden"
+              onClick={() => setIsImageModalOpen(true)}
+            >
+              <Image
+                src={imageUrl}
+                alt={combo.name}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 768px) 50vw, 33vw"
+              />
+            </button>
           </div>
 
           <CardContent className="flex flex-1 flex-col p-2 pt-1.5">
@@ -310,13 +319,22 @@ export function ComboCard({ combo, districtId }: ComboCardProps) {
       <div className="hidden md:block">
         <Card className="group relative flex flex-col gap-0 overflow-hidden rounded-2xl border-border/50 p-0 shadow-sm transition-all duration-200 hover:shadow-md">
           <div className="relative w-full overflow-hidden bg-muted/20 md:h-56 lg:h-64">
-            <Image
-              src={imageUrl}
-              alt={combo.name}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-              sizes="(max-width: 1200px) 33vw, 25vw"
-            />
+            <button
+              type="button"
+              className="relative h-full w-full cursor-pointer"
+              onClick={() => setIsImageModalOpen(true)}
+            >
+              <Image
+                src={imageUrl}
+                alt={combo.name}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 1200px) 33vw, 25vw"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                <ZoomIn className="h-8 w-8 text-white" />
+              </div>
+            </button>
           </div>
 
           <CardContent className="flex flex-1 flex-col p-5">
@@ -401,6 +419,14 @@ export function ComboCard({ combo, districtId }: ComboCardProps) {
         onOpenChange={setIsPickerOpen}
         combo={combo}
         districtId={districtId}
+      />
+
+      {/* Image Lightbox Modal */}
+      <ComboImageModal
+        open={isImageModalOpen}
+        onOpenChange={setIsImageModalOpen}
+        imageUrl={imageUrl}
+        imageAlt={combo.name}
       />
     </>
   )
