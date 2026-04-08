@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
     const currentStatus = recipient.status
 
     if (eventType === "delivered") {
-      if (["sent"].includes(currentStatus)) {
+      if (currentStatus === "sent") {
         await CampaignRecipientModel.findByIdAndUpdate(recipient._id, {
           status: "delivered",
           deliveredAt: new Date(),
@@ -128,13 +128,18 @@ export async function POST(req: NextRequest) {
       }
     } else if (eventType === "read") {
       if (currentStatus !== "read") {
-        await CampaignRecipientModel.findByIdAndUpdate(recipient._id, {
-          status: "read",
-          readAt: new Date(),
-        })
-        await CampaignModel.findByIdAndUpdate(recipient.campaignId, {
-          $inc: { readCount: 1 },
-        })
+        const recipientUpdates: any = { status: "read", readAt: new Date() }
+        const campaignUpdates: any = { $inc: { readCount: 1 } }
+
+        // If current status is still "sent", it means we either skipped "delivered" 
+        // or the events arrived out of order. We MUST increment deliveredCount too.
+        if (currentStatus === "sent") {
+          recipientUpdates.deliveredAt = recipientUpdates.readAt
+          campaignUpdates.$inc.deliveredCount = 1
+        }
+
+        await CampaignRecipientModel.findByIdAndUpdate(recipient._id, recipientUpdates)
+        await CampaignModel.findByIdAndUpdate(recipient.campaignId, campaignUpdates)
       }
     } else if (eventType === "failed") {
       if (["sent", "delivered"].includes(currentStatus)) {

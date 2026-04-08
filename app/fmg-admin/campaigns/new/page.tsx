@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +18,7 @@ import {
 type FilterType = "all" | "new_customers" | "high_value" | "city" | "manual"
 
 interface Customer { _id: string; name: string; mobile: string; whatsappOptIn: boolean }
+interface DistrictOption { _id: string; name: string }
 
 const DYNAMIC_VARS = [
   { key: "{{customerName}}", label: "Customer Name", example: "Ravi Kumar" },
@@ -30,12 +31,17 @@ export default function CreateCampaignPage() {
   const [estimating, setEstimating] = useState(false)
   const [estimatedReach, setEstimatedReach] = useState<number | null>(null)
   const [showVarGuide, setShowVarGuide] = useState(false)
+  const [isEstimateStale, setIsEstimateStale] = useState(false)
+  const [districtOptions, setDistrictOptions] = useState<DistrictOption[]>([])
+  const [loadingDistricts, setLoadingDistricts] = useState(false)
 
   // Step 1 state
   const [name, setName] = useState("")
   const [templateId, setTemplateId] = useState("")
   const [templateName, setTemplateName] = useState("")
   const [templateBody, setTemplateBody] = useState("")
+  const [templateStatus, setTemplateStatus] = useState("")
+  const [templateLanguage, setTemplateLanguage] = useState("")
   const [params, setParams] = useState(["", "", "", "", ""])
 
   // Step 2 state
@@ -49,11 +55,27 @@ export default function CreateCampaignPage() {
   const [sendTiming, setSendTiming] = useState<"now" | "later">("now")
   const [scheduledAt, setScheduledAt] = useState("")
 
+  const requiredPlaceholderIndexes = Array.from(
+    new Set(
+      (templateBody.match(/\{\{(\d+)\}\}/g) ?? [])
+        .map((m) => Number(m.replace(/\D/g, "")))
+        .filter((n) => Number.isFinite(n) && n > 0)
+    )
+  ).sort((a, b) => a - b)
+
+  const missingPlaceholderIndexes = requiredPlaceholderIndexes.filter(
+    (index) => !params[index - 1]?.trim()
+  )
+
+
   const step1Issues: string[] = []
   if (!name.trim()) step1Issues.push("Campaign name is required.")
   if (!templateId.trim()) step1Issues.push("Template ID is required.")
   if (!params.some((p) => p.trim().length > 0)) {
     step1Issues.push("Add at least one template parameter or dynamic variable.")
+  }
+  if (missingPlaceholderIndexes.length > 0) {
+    step1Issues.push(`Missing values for placeholders: ${missingPlaceholderIndexes.map((i) => `{{${i}}}`).join(", ")}`)
   }
 
   const step2Issues: string[] = []
@@ -71,11 +93,26 @@ export default function CreateCampaignPage() {
   if (sendTiming === "later" && !scheduledAt) {
     step3Issues.push("Scheduled date and time is required when sending later.")
   }
+  if (sendTiming === "later" && scheduledAt) {
+    const scheduleDate = new Date(scheduledAt)
+    if (Number.isNaN(scheduleDate.getTime()) || scheduleDate.getTime() <= Date.now()) {
+      step3Issues.push("Scheduled date and time must be in the future.")
+    }
+  }
+  if (filterType !== "manual" && isEstimateStale) {
+    step3Issues.push("Audience estimate is stale. Recalculate reach before confirming.")
+  }
 
   const updateParam = (i: number, val: string) => {
     const updated = [...params]
     updated[i] = val
     setParams(updated)
+  }
+
+  const markEstimateStale = () => {
+    if (estimatedReach !== null) {
+      setIsEstimateStale(true)
+    }
   }
 
   /** Replace all {{n}} placeholders in the template body with the entered param values */
@@ -88,6 +125,10 @@ export default function CreateCampaignPage() {
     return preview
   }
 
+  const unresolvedNumericPlaceholders = Array.from(
+    new Set((previewMessage().match(/\{\{\d+\}\}/g) ?? []))
+  )
+
   const buildFilter = () => ({
     type: filterType,
     ...(filterType === "high_value" && { minSpend: Number(minSpend) }),
@@ -99,6 +140,7 @@ export default function CreateCampaignPage() {
   const calculateReach = async () => {
     if (filterType === "manual") {
       setEstimatedReach(selectedCustomers.length)
+      setIsEstimateStale(false)
       return
     }
     setEstimating(true)
@@ -112,6 +154,7 @@ export default function CreateCampaignPage() {
       const res = await fetch(`/api/admin/campaigns/estimate?${qs}`)
       const data = await res.json()
       setEstimatedReach(data.count)
+      setIsEstimateStale(false)
     } catch {
       toast.error("Failed to estimate reach")
     } finally {
@@ -127,6 +170,30 @@ export default function CreateCampaignPage() {
     if (filterType === "manual" && selectedCustomers.length === 0) {
       toast.error("Please select at least one customer")
       return
+    }
+    if (missingPlaceholderIndexes.length > 0) {
+      toast.error(`Fill required placeholders: ${missingPlaceholderIndexes.map((i) => `{{${i}}}`).join(", ")}`)
+      return
+    }
+    if (!asDraft && filterType !== "manual" && isEstimateStale) {
+      toast.error("Recalculate audience estimate before confirming send/schedule")
+      return
+    }
+    if (sendTiming === "later") {
+      const scheduleDate = new Date(scheduledAt)
+      if (!scheduledAt || Number.isNaN(scheduleDate.getTime()) || scheduleDate.getTime() <= Date.now()) {
+        toast.error("Please select a future date/time for scheduled campaign")
+        return
+      }
+    }
+
+    if (!asDraft && sendTiming === "now") {
+      const confirmed = window.confirm(
+        `Send campaign now?\n\nCampaign: ${name}\nTemplate: ${templateName || templateId}\nEstimated Reach: ${
+          estimatedReach !== null ? `~${estimatedReach.toLocaleString()} customers` : "Not calculated"
+        }\n\nThis will start sending immediately.`
+      )
+      if (!confirmed) return
     }
     setLoading(true)
     try {
@@ -157,6 +224,35 @@ export default function CreateCampaignPage() {
       setLoading(false)
     }
   }
+
+  const citySuggestions = districtOptions.map((d) => d.name)
+  const hasCityExactMatch =
+    city.trim().length > 0 &&
+    citySuggestions.some((name) => name.toLowerCase() === city.trim().toLowerCase())
+
+  const shouldWarnCityMismatch = filterType === "city" && city.trim().length > 0 && districtOptions.length > 0 && !hasCityExactMatch
+
+  const disabledConfirm = loading || step3Issues.length > 0
+
+  useEffect(() => {
+    if (filterType !== "city" || districtOptions.length > 0 || loadingDistricts) return
+
+    const loadDistricts = async () => {
+      setLoadingDistricts(true)
+      try {
+        const res = await fetch("/api/admin/campaigns/districts")
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error ?? "Failed to load districts")
+        setDistrictOptions(data.districts ?? [])
+      } catch {
+        // Soft-fail and keep free-text mode.
+      } finally {
+        setLoadingDistricts(false)
+      }
+    }
+
+    loadDistricts()
+  }, [filterType, districtOptions.length, loadingDistricts])
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-6 lg:p-8 max-w-5xl">
@@ -233,6 +329,8 @@ export default function CreateCampaignPage() {
                     setTemplateId(t.id)
                     setTemplateName(t.name)
                     setTemplateBody(t.body ?? "")
+                    setTemplateStatus(t.status ?? "")
+                    setTemplateLanguage(t.language ?? "")
                     // Auto-fill param count
                     setParams(
                       Array.from({ length: 5 }, (_, i) => (i < t.params.length ? params[i] ?? "" : ""))
@@ -302,6 +400,11 @@ export default function CreateCampaignPage() {
                     Preview still contains unresolved placeholders. Fill or intentionally keep dynamic variables before sending.
                   </p>
                 )}
+                {unresolvedNumericPlaceholders.length > 0 && (
+                  <p className="text-xs text-destructive">
+                    Unresolved numeric placeholders: {unresolvedNumericPlaceholders.join(", ")}
+                  </p>
+                )}
 
                 <div className="space-y-2">
                   {params.map((p, i) => (
@@ -355,6 +458,16 @@ export default function CreateCampaignPage() {
                         <span className="text-muted-foreground">Name:</span> {templateName}
                       </p>
                     )}
+                    {templateStatus && (
+                      <p>
+                        <span className="text-muted-foreground">Status:</span> {templateStatus}
+                      </p>
+                    )}
+                    {templateLanguage && (
+                      <p>
+                        <span className="text-muted-foreground">Language:</span> {templateLanguage}
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -377,7 +490,7 @@ export default function CreateCampaignPage() {
                 value={filterType}
                 onValueChange={(v: FilterType) => {
                   setFilterType(v)
-                  setEstimatedReach(null)
+                  markEstimateStale()
                 }}
               >
                 {[
@@ -405,7 +518,10 @@ export default function CreateCampaignPage() {
                     <Input
                       type="number"
                       value={daysSinceJoined}
-                      onChange={(e) => setDaysSinceJoined(e.target.value)}
+                      onChange={(e) => {
+                        setDaysSinceJoined(e.target.value)
+                        markEstimateStale()
+                      }}
                       className="w-32"
                     />
                   </div>
@@ -416,7 +532,10 @@ export default function CreateCampaignPage() {
                     <Input
                       type="number"
                       value={minSpend}
-                      onChange={(e) => setMinSpend(e.target.value)}
+                      onChange={(e) => {
+                        setMinSpend(e.target.value)
+                        markEstimateStale()
+                      }}
                       placeholder="e.g. 1000"
                       className="w-40"
                     />
@@ -427,19 +546,40 @@ export default function CreateCampaignPage() {
                     <Label>District / City name</Label>
                     <Input
                       value={city}
-                      onChange={(e) => setCity(e.target.value)}
+                      onChange={(e) => {
+                        setCity(e.target.value)
+                        markEstimateStale()
+                      }}
                       placeholder="e.g. Chennai"
+                      list="district-options"
                       className="w-56"
                     />
+                    <datalist id="district-options">
+                      {citySuggestions.map((name) => (
+                        <option key={name} value={name} />
+                      ))}
+                    </datalist>
                     <p className="text-xs text-muted-foreground">
-                      Must exactly match a district name in the database.
+                      Pick from suggested district names to avoid exact-match errors.
                     </p>
+                    {loadingDistricts && (
+                      <p className="text-xs text-muted-foreground">Loading district suggestions...</p>
+                    )}
+                    {shouldWarnCityMismatch && (
+                      <p className="text-xs text-amber-600 dark:text-amber-300">
+                        City may not match known districts. Try a suggested district name.
+                      </p>
+                    )}
                   </div>
                 )}
                 {filterType === "manual" && (
                   <CustomerPicker
                     selected={selectedCustomers}
-                    onChange={setSelectedCustomers}
+                    onChange={(value) => {
+                      setSelectedCustomers(value)
+                      setEstimatedReach(value.length)
+                      setIsEstimateStale(false)
+                    }}
                   />
                 )}
               </div>
@@ -458,12 +598,22 @@ export default function CreateCampaignPage() {
                     ~<strong>{estimatedReach.toLocaleString()}</strong> customers
                   </p>
                 )}
+                {isEstimateStale && filterType !== "manual" && (
+                  <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">
+                    Estimate stale
+                  </Badge>
+                )}
                 {estimatedReach === null && (
                   <Badge variant="outline" className="text-xs">
                     Reach not calculated
                   </Badge>
                 )}
               </div>
+              {filterType === "city" && estimatedReach === 0 && !estimating && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+                  Reach is zero for this district. Verify city spelling or choose a suggested district name.
+                </div>
+              )}
               {step2Issues.length > 0 && (
                 <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
                   <p className="font-medium">Audience setup needs attention:</p>
@@ -585,6 +735,8 @@ export default function CreateCampaignPage() {
                 { label: "Campaign name", value: name || "—" },
                 { label: "Template ID", value: templateId ? <code className="text-xs font-mono">{templateId.slice(0, 20)}...</code> : "—" },
                 { label: "Template name", value: templateName || "—" },
+                { label: "Template status", value: templateStatus || "—" },
+                { label: "Template language", value: templateLanguage || "—" },
                 { label: "Audience", value: filterType.replace("_", " ") },
                 { label: "Est. reach", value: estimatedReach != null ? `~${estimatedReach.toLocaleString()} customers` : "Not estimated" },
                 { label: "Timing", value: sendTiming === "now" ? "Immediately after confirm" : scheduledAt || "—" },
@@ -621,7 +773,7 @@ export default function CreateCampaignPage() {
             <Button variant="outline" onClick={() => handleSubmit(true)} disabled={loading}>
               Save as Draft
             </Button>
-            <Button onClick={() => handleSubmit(false)} disabled={loading}>
+            <Button onClick={() => handleSubmit(false)} disabled={disabledConfirm}>
               <Send className="mr-2 h-4 w-4" />
               {sendTiming === "later" ? "Confirm & Schedule" : "Confirm & Send"}
             </Button>
