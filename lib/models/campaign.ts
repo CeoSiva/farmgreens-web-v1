@@ -23,6 +23,7 @@ export interface ICampaign extends Document {
   deliveredCount: number
   readCount: number
   failedCount: number
+  skippedCount: number  // customers skipped due to 24h re-send guard
   createdBy: string
   createdAt: Date
   updatedAt: Date
@@ -48,6 +49,7 @@ const campaignSchema = new Schema<ICampaign>(
     deliveredCount: { type: Number, default: 0 },
     readCount: { type: Number, default: 0 },
     failedCount: { type: Number, default: 0 },
+    skippedCount: { type: Number, default: 0 },
     createdBy: { type: String, required: true },
   },
   { timestamps: true }

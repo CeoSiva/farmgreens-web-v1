@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { TemplateBrowser } from "@/components/admin/campaigns/template-browser"
 import { CustomerPicker } from "@/components/admin/campaigns/customer-picker"
 import { toast } from "sonner"
@@ -15,13 +16,13 @@ import {
   ArrowLeft, ArrowRight, Send, Clock, Users, Megaphone, Info, ChevronDown, ChevronUp,
 } from "lucide-react"
 
-type FilterType = "all" | "new_customers" | "high_value" | "city" | "manual"
-
 interface Customer { _id: string; name: string; mobile: string; whatsappOptIn: boolean }
 interface DistrictOption { _id: string; name: string }
 
 const DYNAMIC_VARS = [
-  { key: "{{customerName}}", label: "Customer Name", example: "Ravi Kumar" },
+  { key: "{{customerName}}", label: "Customer Full Name", example: "Ravi Kumar" },
+  { key: "{{customerFirstName}}", label: "Customer First Name", example: "Ravi" },
+  { key: "{{customerMobile}}", label: "Customer Mobile", example: "9876543210" },
 ]
 
 export default function CreateCampaignPage() {
@@ -43,11 +44,17 @@ export default function CreateCampaignPage() {
   const [templateStatus, setTemplateStatus] = useState("")
   const [templateLanguage, setTemplateLanguage] = useState("")
   const [params, setParams] = useState(["", "", "", "", ""])
+  const [hasMediaHeader, setHasMediaHeader] = useState(false)
+  const [templateMediaUrl, setTemplateMediaUrl] = useState("")
 
   // Step 2 state
-  const [filterType, setFilterType] = useState<FilterType>("all")
+  const [useAllOptedIn, setUseAllOptedIn] = useState(true)
+  const [useManual, setUseManual] = useState(false)
+  const [useCityFilter, setUseCityFilter] = useState(false)
+  const [selectedCity, setSelectedCity] = useState("")
+  const [useMinSpendFilter, setUseMinSpendFilter] = useState(false)
   const [minSpend, setMinSpend] = useState("")
-  const [city, setCity] = useState("")
+  const [useNewCustomerFilter, setUseNewCustomerFilter] = useState(false)
   const [daysSinceJoined, setDaysSinceJoined] = useState("30")
   const [selectedCustomers, setSelectedCustomers] = useState<Customer[]>([])
 
@@ -71,7 +78,7 @@ export default function CreateCampaignPage() {
   const step1Issues: string[] = []
   if (!name.trim()) step1Issues.push("Campaign name is required.")
   if (!templateId.trim()) step1Issues.push("Template ID is required.")
-  if (!params.some((p) => p.trim().length > 0)) {
+  if (requiredPlaceholderIndexes.length > 0 && !params.some((p) => p.trim().length > 0)) {
     step1Issues.push("Add at least one template parameter or dynamic variable.")
   }
   if (missingPlaceholderIndexes.length > 0) {
@@ -79,14 +86,17 @@ export default function CreateCampaignPage() {
   }
 
   const step2Issues: string[] = []
-  if (filterType === "manual" && selectedCustomers.length === 0) {
+  if (useManual && selectedCustomers.length === 0) {
     step2Issues.push("Select at least one customer for manual targeting.")
   }
-  if (filterType === "city" && !city.trim()) {
+  if (useCityFilter && !selectedCity.trim()) {
     step2Issues.push("District / city name is required for city targeting.")
   }
-  if (filterType === "high_value" && !minSpend.trim()) {
+  if (useMinSpendFilter && !minSpend.trim()) {
     step2Issues.push("Minimum spend is required for high-value targeting.")
+  }
+  if (!useAllOptedIn && !useManual && !useCityFilter && !useMinSpendFilter && !useNewCustomerFilter) {
+    step2Issues.push("Select at least one target audience filter, or choose 'All opted-in'.")
   }
 
   const step3Issues: string[] = []
@@ -99,7 +109,7 @@ export default function CreateCampaignPage() {
       step3Issues.push("Scheduled date and time must be in the future.")
     }
   }
-  if (filterType !== "manual" && isEstimateStale) {
+  if (!useManual && isEstimateStale) {
     step3Issues.push("Audience estimate is stale. Recalculate reach before confirming.")
   }
 
@@ -129,26 +139,30 @@ export default function CreateCampaignPage() {
     new Set((previewMessage().match(/\{\{\d+\}\}/g) ?? []))
   )
 
-  const buildFilter = () => ({
-    type: filterType,
-    ...(filterType === "high_value" && { minSpend: Number(minSpend) }),
-    ...(filterType === "city" && { city }),
-    ...(filterType === "new_customers" && { daysSinceJoined: Number(daysSinceJoined) }),
-    ...(filterType === "manual" && { customerIds: selectedCustomers.map((c) => c._id) }),
-  })
+  const buildFilter = () => {
+    if (useManual) return { type: "manual", customerIds: selectedCustomers.map((c) => c._id) }
+    if (useAllOptedIn) return { type: "combined" }
+    return {
+      type: "combined",
+      ...(useMinSpendFilter && minSpend && { minSpend: Number(minSpend) }),
+      ...(useCityFilter && selectedCity && { districts: [selectedCity] }),
+      ...(useNewCustomerFilter && daysSinceJoined && { daysSinceJoined: Number(daysSinceJoined) }),
+    }
+  }
 
   const calculateReach = async () => {
-    if (filterType === "manual") {
+    if (useManual) {
       setEstimatedReach(selectedCustomers.length)
       setIsEstimateStale(false)
       return
     }
     setEstimating(true)
     try {
-      const f = buildFilter()
-      const qs = new URLSearchParams({ filterType: f.type })
+      const f: any = buildFilter()
+      const qs = new URLSearchParams()
+      qs.set("filterType", f.type)
       if (f.minSpend != null) qs.set("minSpend", String(f.minSpend))
-      if (f.city) qs.set("city", f.city)
+      if (f.districts?.length > 0) qs.set("city", f.districts.join(","))
       if (f.daysSinceJoined != null) qs.set("daysSinceJoined", String(f.daysSinceJoined))
 
       const res = await fetch(`/api/admin/campaigns/estimate?${qs}`)
@@ -167,7 +181,7 @@ export default function CreateCampaignPage() {
       toast.error("Campaign name and Template ID are required")
       return
     }
-    if (filterType === "manual" && selectedCustomers.length === 0) {
+    if (useManual && selectedCustomers.length === 0) {
       toast.error("Please select at least one customer")
       return
     }
@@ -175,7 +189,7 @@ export default function CreateCampaignPage() {
       toast.error(`Fill required placeholders: ${missingPlaceholderIndexes.map((i) => `{{${i}}}`).join(", ")}`)
       return
     }
-    if (!asDraft && filterType !== "manual" && isEstimateStale) {
+    if (!asDraft && !useManual && isEstimateStale) {
       toast.error("Recalculate audience estimate before confirming send/schedule")
       return
     }
@@ -197,11 +211,19 @@ export default function CreateCampaignPage() {
     }
     setLoading(true)
     try {
+        // Build the final templateParams:
+        // - For media templates: prepend the mediaUrl as the first param automatically
+        // - For text templates: use user-filled params matching placeholder count
+        const textParams = params.slice(0, requiredPlaceholderIndexes.length).map(p => p || "")
+        const templateParams = hasMediaHeader && templateMediaUrl
+          ? [templateMediaUrl, ...textParams]
+          : textParams
+
       const body = {
         name,
         templateId,
         templateName: templateName || name,
-        templateParams: params.filter(Boolean),
+        templateParams,
         targetFilter: buildFilter(),
         ...(sendTiming === "later" && scheduledAt && { scheduledAt }),
       }
@@ -227,15 +249,15 @@ export default function CreateCampaignPage() {
 
   const citySuggestions = districtOptions.map((d) => d.name)
   const hasCityExactMatch =
-    city.trim().length > 0 &&
-    citySuggestions.some((name) => name.toLowerCase() === city.trim().toLowerCase())
+    selectedCity.trim().length > 0 &&
+    citySuggestions.some((name) => name.toLowerCase() === selectedCity.trim().toLowerCase())
 
-  const shouldWarnCityMismatch = filterType === "city" && city.trim().length > 0 && districtOptions.length > 0 && !hasCityExactMatch
+  const shouldWarnCityMismatch = useCityFilter && selectedCity.trim().length > 0 && districtOptions.length > 0 && !hasCityExactMatch
 
   const disabledConfirm = loading || step3Issues.length > 0
 
   useEffect(() => {
-    if (filterType !== "city" || districtOptions.length > 0 || loadingDistricts) return
+    if ((!useCityFilter) || districtOptions.length > 0 || loadingDistricts) return
 
     const loadDistricts = async () => {
       setLoadingDistricts(true)
@@ -252,7 +274,7 @@ export default function CreateCampaignPage() {
     }
 
     loadDistricts()
-  }, [filterType, districtOptions.length, loadingDistricts])
+  }, [useCityFilter, districtOptions.length, loadingDistricts])
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 md:gap-8 md:p-6 lg:p-8 max-w-5xl">
@@ -331,9 +353,11 @@ export default function CreateCampaignPage() {
                     setTemplateBody(t.body ?? "")
                     setTemplateStatus(t.status ?? "")
                     setTemplateLanguage(t.language ?? "")
-                    // Auto-fill param count
+                    setHasMediaHeader(t.hasMediaHeader ?? false)
+                    setTemplateMediaUrl(t.mediaUrl ?? "")
+                    // Auto-fill param slots only for user-fillable text variables
                     setParams(
-                      Array.from({ length: 5 }, (_, i) => (i < t.params.length ? params[i] ?? "" : ""))
+                      Array.from({ length: t.params.length }, () => "")
                     )
                     toast.success(`Template "${t.name}" selected`)
                   }}
@@ -406,20 +430,33 @@ export default function CreateCampaignPage() {
                   </p>
                 )}
 
-                <div className="space-y-2">
-                  {params.map((p, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs w-12 shrink-0 justify-center">
-                        {"{{" + (i + 1) + "}}"}
-                      </Badge>
-                      <Input
-                        value={p}
-                        onChange={(e) => updateParam(i, e.target.value)}
-                        placeholder={i === 0 ? "{{customerName}} or fixed text" : "Value or leave blank"}
-                        className="flex-1 text-sm"
-                      />
-                    </div>
+                <datalist id="dynamic-vars-list">
+                  {DYNAMIC_VARS.map((v) => (
+                    <option key={v.key} value={v.key}>{v.label}</option>
                   ))}
+                </datalist>
+
+                <div className="space-y-2">
+                  {params.length === 0 ? (
+                    <div className="rounded-lg border border-dashed p-6 text-center">
+                      <p className="text-sm text-muted-foreground">This template does not require any variables.</p>
+                    </div>
+                  ) : (
+                    params.map((p, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs w-12 shrink-0 justify-center">
+                          {"{{" + (i + 1) + "}}"}
+                        </Badge>
+                        <Input
+                          list="dynamic-vars-list"
+                          value={p}
+                          onChange={(e) => updateParam(i, e.target.value)}
+                          placeholder="Double-click to select variable or type fixed text"
+                          className="flex-1 text-sm bg-white dark:bg-zinc-900 shadow-sm"
+                        />
+                      </div>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -486,101 +523,121 @@ export default function CreateCampaignPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              <RadioGroup
-                value={filterType}
-                onValueChange={(v: FilterType) => {
-                  setFilterType(v)
-                  markEstimateStale()
-                }}
-              >
-                {[
-                  { value: "all", label: "All opted-in customers", desc: "Everyone who agreed to receive WhatsApp messages" },
-                  { value: "new_customers", label: "New customers", desc: "Customers who joined within N days" },
-                  { value: "high_value", label: "High-value customers", desc: "Customers with total order spend above a threshold" },
-                  { value: "city", label: "Specific city / district", desc: "Filter by district name from the database" },
-                  { value: "manual", label: "Manually selected customers", desc: "Search and pick individual customers" },
-                ].map((opt) => (
-                  <div key={opt.value} className="flex items-start space-x-2.5">
-                    <RadioGroupItem value={opt.value} id={opt.value} className="mt-1" />
-                    <Label htmlFor={opt.value} className="cursor-pointer">
-                      <span className="font-medium">{opt.label}</span>
-                      <p className="text-xs text-muted-foreground font-normal">{opt.desc}</p>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
+              <div className="space-y-2">
+                <div className="flex items-start space-x-2.5">
+                  <Checkbox
+                    id="all"
+                    checked={useAllOptedIn}
+                    onCheckedChange={(c) => { setUseAllOptedIn(!!c); if(c){ setUseManual(false); setUseCityFilter(false); setUseMinSpendFilter(false); setUseNewCustomerFilter(false); } markEstimateStale() }}
+                  />
+                  <Label htmlFor="all" className="cursor-pointer">
+                    <span className="font-medium">All opted-in customers</span>
+                    <p className="text-xs text-muted-foreground font-normal">Everyone who agreed to receive messages.</p>
+                  </Label>
+                </div>
 
-              {/* Conditional sub-fields */}
-              <div className="pl-1">
-                {filterType === "new_customers" && (
-                  <div className="space-y-1.5">
-                    <Label>Joined in the last (days)</Label>
+                <div className="flex items-start space-x-2.5">
+                  <Checkbox
+                    id="new"
+                    checked={useNewCustomerFilter}
+                    onCheckedChange={(c) => { setUseNewCustomerFilter(!!c); if(c){ setUseAllOptedIn(false); setUseManual(false); } markEstimateStale() }}
+                  />
+                  <Label htmlFor="new" className="cursor-pointer">
+                    <span className="font-medium">New customers</span>
+                    <p className="text-xs text-muted-foreground font-normal">Customers who joined within N days.</p>
+                  </Label>
+                </div>
+
+                {useNewCustomerFilter && (
+                  <div className="pl-6 space-y-1.5 pb-2">
+                    <Label className="text-xs">Joined in the last (days)</Label>
                     <Input
                       type="number"
                       value={daysSinceJoined}
-                      onChange={(e) => {
-                        setDaysSinceJoined(e.target.value)
-                        markEstimateStale()
-                      }}
-                      className="w-32"
+                      onChange={(e) => { setDaysSinceJoined(e.target.value); markEstimateStale() }}
+                      className="w-32 h-8"
                     />
                   </div>
                 )}
-                {filterType === "high_value" && (
-                  <div className="space-y-1.5">
-                    <Label>Minimum total spend (₹)</Label>
+
+                <div className="flex items-start space-x-2.5">
+                  <Checkbox
+                    id="spend"
+                    checked={useMinSpendFilter}
+                    onCheckedChange={(c) => { setUseMinSpendFilter(!!c); if(c){ setUseAllOptedIn(false); setUseManual(false); } markEstimateStale() }}
+                  />
+                  <Label htmlFor="spend" className="cursor-pointer">
+                    <span className="font-medium">High-value customers</span>
+                    <p className="text-xs text-muted-foreground font-normal">Customers above a total spend threshold.</p>
+                  </Label>
+                </div>
+
+                {useMinSpendFilter && (
+                  <div className="pl-6 space-y-1.5 pb-2">
+                    <Label className="text-xs">Minimum total spend (₹)</Label>
                     <Input
                       type="number"
                       value={minSpend}
-                      onChange={(e) => {
-                        setMinSpend(e.target.value)
-                        markEstimateStale()
-                      }}
+                      onChange={(e) => { setMinSpend(e.target.value); markEstimateStale() }}
                       placeholder="e.g. 1000"
-                      className="w-40"
+                      className="w-32 h-8"
                     />
                   </div>
                 )}
-                {filterType === "city" && (
-                  <div className="space-y-1.5">
-                    <Label>District / City name</Label>
+
+                <div className="flex items-start space-x-2.5">
+                  <Checkbox
+                    id="city"
+                    checked={useCityFilter}
+                    onCheckedChange={(c) => { setUseCityFilter(!!c); if(c){ setUseAllOptedIn(false); setUseManual(false); } markEstimateStale() }}
+                  />
+                  <Label htmlFor="city" className="cursor-pointer">
+                    <span className="font-medium">Specific district</span>
+                    <p className="text-xs text-muted-foreground font-normal">Filter by specific districts.</p>
+                  </Label>
+                </div>
+
+                {useCityFilter && (
+                  <div className="pl-6 space-y-1.5 pb-2">
+                    <Label className="text-xs">District / City name</Label>
                     <Input
-                      value={city}
-                      onChange={(e) => {
-                        setCity(e.target.value)
-                        markEstimateStale()
-                      }}
+                      value={selectedCity}
+                      onChange={(e) => { setSelectedCity(e.target.value); markEstimateStale() }}
                       placeholder="e.g. Chennai"
                       list="district-options"
-                      className="w-56"
+                      className="w-56 h-8"
                     />
                     <datalist id="district-options">
                       {citySuggestions.map((name) => (
                         <option key={name} value={name} />
                       ))}
                     </datalist>
-                    <p className="text-xs text-muted-foreground">
-                      Pick from suggested district names to avoid exact-match errors.
-                    </p>
-                    {loadingDistricts && (
-                      <p className="text-xs text-muted-foreground">Loading district suggestions...</p>
-                    )}
-                    {shouldWarnCityMismatch && (
-                      <p className="text-xs text-amber-600 dark:text-amber-300">
-                        City may not match known districts. Try a suggested district name.
-                      </p>
-                    )}
                   </div>
                 )}
-                {filterType === "manual" && (
-                  <CustomerPicker
-                    selected={selectedCustomers}
-                    onChange={(value) => {
-                      setSelectedCustomers(value)
-                      setEstimatedReach(value.length)
-                      setIsEstimateStale(false)
-                    }}
+
+                <div className="flex items-start space-x-2.5 pt-2 border-t mt-2">
+                  <Checkbox
+                    id="manual"
+                    checked={useManual}
+                    onCheckedChange={(c) => { setUseManual(!!c); if(c){ setUseAllOptedIn(false); setUseCityFilter(false); setUseMinSpendFilter(false); setUseNewCustomerFilter(false); } markEstimateStale() }}
                   />
+                  <Label htmlFor="manual" className="cursor-pointer">
+                    <span className="font-medium">Manually select customers</span>
+                    <p className="text-xs text-muted-foreground font-normal">Search and pick individual customers to send to.</p>
+                  </Label>
+                </div>
+
+                {useManual && (
+                  <div className="pl-6 pt-2">
+                    <CustomerPicker
+                      selected={selectedCustomers}
+                      onChange={(value) => {
+                        setSelectedCustomers(value)
+                        setEstimatedReach(value.length)
+                        setIsEstimateStale(false)
+                      }}
+                    />
+                  </div>
                 )}
               </div>
 
@@ -589,7 +646,7 @@ export default function CreateCampaignPage() {
                   variant="outline"
                   size="sm"
                   onClick={calculateReach}
-                  disabled={estimating || (filterType === "city" && !city) || (filterType === "high_value" && !minSpend)}
+                  disabled={estimating || (useCityFilter && !selectedCity) || (useMinSpendFilter && !minSpend)}
                 >
                   {estimating ? "Calculating..." : "Calculate Reach"}
                 </Button>
@@ -598,7 +655,7 @@ export default function CreateCampaignPage() {
                     ~<strong>{estimatedReach.toLocaleString()}</strong> customers
                   </p>
                 )}
-                {isEstimateStale && filterType !== "manual" && (
+                {isEstimateStale && !useManual && (
                   <Badge variant="outline" className="text-xs border-amber-300 text-amber-700">
                     Estimate stale
                   </Badge>
@@ -609,9 +666,9 @@ export default function CreateCampaignPage() {
                   </Badge>
                 )}
               </div>
-              {filterType === "city" && estimatedReach === 0 && !estimating && (
+              {useCityFilter && estimatedReach === 0 && !estimating && (
                 <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                  Reach is zero for this district. Verify city spelling or choose a suggested district name.
+                  Reach is zero for this district. Verify district spelling or choose a suggested district name.
                 </div>
               )}
               {step2Issues.length > 0 && (
@@ -634,33 +691,15 @@ export default function CreateCampaignPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Filter type</span>
-                <Badge variant="outline" className="capitalize">{filterType.replace("_", " ")}</Badge>
+                <span className="text-muted-foreground">Filters active</span>
+                <div className="flex flex-col items-end gap-1">
+                  {useAllOptedIn && <Badge variant="outline">All Customers</Badge>}
+                  {useManual && <Badge variant="outline">Manual Selection ({selectedCustomers.length})</Badge>}
+                  {useCityFilter && <Badge variant="outline">District: {selectedCity || "—"}</Badge>}
+                  {useMinSpendFilter && <Badge variant="outline">Min Spend: ₹{minSpend || "—"}</Badge>}
+                  {useNewCustomerFilter && <Badge variant="outline">Joined last {daysSinceJoined} days</Badge>}
+                </div>
               </div>
-              {filterType === "new_customers" && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Joined within</span>
-                  <span>{daysSinceJoined} days</span>
-                </div>
-              )}
-              {filterType === "high_value" && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Min spend</span>
-                  <span>₹{minSpend || "—"}</span>
-                </div>
-              )}
-              {filterType === "city" && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">City</span>
-                  <span>{city || "—"}</span>
-                </div>
-              )}
-              {filterType === "manual" && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Selected</span>
-                  <span>{selectedCustomers.length} customers</span>
-                </div>
-              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Estimated reach</span>
                 <span className="font-semibold">
@@ -737,7 +776,7 @@ export default function CreateCampaignPage() {
                 { label: "Template name", value: templateName || "—" },
                 { label: "Template status", value: templateStatus || "—" },
                 { label: "Template language", value: templateLanguage || "—" },
-                { label: "Audience", value: filterType.replace("_", " ") },
+                { label: "Audience", value: useManual ? "Manual Selection" : useAllOptedIn ? "All Customers" : "Combined Filters" },
                 { label: "Est. reach", value: estimatedReach != null ? `~${estimatedReach.toLocaleString()} customers` : "Not estimated" },
                 { label: "Timing", value: sendTiming === "now" ? "Immediately after confirm" : scheduledAt || "—" },
               ].map(({ label, value }) => (

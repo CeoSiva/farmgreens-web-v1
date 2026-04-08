@@ -6,6 +6,7 @@ export type RecipientStatus =
   | "delivered"
   | "read"
   | "failed"
+  | "skipped"
 
 export interface ICampaignRecipient extends Document {
   campaignId: Types.ObjectId
@@ -29,7 +30,7 @@ const campaignRecipientSchema = new Schema<ICampaignRecipient>(
     customerName: { type: String, required: true, trim: true },
     status: {
       type: String,
-      enum: ["pending", "sent", "delivered", "read", "failed"],
+      enum: ["pending", "sent", "delivered", "read", "failed", "skipped"],
       default: "pending",
     },
     gupshupMessageId: { type: String, trim: true },

@@ -40,6 +40,11 @@ export async function GET(req: NextRequest) {
 
     console.log("[Templates] Gupshup response:", JSON.stringify({ status: res.status, responseKeys: Object.keys(data) }))
 
+    // DEBUG: log first raw template to identify the correct field structure
+    if (data?.templates?.[0]) {
+      console.log("[Templates] RAW first template sample:", JSON.stringify(data.templates[0], null, 2))
+    }
+
     if (res.status === 401) {
       return NextResponse.json({
         error: "Gupshup returned 401 (Unauthorized). Your GUPSHUP_API_KEY may have expired or is incorrect.",
@@ -61,17 +66,49 @@ export async function GET(req: NextRequest) {
     // Normalize — Gupshup can return { templates: [] } or { data: [] } or a plain array
     const rawList: any[] = data?.templates ?? data?.data ?? (Array.isArray(data) ? data : [])
 
-    const templates = rawList.map((t: any) => ({
-      id: t.id ?? t.elementName ?? t.name ?? "",
-      name: t.elementName ?? t.name ?? t.id ?? "",
-      category: t.category ?? t.templateCategory ?? "",
-      status: t.status ?? t.templateStatus ?? "",
-      body: t.body ?? t.data ?? t.templateText ?? t.components?.find((c: any) => c.type === "BODY")?.text ?? "",
-      language: t.languageCode ?? t.language ?? "en",
-      params: extractParams(
-        t.body ?? t.data ?? t.templateText ?? t.components?.find((c: any) => c.type === "BODY")?.text ?? ""
-      ),
-    }))
+    const templates = rawList.map((t: any) => {
+      const headerObj = t.components?.find((c: any) => c.type === "HEADER")
+      const bodyObj = t.components?.find((c: any) => c.type === "BODY")
+      const footerObj = t.components?.find((c: any) => c.type === "FOOTER")
+      const buttons = t.components?.find((c: any) => c.type === "BUTTONS")?.buttons ?? []
+
+      const headerText = headerObj?.text ?? ""
+      const bodyText = t.body ?? t.data ?? t.templateText ?? bodyObj?.text ?? ""
+      const footerText = footerObj?.text ?? ""
+      const buttonText = buttons.map((b: any) => b.text + (b.url ? " " + b.url : "")).join(" ")
+
+      // Aggregate all text that could contain {{n}}
+      const combinedText = `${headerText} ${bodyText} ${footerText} ${buttonText}`
+
+      // Parse containerMeta (JSON string) to find media URLs for IMAGE/VIDEO/DOCUMENT templates
+      let containerMetaObj: any = {}
+      try { containerMetaObj = JSON.parse(t.containerMeta ?? "{}") } catch {}
+
+      // For media-header templates, Gupshup POSITIONAL format requires the media URL as the first param.
+      // Even when the body has no {{n}} variables, the image/video URL must be passed.
+      const templateType: string = t.templateType ?? t.templateSubType ?? "TEXT"
+      const isMediaTemplate = ["IMAGE", "VIDEO", "DOCUMENT"].includes(templateType.toUpperCase())
+      const mediaUrl: string = containerMetaObj.mediaUrl ?? containerMetaObj.mediaHandle ?? ""
+
+      // Count text-level placeholders in body/header/buttons
+      const textParams = extractParams(combinedText)
+
+      // For media templates: total params = [mediaUrl, ...textParams]
+      // We expose `hasMediaHeader` so the engine prepends the URL automatically.
+      return {
+        id: t.id ?? t.elementName ?? t.name ?? "",
+        name: t.elementName ?? t.name ?? t.id ?? "",
+        category: t.category ?? t.templateCategory ?? "",
+        status: t.status ?? t.templateStatus ?? "",
+        templateType,
+        body: headerText ? `[Header: ${headerText}]\n\n${bodyText}` : bodyText,
+        language: t.languageCode ?? t.language ?? "en",
+        hasMediaHeader: isMediaTemplate,
+        mediaUrl,
+        // params array only covers USER-FILLABLE text variables
+        params: textParams,
+      }
+    })
 
     return NextResponse.json({ templates })
   } catch (err: any) {

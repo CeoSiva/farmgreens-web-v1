@@ -15,7 +15,7 @@ import { toast } from "sonner"
 interface Campaign {
   _id: string; name: string; status: CampaignStatus
   totalRecipients: number; sentCount: number; deliveredCount: number
-  readCount: number; failedCount: number
+  readCount: number; failedCount: number; skippedCount: number
   deliveryRate: string; readRate: string; progress: string
   startedAt?: string; createdAt: string; completedAt?: string
 }
@@ -29,7 +29,7 @@ interface Recipient {
   sentAt?: string; deliveredAt?: string; readAt?: string
 }
 
-const STATUS_FILTER = ["all", "sent", "delivered", "read", "failed"]
+const STATUS_FILTER = ["all", "sent", "delivered", "read", "failed", "skipped"]
 
 export function CampaignDetailClient({ id }: { id: string }) {
   const router = useRouter()
@@ -209,9 +209,10 @@ export function CampaignDetailClient({ id }: { id: string }) {
         {[
           { label: "Recipients", value: campaign.totalRecipients.toLocaleString(), sub: "" },
           { label: "Sent", value: campaign.sentCount.toLocaleString(), sub: pct(campaign.sentCount, campaign.totalRecipients) },
-          { label: "Delivered", value: campaign.deliveredCount.toLocaleString(), sub: `${campaign.deliveryRate}% of sent` },
-          { label: "Read", value: campaign.readCount.toLocaleString(), sub: `${campaign.readRate}% of sent` },
+          { label: "Delivered", value: campaign.deliveredCount.toLocaleString(), sub: `${campaign.deliveryRate}% of sent`, accent: "" },
+          { label: "Read", value: campaign.readCount.toLocaleString(), sub: `${campaign.readRate}% of sent`, accent: "" },
           { label: "Failed", value: campaign.failedCount.toLocaleString(), sub: pct(campaign.failedCount, campaign.sentCount), accent: campaign.failedCount > 0 ? "text-red-600" : "" },
+          { label: "Skipped", value: (campaign.skippedCount ?? 0).toLocaleString(), sub: "24h cooldown guard", accent: (campaign.skippedCount ?? 0) > 0 ? "text-amber-500" : "" },
         ].map((s) => (
           <Card key={s.label}>
             <CardHeader className="pb-1">

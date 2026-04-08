@@ -33,7 +33,12 @@ export async function sendCampaignWhatsApp({
 
   const destination = normalizePhone(phone)
 
-  const templatePayload = { id: templateId, params }
+  // Only include params in payload if the template actually has variables.
+  // Gupshup returns #132012 if you send params: [] for a no-variable template.
+  const templatePayload: { id: string; params?: string[] } = { id: templateId }
+  if (params && params.length > 0) {
+    templatePayload.params = params
+  }
 
   const body = new URLSearchParams({
     source: sourceNumber,
@@ -92,9 +97,9 @@ export async function sendCampaignWhatsApp({
 // ─── Audience Targeting Filter ────────────────────────────────────────────────
 
 export type TargetFilter = {
-  type: "all" | "new_customers" | "high_value" | "city" | "manual"
+  type: "combined" | "manual"
+  districts?: string[]
   minSpend?: number
-  city?: string
   daysSinceJoined?: number
   customerIds?: string[] // for manual selection
 }
@@ -102,34 +107,27 @@ export type TargetFilter = {
 export function buildCustomerFilter(targetFilter: TargetFilter): object {
   const base: Record<string, unknown> = { whatsappOptIn: true }
 
-  switch (targetFilter.type) {
-    case "all":
-      return base
-
-    case "new_customers": {
-      const days = targetFilter.daysSinceJoined ?? 30
-      const since = new Date()
-      since.setDate(since.getDate() - days)
-      return { ...base, createdAt: { $gte: since } }
+  if (targetFilter.type === "manual") {
+    if (targetFilter.customerIds && targetFilter.customerIds.length > 0) {
+      const { Types } = require("mongoose")
+      return { ...base, _id: { $in: targetFilter.customerIds.map((id: string) => new Types.ObjectId(id)) } }
     }
-
-    case "high_value":
-      // Signal for engine to use order aggregation — returns a marker object
-      return { ...base, _highValueFilter: targetFilter.minSpend ?? 0 }
-
-    case "city":
-      // Signal for engine to do district lookup — returns a marker object
-      return { ...base, _cityFilter: targetFilter.city ?? "" }
-
-    case "manual":
-      // Direct customer ID list
-      if (targetFilter.customerIds && targetFilter.customerIds.length > 0) {
-        const { Types } = require("mongoose")
-        return { ...base, _id: { $in: targetFilter.customerIds.map((id: string) => new Types.ObjectId(id)) } }
-      }
-      return base
-
-    default:
-      return base
+    return base
   }
+
+  if (targetFilter.daysSinceJoined !== undefined && targetFilter.daysSinceJoined > 0) {
+    const since = new Date()
+    since.setDate(since.getDate() - targetFilter.daysSinceJoined)
+    base.createdAt = { $gte: since }
+  }
+
+  if (targetFilter.minSpend !== undefined && targetFilter.minSpend > 0) {
+    base._highValueFilter = targetFilter.minSpend
+  }
+
+  if (targetFilter.districts && targetFilter.districts.length > 0) {
+    base._cityFilter = targetFilter.districts
+  }
+
+  return base
 }

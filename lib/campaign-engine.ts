@@ -24,19 +24,19 @@ function sleep(ms: number) {
 async function fetchTargetCustomers(targetFilter: TargetFilter) {
   const filter = buildCustomerFilter(targetFilter) as any
 
-  // Handle city filter — look up district by name, then query customers by districtId
+  // Handle city filter — look up districts by name, then query customers by districtId
   if (filter._cityFilter !== undefined) {
-    const cityName: string = filter._cityFilter
+    const cityNames: string[] = filter._cityFilter
     delete filter._cityFilter
 
-    const district = await DistrictModel.findOne({
-      name: { $regex: new RegExp(`^${cityName}$`, "i") },
+    const districts = await DistrictModel.find({
+      name: { $in: cityNames.map(name => new RegExp(`^${name}$`, "i")) },
     })
 
-    if (district) {
-      filter["addresses.districtId"] = district._id
+    if (districts.length > 0) {
+      filter["addresses.districtId"] = { $in: districts.map(d => d._id) }
     } else {
-      console.warn(`[Campaign] City "${cityName}" not found in districts. Returning all opted-in.`)
+      console.warn(`[Campaign] Cities "${cityNames.join(', ')}" not found in districts. Returning all opted-in.`)
     }
   }
 
@@ -135,9 +135,33 @@ export async function executeCampaign(campaignId: string): Promise<void> {
         continue
       }
 
-      // Build params, replacing {{customerName}} with actual name
+      // ── 24-HOUR RE-SEND GUARD ────────────────────────────────────────────
+      // WhatsApp caps marketing messages at ~2 per number per 24h across all
+      // businesses. Exceeding this degrades template quality and causes #131049.
+      // We check across ALL our own campaigns to avoid the limit proactively.
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+      const recentlySent = await CampaignRecipientModel.findOne({
+        customerId: customer._id,
+        status: { $in: ["sent", "delivered", "read"] },
+        sentAt: { $gte: twentyFourHoursAgo },
+      })
+      if (recentlySent) {
+        console.log(`[Campaign] Skipping ${customer.mobile} — already received a campaign in the last 24h (campaignId: ${recentlySent.campaignId}).`)
+        await CampaignRecipientModel.findOneAndUpdate(
+          { campaignId: campaign._id, customerId: customer._id },
+          { status: "skipped", errorMessage: "24h re-send cooldown: already received a campaign in the last 24 hours." }
+        )
+        await CampaignModel.findByIdAndUpdate(campaignId, { $inc: { skippedCount: 1 } })
+        continue
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
+      // Build params, replacing dynamic variables with actual customer data
       const params = campaign.templateParams.map((p: string) =>
-        p.replace(/\{\{customerName\}\}/g, customer.name)
+        p
+          .replace(/\{\{customerName\}\}/gi, customer.name || "")
+          .replace(/\{\{customerFirstName\}\}/gi, (customer.name || "").split(" ")[0])
+          .replace(/\{\{customerMobile\}\}/gi, customer.mobile || "")
       )
 
       const phone = `${customer.countryCode?.replace("+", "") ?? "91"}${customer.mobile}`

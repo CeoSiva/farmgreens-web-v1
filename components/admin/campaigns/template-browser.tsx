@@ -1,11 +1,10 @@
-"use client"
-
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, Search, CheckCircle2, Loader2 } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { BookOpen, Search, CheckCircle2, Loader2, MessageSquare } from "lucide-react"
 import { toast } from "sonner"
 
 interface GupshupTemplate {
@@ -16,6 +15,9 @@ interface GupshupTemplate {
   body: string
   language: string
   params: string[]
+  templateType?: string
+  hasMediaHeader?: boolean
+  mediaUrl?: string
 }
 
 interface Props {
@@ -28,6 +30,7 @@ export function TemplateBrowser({ onSelect }: Props) {
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState("")
   const [errorHint, setErrorHint] = useState("")
+  const [activeCategory, setActiveCategory] = useState<string>("ALL")
 
   const fetchTemplates = async () => {
     if (templates.length > 0) { setOpen(true); return }
@@ -49,19 +52,25 @@ export function TemplateBrowser({ onSelect }: Props) {
     }
   }
 
+  const categories = useMemo(() => {
+    const cats = new Set(templates.map((t) => t.category))
+    return ["ALL", ...Array.from(cats)].sort()
+  }, [templates])
+
   const filtered = templates.filter(
     (t) =>
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.body?.toLowerCase().includes(search.toLowerCase())
+      (activeCategory === "ALL" || t.category === activeCategory) &&
+      (t.name.toLowerCase().includes(search.toLowerCase()) ||
+       t.body?.toLowerCase().includes(search.toLowerCase()))
   )
 
   return (
     <div>
-      <Button type="button" variant="outline" size="sm" onClick={fetchTemplates} disabled={loading}>
+      <Button type="button" variant="outline" size="sm" onClick={fetchTemplates} disabled={loading} className="gap-2">
         {loading ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          <BookOpen className="mr-2 h-4 w-4" />
+          <BookOpen className="h-4 w-4" />
         )}
         Browse Gupshup Templates
       </Button>
@@ -82,51 +91,84 @@ export function TemplateBrowser({ onSelect }: Props) {
       )}
 
       {open && (
-        <Card className="mt-3 border shadow-md">
-          <CardHeader className="pb-2 flex-row items-center justify-between">
-            <CardTitle className="text-sm">Select a Template</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>✕</Button>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search templates..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-8 text-sm"
-              />
-            </div>
-            <div className="space-y-1.5 max-h-64 overflow-y-auto">
-              {filtered.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-4 text-center">
-                  No templates found.
-                </p>
-              ) : (
-                filtered.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => { onSelect(t); setOpen(false) }}
-                    className="w-full text-left rounded-lg border p-3 hover:bg-muted transition-colors space-y-1"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">{t.name}</span>
-                      <div className="flex gap-1">
-                        <Badge variant="outline" className="text-xs">{t.category}</Badge>
-                        <Badge
-                          variant="outline"
-                          className={`text-xs ${t.status === "APPROVED" ? "text-green-600 border-green-300" : "text-yellow-600 border-yellow-300"}`}
-                        >
-                          {t.status}
-                        </Badge>
+        <Card className="mt-4 border shadow-lg bg-card/60 backdrop-blur-md overflow-hidden">
+          <div className="bg-muted px-4 py-3 flex items-center justify-between border-b">
+            <h3 className="font-semibold flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" /> Select Gupshup Template
+            </h3>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(false)}>✕</Button>
+          </div>
+          <CardContent className="p-0">
+            <Tabs defaultValue="ALL" value={activeCategory} onValueChange={setActiveCategory} className="w-full">
+              <div className="p-4 border-b space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search templates by name or content..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-9 h-9"
+                  />
+                </div>
+                <TabsList className="w-full flex-wrap h-auto justify-start gap-1 bg-transparent p-0">
+                  {categories.map((cat) => (
+                    <TabsTrigger
+                      key={cat}
+                      value={cat}
+                      className="rounded-full px-4 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground border bg-muted"
+                    >
+                      {cat}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
+
+              <div className="p-4 max-h-[400px] overflow-y-auto bg-muted/20">
+                {filtered.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-xl">
+                    <p>No templates found matching your criteria.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filtered.map((t) => (
+                      <div
+                        key={t.id}
+                        className="group relative flex flex-col sm:flex-row gap-4 p-4 rounded-xl border bg-card hover:border-primary/50 transition-all cursor-pointer"
+                        onClick={() => { onSelect(t); setOpen(false) }}
+                      >
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-start justify-between">
+                            <h4 className="font-semibold text-sm group-hover:text-primary transition-colors">
+                              {t.name}
+                            </h4>
+                            <div className="flex items-center gap-2">
+                              {t.status === "APPROVED" ? (
+                                <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
+                                  Approved
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300">
+                                  {t.status}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-sm text-foreground/80 line-clamp-3 bg-muted/40 p-2 rounded-md font-sans">
+                            {t.body}
+                          </p>
+                          <div className="flex justify-between items-center text-xs text-muted-foreground pt-1">
+                            <span>ID: <code className="bg-muted px-1 py-0.5 rounded">{t.id.slice(0,8)}...</code></span>
+                            <span className="flex items-center gap-1">
+                              Tap to select <CheckCircle2 className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity text-primary" />
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{t.body}</p>
-                    <p className="text-xs text-blue-600">ID: {t.id}</p>
-                  </button>
-                ))
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Tabs>
           </CardContent>
         </Card>
       )}

@@ -12,28 +12,29 @@ export async function GET(req: NextRequest) {
   if (authError) return authError
 
   const { searchParams } = new URL(req.url)
-  const filterType = (searchParams.get("filterType") ?? "all") as TargetFilter["type"]
+  const filterType = (searchParams.get("filterType") ?? "combined") as TargetFilter["type"]
   const minSpend = searchParams.get("minSpend") ? Number(searchParams.get("minSpend")) : undefined
-  const city = searchParams.get("city") ?? undefined
+  const cityParam = searchParams.get("city")
+  const districts = cityParam ? cityParam.split(",").filter(Boolean) : undefined
   const daysSinceJoined = searchParams.get("daysSinceJoined")
     ? Number(searchParams.get("daysSinceJoined"))
     : undefined
   const customerIds = searchParams.get("customerIds")?.split(",").filter(Boolean)
 
-  const targetFilter: TargetFilter = { type: filterType, minSpend, city, daysSinceJoined, customerIds }
+  const targetFilter: TargetFilter = { type: filterType, minSpend, districts, daysSinceJoined, customerIds }
 
   await connectDB()
   const filter = buildCustomerFilter(targetFilter) as any
 
   // Resolve city filter via district lookup
   if (filter._cityFilter !== undefined) {
-    const cityName: string = filter._cityFilter
+    const cityNames: string[] = filter._cityFilter
     delete filter._cityFilter
-    const district = await DistrictModel.findOne({
-      name: { $regex: new RegExp(`^${cityName}$`, "i") },
+    const resolvedDistricts = await DistrictModel.find({
+      name: { $in: cityNames.map(name => new RegExp(`^${name}$`, "i")) },
     })
-    if (district) {
-      filter["addresses.districtId"] = district._id
+    if (resolvedDistricts.length > 0) {
+      filter["addresses.districtId"] = { $in: resolvedDistricts.map(d => d._id) }
     }
   }
 
