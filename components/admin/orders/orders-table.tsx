@@ -85,6 +85,7 @@ export function OrdersTable({ data }: { data: any[] }) {
   const [cityFilter, setCityFilter] = React.useState("all")
   const [areaFilter, setAreaFilter] = React.useState("all")
   const [valueBucketFilter, setValueBucketFilter] = React.useState("all")
+  const [categoryFilter, setCategoryFilter] = React.useState("all")
 
   // Filter data by date range
   const filteredData = React.useMemo(() => {
@@ -131,6 +132,25 @@ export function OrdersTable({ data }: { data: any[] }) {
     return true
   }
 
+  const categoryOptions = React.useMemo(() => {
+    const categories = new Set<string>()
+    filteredData.forEach((order) => {
+      order.items?.forEach((item: any) => {
+        if (item.productId?.category) {
+          categories.add(item.productId.category)
+        }
+        if (item.selections) {
+          item.selections.forEach((sel: any) => {
+            if (sel.productId?.category) {
+              categories.add(sel.productId.category)
+            }
+          })
+        }
+      })
+    })
+    return Array.from(categories).sort()
+  }, [filteredData])
+
   const structuredFilteredData = React.useMemo(() => {
     return filteredData.filter((order) => {
       const orderCity = normalizeLocation(order.shippingAddress?.districtName)
@@ -140,15 +160,27 @@ export function OrdersTable({ data }: { data: any[] }) {
       const matchesCity = cityFilter === "all" || orderCity === cityFilter
       const matchesArea = areaFilter === "all" || orderArea === areaFilter
       const matchesValue = valueBucketFilter === "all" || matchesValueBucket(total, valueBucketFilter)
+      
+      let matchesCategory = categoryFilter === "all"
+      if (!matchesCategory) {
+        matchesCategory = order.items?.some((item: any) => {
+          if (item.productId?.category === categoryFilter) return true
+          if (item.selections) {
+            return item.selections.some((sel: any) => sel.productId?.category === categoryFilter)
+          }
+          return false
+        }) || false
+      }
 
-      return matchesCity && matchesArea && matchesValue
+      return matchesCity && matchesArea && matchesValue && matchesCategory
     })
-  }, [filteredData, cityFilter, areaFilter, valueBucketFilter])
+  }, [filteredData, cityFilter, areaFilter, valueBucketFilter, categoryFilter])
 
   const activeStructuredFiltersCount = [
     cityFilter !== "all",
     areaFilter !== "all",
     valueBucketFilter !== "all",
+    categoryFilter !== "all",
   ].filter(Boolean).length
 
   const columns: ColumnDef<any>[] = [
@@ -435,7 +467,34 @@ export function OrdersTable({ data }: { data: any[] }) {
 
     rows.forEach((r) => {
       const o = r.original
-      const items = Array.isArray(o.items) ? o.items : []
+      let items = Array.isArray(o.items) ? o.items : []
+
+      // Category filter isolation logic
+      if (categoryFilter !== "all") {
+        items = items.reduce((acc: any[], item: any) => {
+          if (item.itemType === "combo") {
+            const matchingSelections = item.selections?.filter(
+              (sel: any) => sel.productId?.category === categoryFilter
+            )
+            if (matchingSelections && matchingSelections.length > 0) {
+              matchingSelections.forEach((sel: any) => {
+                acc.push({
+                  itemType: "product",
+                  name: `${sel.productName} (${item.comboName})`,
+                  qty: sel.qty,
+                  price: sel.unitPrice,
+                  unit: "unit",
+                })
+              })
+            }
+          } else {
+            if (item.productId?.category === categoryFilter) {
+              acc.push(item)
+            }
+          }
+          return acc
+        }, [])
+      }
 
       // Keep one row even when items are empty.
       const chunkCount = Math.max(1, Math.ceil(items.length / ITEMS_PER_EXPORT_ROW))
@@ -470,20 +529,25 @@ export function OrdersTable({ data }: { data: any[] }) {
           const n = i + 1
 
           if (it) {
-            const isWeight = it.unit?.toLowerCase() === "kg"
+            const isCombo = it.itemType === "combo"
+            const itemName = isCombo ? it.comboName : it.name
+            const itemQty = isCombo ? 1 : it.qty
+            const itemUnit = isCombo ? "pkg" : it.unit
+
+            const isWeight = itemUnit?.toLowerCase() === "kg"
 
             if (isWeight) {
-              const multiplier = it.qty * 4
-              rowData[`Product ${n}`] = `${it.name} - 250g`
+              const multiplier = itemQty * 4
+              rowData[`Product ${n}`] = `${itemName} - 250g`
               rowData[`Qty ${n}`] = multiplier
             } else {
-              const unit = it.unit?.toLowerCase()
-              const shouldHideUnit = unit === "bunch" || unit === "batch"
-              rowData[`Product ${n}`] = it.name
-              rowData[`Qty ${n}`] = shouldHideUnit ? it.qty : `${it.qty}${it.unit}`
+              const unit = itemUnit?.toLowerCase()
+              const shouldHideUnit = unit === "bunch" || unit === "batch" || unit === "pkg"
+              rowData[`Product ${n}`] = itemName
+              rowData[`Qty ${n}`] = shouldHideUnit ? itemQty : `${itemQty}${itemUnit || ""}`
             }
 
-            rowData[`Price ${n}`] = (it.price * it.qty).toFixed(2)
+            rowData[`Price ${n}`] = (it.price * itemQty).toFixed(2)
           } else {
             rowData[`Product ${n}`] = ""
             rowData[`Qty ${n}`] = ""
@@ -506,12 +570,14 @@ export function OrdersTable({ data }: { data: any[] }) {
     setCityFilter("all")
     setAreaFilter("all")
     setValueBucketFilter("all")
+    setCategoryFilter("all")
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-1 flex-col gap-3 sm:grid sm:grid-cols-2 lg:flex lg:flex-row">
+      <div className="flex flex-col gap-3">
+        {/* Search & Date row */}
+        <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:flex lg:flex-row">
           <div className="relative flex-1">
             <Search className="absolute top-2.5 left-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -523,6 +589,7 @@ export function OrdersTable({ data }: { data: any[] }) {
           </div>
           <DatePickerWithRange date={date} setDate={setDate} />
         </div>
+        {/* Filters & Export row */}
         <div className="flex flex-wrap items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -599,6 +666,19 @@ export function OrdersTable({ data }: { data: any[] }) {
               <SelectItem value="250to500">250 - 500</SelectItem>
               <SelectItem value="500to1000">500 - 1000</SelectItem>
               <SelectItem value="gt1000">&gt; 1000</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="h-10 w-full bg-card text-sm sm:w-[150px] lg:h-9">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categoryOptions.map((cat) => (
+                <SelectItem key={cat} value={cat} className="capitalize">
+                  {cat}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Badge variant="secondary">Filters: {activeStructuredFiltersCount}</Badge>

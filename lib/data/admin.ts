@@ -4,7 +4,12 @@ import CustomerModel, { ICustomer } from "../models/customer"
 
 export async function listRecentOrders(limit = 50): Promise<IOrder[]> {
   await connectDB()
-  return OrderModel.find().sort({ createdAt: -1 }).limit(limit).lean()
+  return OrderModel.find()
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .populate("items.productId", "category")
+    .populate("items.selections.productId", "category")
+    .lean() as unknown as IOrder[]
 }
 
 export async function listCustomers(limit = 50): Promise<ICustomer[]> {
