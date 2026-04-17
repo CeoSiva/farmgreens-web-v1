@@ -6,6 +6,7 @@ export type OrderStatus =
   | "dispatched"
   | "delivered"
   | "cancelled"
+  | "paid"
 
 /** A line item representing a regular product in an order. */
 export interface IOrderItem {
@@ -34,7 +35,9 @@ export interface IOrderComboItem {
 export interface IOrder extends Document {
   orderNumber: string
   status: OrderStatus
-  paymentMethod: "cod"
+  paymentMethod: "cod" | "online"
+  razorpayPaymentId?: string
+  razorpayOrderId?: string
   customer: {
     customerId?: Types.ObjectId
     name: string
@@ -94,10 +97,12 @@ const orderSchema = new Schema(
     orderNumber: { type: String, required: true, unique: true, trim: true },
     status: {
       type: String,
-      enum: ["placed", "confirmed", "dispatched", "delivered", "cancelled"],
+      enum: ["placed", "confirmed", "dispatched", "delivered", "cancelled", "paid"],
       default: "placed",
     },
-    paymentMethod: { type: String, enum: ["cod"], default: "cod" },
+    paymentMethod: { type: String, enum: ["cod", "online"], default: "cod" },
+    razorpayPaymentId: { type: String, trim: true },
+    razorpayOrderId: { type: String, trim: true },
     customer: {
       customerId: { type: Schema.Types.ObjectId, ref: "Customer" },
       name: { type: String, required: true, trim: true },

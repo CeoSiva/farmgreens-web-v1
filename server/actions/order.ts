@@ -161,8 +161,8 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
 
     await createOrder({
       orderNumber,
-      status: "placed",
-      paymentMethod: "cod",
+      status: parsed.data.paymentMethod === "online" ? "paid" : "placed",
+      paymentMethod: parsed.data.paymentMethod,
       customer: {
         customerId,
         name: parsed.data.name,
