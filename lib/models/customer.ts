@@ -21,7 +21,7 @@ export interface ICustomer extends Document {
   updatedAt: Date
 }
 
-const customerAddressSchema = new Schema<ICustomerAddress>(
+const customerAddressSchema = new Schema(
   {
     label: { type: String, trim: true },
     door: { type: String, required: true, trim: true },
@@ -36,6 +36,8 @@ const customerAddressSchema = new Schema<ICustomerAddress>(
       ref: "Area",
     },
     isDefault: { type: Boolean, default: false },
+    lat: { type: Number, required: false },
+    lng: { type: Number, required: false },
   },
   { _id: false }
 )

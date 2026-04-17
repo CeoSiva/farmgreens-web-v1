@@ -20,6 +20,8 @@ export async function upsertCustomerByMobile(data: {
     districtId: string
     areaId?: string
     isDefault?: boolean
+    lat?: number
+    lng?: number
   }
 }): Promise<ICustomer> {
   await connectDB()
@@ -69,6 +71,12 @@ export async function upsertCustomerByMobile(data: {
       }
       if (data.address.areaId) {
         newAddr.areaId = data.address.areaId
+      }
+      if (data.address.lat !== undefined) {
+        newAddr.lat = data.address.lat
+      }
+      if (data.address.lng !== undefined) {
+        newAddr.lng = data.address.lng
       }
       update.$push = {
         addresses: newAddr,

@@ -12,13 +12,14 @@ import {
 } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { 
-  User, 
-  MapPin, 
+import {
+  User,
+  MapPin,
   Phone,
   Hash,
   ShoppingBag,
-  Save
+  Save,
+  ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -172,6 +173,17 @@ export function CustomerDetailsDrawer({
                         )}
                       </div>
                       <p className="text-muted-foreground">{addr.door}, {addr.street}</p>
+                      {addr.lat && addr.lng && (
+                        <a
+                          href={`https://www.google.com/maps?q=${addr.lat},${addr.lng}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          View on Google Maps
+                        </a>
+                      )}
                     </div>
                   ))
                 ) : (

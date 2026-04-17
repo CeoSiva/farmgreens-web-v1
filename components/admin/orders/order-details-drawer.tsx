@@ -20,6 +20,7 @@ import {
   Phone,
   Info,
   FileDown,
+  ExternalLink,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatQuantity } from "@/lib/utils/format"
@@ -297,6 +298,17 @@ export function OrderDetailsDrawer({
                     </p>
                   </div>
                 </div>
+                {address.lat && address.lng && (
+                  <a
+                    href={`https://www.google.com/maps?q=${address.lat},${address.lng}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    View on Google Maps
+                  </a>
+                )}
               </div>
             </section>
 

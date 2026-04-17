@@ -14,6 +14,8 @@ export const CheckoutSchema = z.object({
   areaId: z.string().optional(),
   saveDetails: z.boolean(),
   whatsappOptIn: z.boolean(),
+  lat: z.number("Please pin your delivery location on the map").min(-90, "Invalid latitude").max(90, "Invalid latitude"),
+  lng: z.number("Please pin your delivery location on the map").min(-180, "Invalid longitude").max(180, "Invalid longitude"),
 })
 
 export type CheckoutFormValues = z.infer<typeof CheckoutSchema>

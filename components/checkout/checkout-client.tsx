@@ -29,6 +29,7 @@ import {
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
+import { MapPicker } from "@/components/checkout/map-picker"
 import {
   Popover,
   PopoverContent,
@@ -57,6 +58,7 @@ export function CheckoutClient({
   const [areaOpen, setAreaOpen] = useState(false)
   const [apartmentSearch, setApartmentSearch] = useState("")
   const [apartmentOpen, setApartmentOpen] = useState(false)
+  const [locationPinned, setLocationPinned] = useState(false)
 
   const {
     register,
@@ -77,11 +79,21 @@ export function CheckoutClient({
       countryCode: "+91",
       saveDetails: true,
       whatsappOptIn: true,
+      lat: 0,
+      lng: 0,
     },
   })
 
   const districtId = watch("districtId")
   const mobile = watch("mobile")
+  const lat = watch("lat")
+  const lng = watch("lng")
+
+  const handleLocationChange = (newLat: number, newLng: number) => {
+    setValue("lat", newLat)
+    setValue("lng", newLng)
+    setLocationPinned(true)
+  }
 
   useEffect(() => {
     if (!districtId) return
@@ -534,6 +546,17 @@ export function CheckoutClient({
                   )}
                 </div>
               </div>
+
+              <MapPicker
+                initialLat={lat !== 0 ? lat : undefined}
+                initialLng={lng !== 0 ? lng : undefined}
+                onLocationChange={handleLocationChange}
+              />
+              {errors.lat && (
+                <div className="text-xs text-destructive">
+                  {errors.lat.message}
+                </div>
+              )}
             </div>
           </div>
 
@@ -565,7 +588,7 @@ export function CheckoutClient({
             </div>
           </div>
 
-          <Button type="submit" disabled={isPending} size="lg">
+          <Button type="submit" disabled={isPending || !locationPinned} size="lg">
             Place order (COD)
           </Button>
         </form>

@@ -150,6 +150,8 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
           districtId: parsed.data.districtId,
           areaId: parsed.data.areaId || undefined,
           isDefault: true,
+          lat: parsed.data.lat,
+          lng: parsed.data.lng,
         },
       })
       customerId = (customer as any)._id
@@ -175,6 +177,8 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
         areaId: area ? (area as any)._id : undefined,
         districtName: (district as any).name,
         areaName: area ? (area as any).name : undefined,
+        lat: parsed.data.lat,
+        lng: parsed.data.lng,
       },
       items,
       subtotal,

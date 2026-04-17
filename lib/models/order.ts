@@ -49,6 +49,8 @@ export interface IOrder extends Document {
     areaId?: Types.ObjectId
     districtName: string
     areaName?: string
+    lat?: number
+    lng?: number
   }
   items: (IOrderItem | IOrderComboItem)[]
   subtotal: number
@@ -110,6 +112,8 @@ const orderSchema = new Schema(
       areaId: { type: Schema.Types.ObjectId, ref: "Area" },
       districtName: { type: String, required: true, trim: true },
       areaName: { type: String, trim: true },
+      lat: { type: Number },
+      lng: { type: Number },
     },
     items: {
       type: [mergedOrderItemSchema],
