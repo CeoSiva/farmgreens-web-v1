@@ -6,6 +6,7 @@ export type OrderStatus =
   | "dispatched"
   | "delivered"
   | "cancelled"
+  | "paid"
 
 /** A line item representing a regular product in an order. */
 export interface IOrderItem {
@@ -34,7 +35,9 @@ export interface IOrderComboItem {
 export interface IOrder extends Document {
   orderNumber: string
   status: OrderStatus
-  paymentMethod: "cod"
+  paymentMethod: "cod" | "online"
+  razorpayPaymentId?: string
+  razorpayOrderId?: string
   customer: {
     customerId?: Types.ObjectId
     name: string

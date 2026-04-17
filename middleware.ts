@@ -22,17 +22,22 @@ export async function middleware(request: NextRequest) {
   // 2. Handle District Routing (e.g., /chennai -> /?district=chennai)
   const parts = pathname.split('/').filter(Boolean);
   const reservedPaths = [
-    "fmg-admin", 
-    "fmg-login", 
-    "api", 
-    "assets", 
-    "images", 
-    "shop", 
+    "fmg-admin",
+    "fmg-login",
+    "api",
+    "assets",
+    "images",
+    "shop",
     "product",
-    "cart", 
-    "checkout", 
+    "cart",
+    "checkout",
     "order-confirmed",
     "about",
+    "terms",
+    "privacy",
+    "shipping",
+    "returns",
+    "combo",
     "_next"
   ];
   
