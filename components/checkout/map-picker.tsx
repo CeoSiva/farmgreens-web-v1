@@ -37,6 +37,7 @@ export function MapPicker({ initialLat, initialLng, onLocationChange }: MapPicke
     initialLat && initialLng ? { lat: initialLat, lng: initialLng } : DEFAULT_CENTER
   )
   const [isLoadingLocation, setIsLoadingLocation] = useState(false)
+  const [showOverlay, setShowOverlay] = useState(!initialLat || !initialLng)
   const mapRef = useRef<google.maps.Map | null>(null)
 
   // Update marker when initial props change
@@ -84,6 +85,7 @@ export function MapPicker({ initialLat, initialLng, onLocationChange }: MapPicke
         setMarkerPosition(newPosition)
         onLocationChange(latitude, longitude)
         setIsLoadingLocation(false)
+        setShowOverlay(false)
 
         // Pan map to new location
         if (mapRef.current) {
@@ -140,7 +142,7 @@ export function MapPicker({ initialLat, initialLng, onLocationChange }: MapPicke
           {isLoadingLocation ? "Locating..." : "Use my location"}
         </Button>
       </div>
-      <Card className="overflow-hidden p-0">
+      <Card className="overflow-hidden p-0 relative">
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={center}
@@ -159,6 +161,31 @@ export function MapPicker({ initialLat, initialLng, onLocationChange }: MapPicke
             onDragEnd={handleMarkerDragEnd}
           />
         </GoogleMap>
+        {showOverlay && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-3 p-6">
+              <Button
+                type="button"
+                size="lg"
+                onClick={handleGetCurrentLocation}
+                disabled={isLoadingLocation}
+                className="shadow-lg"
+              >
+                <Navigation className="h-5 w-5 mr-2" />
+                {isLoadingLocation ? "Locating..." : "Use my location"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowOverlay(false)}
+                className="text-white hover:text-white hover:bg-white/20"
+              >
+                Pin manually on map
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
       <div className="text-xs text-muted-foreground">
         Drag the marker or click on the map to set your delivery location.

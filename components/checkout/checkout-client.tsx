@@ -154,6 +154,51 @@ export function CheckoutClient({
 
   const canCheckout = cart.items.length > 0
 
+  const showValidationErrorsToast = () => {
+    const errorMessages: string[] = []
+    const fieldMap: Record<string, string> = {
+      name: "Full name",
+      mobile: "Mobile number",
+      door: "Door/Flat",
+      street: "Street",
+      districtId: "District",
+      areaId: "Area",
+      lat: "Location",
+      lng: "Location",
+    }
+
+    Object.keys(errors).forEach((key) => {
+      const message = errors[key]?.message
+      if (message) {
+        const fieldName = fieldMap[key] || key
+        errorMessages.push(`${fieldName}: ${message}`)
+      }
+    })
+
+    if (errorMessages.length > 0) {
+      toast.error("Please fix the following errors:", {
+        description: (
+          <ul className="list-disc pl-4 mt-2">
+            {errorMessages.map((msg, idx) => (
+              <li key={idx} className="text-sm">{msg}</li>
+            ))}
+          </ul>
+        ),
+        action: {
+          label: "Go to first error",
+          onClick: () => {
+            const firstErrorKey = Object.keys(errors)[0]
+            const element = document.querySelector(`[name="${firstErrorKey}"]`) as HTMLElement
+            if (element) {
+              element.scrollIntoView({ behavior: "smooth", block: "center" })
+              element.focus()
+            }
+          },
+        },
+      })
+    }
+  }
+
   const summary = useMemo(() => {
     const itemCount = cart.items.length
     return { itemCount }
@@ -210,6 +255,12 @@ export function CheckoutClient({
   }
 
   const onSubmit = async (data: CheckoutFormValues) => {
+    // Check for validation errors before submission
+    if (Object.keys(errors).length > 0) {
+      showValidationErrorsToast()
+      return
+    }
+
     setValue("countryCode", "+91")
 
     if (data.paymentMethod === "online") {
