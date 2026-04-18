@@ -12,6 +12,8 @@ import { addToCartAction, clearCartAction } from "@/server/actions/cart"
 import { useCart } from "@/components/cart/cart-context"
 import { cn } from "@/lib/utils"
 import { formatQuantity } from "@/lib/utils/format"
+import { trackSelectItem, trackAddToCart } from "@/lib/analytics"
+import { useSearchParams } from "next/navigation"
 
 export interface SerializedProduct {
   _id: string
@@ -40,6 +42,8 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const [isPending, startTransition] = useTransition()
   const router = useLocationRouter()
+  const searchParams = useSearchParams()
+  const districtSlug = searchParams.get("district") || undefined
 
   const { isInCart, updateCart } = useCart()
   const inCart = isInCart(product._id)
@@ -80,6 +84,8 @@ export function ProductCard({ product }: ProductCardProps) {
               },
             })
           )
+          // Track add_to_cart event
+          trackAddToCart(product._id, product.name, displayPrice, defaultQty, undefined, districtSlug)
         } else toast.error("Failed to add to cart")
       } catch {
         toast.error("Failed to add to cart")
@@ -115,10 +121,14 @@ export function ProductCard({ product }: ProductCardProps) {
     })
   }
 
+  const handleProductClick = () => {
+    trackSelectItem(product._id, product.name, displayPrice, undefined, districtSlug)
+  }
+
   return (
     <>
       {/* MOBILE / ZEPTO STYLE CARD (Visible only on mobile) */}
-      <Link href={`/product/${product._id}`} className="block md:hidden">
+      <Link href={`/product/${product._id}`} className="block md:hidden" onClick={handleProductClick}>
         <Card className="group relative flex flex-col gap-0 overflow-hidden rounded-xl border border-border/50 bg-background p-0 shadow-xs transition-all duration-200 hover:shadow-md">
           {product.isAvailable ? (
             <div className="absolute top-0 right-0 z-10 rounded-bl-lg bg-orange-500/90 px-1.5 py-0.5 text-[8px] font-bold text-white shadow-sm backdrop-blur-sm">
@@ -188,7 +198,7 @@ export function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       {/* DESKTOP / ORIGINAL STYLE CARD (Visible only on tablet and desktop) */}
-      <Link href={`/product/${product._id}`} className="hidden md:block">
+      <Link href={`/product/${product._id}`} className="hidden md:block" onClick={handleProductClick}>
         <Card className="group relative flex flex-col gap-0 overflow-hidden rounded-2xl border-border/50 p-0 shadow-sm transition-all duration-200 hover:shadow-md">
           <div className="relative w-full overflow-hidden bg-muted/20 md:h-56 lg:h-64">
             <Image

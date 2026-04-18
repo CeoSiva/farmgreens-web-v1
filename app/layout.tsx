@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 import { CartProvider } from "@/components/cart/cart-context"
 import { getCartAction } from "@/server/actions/cart"
+import { AnalyticsProvider } from "@/components/analytics/analytics-provider"
 
 const ibmPlexSansHeading = IBM_Plex_Sans({ subsets: ['latin'], variable: '--font-heading' });
 
@@ -33,13 +34,15 @@ export default async function RootLayout({
       className={cn("antialiased", fontMono.variable, "font-sans", notoSans.variable, ibmPlexSansHeading.variable)}
     >
       <body>
-        <ThemeProvider>
-          <CartProvider initialItems={cart.items}>
-            {children}
-            <WhatsAppButton />
-            <Toaster />
-          </CartProvider>
-        </ThemeProvider>
+        <AnalyticsProvider>
+          <ThemeProvider>
+            <CartProvider initialItems={cart.items}>
+              {children}
+              <WhatsAppButton />
+              <Toaster />
+            </CartProvider>
+          </ThemeProvider>
+        </AnalyticsProvider>
       </body>
     </html>
   )

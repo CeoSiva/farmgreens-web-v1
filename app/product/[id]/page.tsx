@@ -3,6 +3,7 @@ import { getProductById } from "@/lib/data/product"
 import { Navbar } from "@/components/landing/navbar"
 import { Footer } from "@/components/landing/footer"
 import { ProductDetailClient } from "@/components/product/product-detail-client"
+import { trackViewItem } from "@/lib/analytics"
 
 export const dynamic = "force-dynamic"
 
@@ -33,6 +34,9 @@ export default async function ProductDetailPage({
     createdAt: raw.createdAt?.toISOString() || new Date().toISOString(),
     updatedAt: raw.updatedAt?.toISOString() || new Date().toISOString(),
   }
+
+  // Track view_item event
+  trackViewItem(product._id, product.name, product.price, undefined, districtSlug)
 
   return (
     <div className="flex min-h-screen flex-col">

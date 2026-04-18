@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState, useTransition } from "react"
 import { LocationAwareLink as Link } from "@/components/location-aware-link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { trackBeginCheckout, trackPurchase, trackDistrictSelected, trackWhatsAppOptIn, trackWhatsAppOptOut } from "@/lib/analytics"
 import { Check, ChevronsUpDown, Plus, CreditCard, Banknote } from "lucide-react"
 
 import type { Cart } from "@/lib/cart"
@@ -130,8 +132,10 @@ export function CheckoutClient({
     )
     if (match) {
       setValue("districtId", match._id)
+      // Track district selection
+      trackDistrictSelected(districtSlug, match.name, existingCustomer?._id?.toString() || "")
     }
-  }, [districtSlug, districts, setValue, districtId])
+  }, [districtSlug, districts, setValue, districtId, existingCustomer])
 
   useEffect(() => {
     if (!mobile || mobile.length < 10) {
@@ -153,6 +157,25 @@ export function CheckoutClient({
   }, [mobile])
 
   const canCheckout = cart.items.length > 0
+
+  // Track begin_checkout when checkout page loads
+  useEffect(() => {
+    if (canCheckout && cart.items.length > 0) {
+      trackBeginCheckout(0, cart.items.length, existingCustomer?._id?.toString(), districtSlug || "")
+    }
+  }, [canCheckout, cart.items, existingCustomer, districtSlug])
+
+  // Track WhatsApp opt-in/out changes
+  const whatsappOptIn = watch("whatsappOptIn")
+  useEffect(() => {
+    if (existingCustomer?._id && whatsappOptIn !== undefined) {
+      if (whatsappOptIn) {
+        trackWhatsAppOptIn(existingCustomer._id.toString())
+      } else {
+        trackWhatsAppOptOut(existingCustomer._id.toString())
+      }
+    }
+  }, [whatsappOptIn, existingCustomer])
 
   const showValidationErrorsToast = () => {
     const errorMessages: string[] = []
@@ -311,6 +334,9 @@ export function CheckoutClient({
                   return
                 }
 
+                // Track purchase event
+                trackPurchase(orderRes.orderNumber || "", 0, cart.items.length, existingCustomer?._id?.toString() || "", districtSlug || "")
+
                 toast.success("Payment successful")
                 window.location.href = `/order-confirmed/${orderRes.orderNumber}`
               },
@@ -348,6 +374,10 @@ export function CheckoutClient({
             toast.error((res as any).error)
             return
           }
+
+          // Track purchase event
+          trackPurchase((res as any).orderNumber || "", 0, cart.items.length, existingCustomer?._id?.toString() || "", districtSlug || "")
+
           toast.success("Order placed")
           window.location.href = `/order-confirmed/${(res as any).orderNumber}`
         } catch {
