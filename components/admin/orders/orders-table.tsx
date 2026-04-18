@@ -460,6 +460,13 @@ export function OrdersTable({ data }: { data: any[] }) {
     return `${normalizedDoor}, ${formattedStreet}`
   }
 
+  const getGoogleMapsLink = (lat?: number, lng?: number): string => {
+    if (lat !== undefined && lng !== undefined && !isNaN(lat) && !isNaN(lng)) {
+      return `https://www.google.com/maps?q=${lat},${lng}`
+    }
+    return "no location"
+  }
+
   const handleExport = (includeMobile: boolean) => {
     const rows = table.getFilteredRowModel().rows
     const ITEMS_PER_EXPORT_ROW = 5
@@ -521,6 +528,10 @@ export function OrdersTable({ data }: { data: any[] }) {
           ),
           Area: o.shippingAddress.areaName ?? "",
           District: o.shippingAddress.districtName ?? "",
+          "Google Maps link": getGoogleMapsLink(
+            o.shippingAddress?.lat,
+            o.shippingAddress?.lng
+          ),
         })
 
         // Fixed product columns (1..5) for every row.
