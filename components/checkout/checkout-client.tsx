@@ -168,7 +168,7 @@ export function CheckoutClient({
     }
 
     Object.keys(errors).forEach((key) => {
-      const message = errors[key]?.message
+      const message = errors[key as keyof typeof errors]?.message
       if (message) {
         const fieldName = fieldMap[key] || key
         errorMessages.push(`${fieldName}: ${message}`)
