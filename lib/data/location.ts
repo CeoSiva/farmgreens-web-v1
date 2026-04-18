@@ -8,6 +8,15 @@ export async function listDistricts(): Promise<IDistrict[]> {
   return DistrictModel.find().sort({ name: 1 }).lean();
 }
 
+export async function getDistrictBySlug(
+  districtSlug: string
+): Promise<IDistrict | null> {
+  await connectDB()
+  return DistrictModel.findOne({
+    name: { $regex: new RegExp(`^${districtSlug}$`, "i") },
+  }).lean()
+}
+
 export async function listAreasByDistrict(districtId: string): Promise<IArea[]> {
   await connectDB();
   return AreaModel.find({ districtId }).sort({ name: 1 }).lean();

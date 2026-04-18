@@ -4,7 +4,7 @@ import { Navbar } from "@/components/landing/navbar"
 import { Footer } from "@/components/landing/footer"
 import { ShopClient } from "@/components/shop/shop-client"
 import type { SerializedCombo } from "@/components/combo/ComboCard"
-import DistrictModel from "@/lib/models/district"
+import { getDistrictBySlug } from "@/lib/data/location"
 
 export const dynamic = "force-dynamic"
 
@@ -25,9 +25,7 @@ export default async function ShopPage({
   // Get district ID for price calculations
   let districtId = ""
   if (districtSlug) {
-    const district = await DistrictModel.findOne({
-      name: { $regex: new RegExp(`^${districtSlug}$`, "i") },
-    }).lean()
+    const district = await getDistrictBySlug(districtSlug)
     districtId = district?._id.toString() ?? ""
   }
 

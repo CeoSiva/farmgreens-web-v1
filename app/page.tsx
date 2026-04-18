@@ -11,7 +11,7 @@ import { CallToAction } from "@/components/landing/call-to-action"
 import { TrustBar } from "@/components/landing/trust-bar"
 import { Footer } from "@/components/landing/footer"
 import type { SerializedCombo } from "@/components/combo/ComboCard"
-import DistrictModel from "@/lib/models/district"
+import { getDistrictBySlug } from "@/lib/data/location"
 
 export const dynamic = "force-dynamic"
 
@@ -28,9 +28,7 @@ export default async function Page({
   // Get district ID for price calculations
   let districtId = ""
   if (districtSlug) {
-    const district = await DistrictModel.findOne({
-      name: { $regex: new RegExp(`^${districtSlug}$`, "i") },
-    }).lean()
+    const district = await getDistrictBySlug(districtSlug)
     districtId = district?._id.toString() ?? ""
   }
 
