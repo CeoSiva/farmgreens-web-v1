@@ -27,6 +27,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { createComboAction, updateComboAction } from "@/server/actions/combo"
 import { ImageUpload } from "@/components/image-upload"
+import React from "react"
 
 // ─── Zod Schema ────────────────────────────────────────────────────────────────
 
@@ -174,6 +175,8 @@ function MultiProductSelect({
 }) {
   const [search, setSearch] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [visibleCount, setVisibleCount] = useState(10)
+  const [hasMore, setHasMore] = useState(false)
 
   const toggle = (id: string) => {
     if (values.includes(id)) {
@@ -199,6 +202,21 @@ function MultiProductSelect({
       return false
     return true
   })
+
+  // Update hasMore and reset visibleCount when filters change
+  React.useEffect(() => {
+    setHasMore(visible.length > visibleCount)
+    setVisibleCount(10)
+  }, [search, selectedCategory, values.length])
+
+  // Load more products
+  const loadMore = () => {
+    setVisibleCount((prev) => {
+      const next = prev + 10
+      setHasMore(visible.length > next)
+      return next
+    })
+  }
 
   return (
     <div className="space-y-2">
@@ -227,18 +245,18 @@ function MultiProductSelect({
       {visible.length > 0 && (
         <button
           type="button"
-          onClick={() => addAll(visible.map((p) => p._id))}
+          onClick={() => addAll(visible.slice(0, visibleCount).map((p) => p._id))}
           className="w-full rounded border border-dashed border-muted-foreground/40 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-muted-foreground/60 hover:bg-muted/50 hover:text-foreground"
         >
-          Select all {visible.length} visible product
-          {visible.length !== 1 ? "s" : ""}
+          Select all {Math.min(visible.length, visibleCount)} visible product
+          {Math.min(visible.length, visibleCount) !== 1 ? "s" : ""}
         </button>
       )}
 
       {/* Visible product list */}
       {visible.length > 0 && (
         <div className="max-h-40 divide-y overflow-y-auto rounded-md border bg-card">
-          {visible.slice(0, 15).map((p) => (
+          {visible.slice(0, visibleCount).map((p) => (
             <button
               key={p._id}
               type="button"
@@ -252,6 +270,28 @@ function MultiProductSelect({
               </span>
             </button>
           ))}
+          {hasMore && (
+            <div
+              ref={(el) => {
+                if (el) {
+                  const observer = new IntersectionObserver(
+                    (entries) => {
+                      if (entries[0].isIntersecting) {
+                        loadMore()
+                        observer.disconnect()
+                      }
+                    },
+                    { threshold: 0.1 }
+                  )
+                  observer.observe(el)
+                  return () => observer.disconnect()
+                }
+              }}
+              className="flex items-center justify-center py-2 text-xs text-muted-foreground"
+            >
+              Loading more products...
+            </div>
+          )}
         </div>
       )}
 
