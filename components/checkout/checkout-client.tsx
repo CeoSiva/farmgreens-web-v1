@@ -323,6 +323,31 @@ export function CheckoutClient({
 
   return (
     <div className="grid gap-6">
+      {districtSlug?.toLowerCase() === "trichy" && (
+        <div className="rounded-lg border border-primary/20 bg-primary/10 p-4 text-sm text-black dark:border-primary/30 dark:bg-primary/20 dark:text-green-700">
+          <div className="flex items-start gap-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mt-0.5 shrink-0"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            <p className="font-medium">
+              All orders will be delivered on Monday (20-04-2026) morning between 7:30 AM and 11:00 AM.
+            </p>
+          </div>
+        </div>
+      )}
       <Card className="p-4">
         <div className="flex items-center justify-between">
           <div>
