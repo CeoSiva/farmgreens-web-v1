@@ -97,10 +97,12 @@ const orderSchema = new Schema(
     orderNumber: { type: String, required: true, unique: true, trim: true },
     status: {
       type: String,
-      enum: ["placed", "confirmed", "dispatched", "delivered", "cancelled"],
+      enum: ["placed", "confirmed", "dispatched", "delivered", "cancelled", "paid"],
       default: "placed",
     },
-    paymentMethod: { type: String, enum: ["cod"], default: "cod" },
+    paymentMethod: { type: String, enum: ["cod", "online"], default: "cod" },
+    razorpayPaymentId: { type: String, trim: true },
+    razorpayOrderId: { type: String, trim: true },
     customer: {
       customerId: { type: Schema.Types.ObjectId, ref: "Customer" },
       name: { type: String, required: true, trim: true },

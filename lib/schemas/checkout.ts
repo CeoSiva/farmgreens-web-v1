@@ -16,6 +16,7 @@ export const CheckoutSchema = z.object({
   whatsappOptIn: z.boolean(),
   lat: z.number("Please pin your delivery location on the map").min(-90, "Invalid latitude").max(90, "Invalid latitude"),
   lng: z.number("Please pin your delivery location on the map").min(-180, "Invalid longitude").max(180, "Invalid longitude"),
+  paymentMethod: z.enum(["cod", "online"], "Please select a payment method"),
 })
 
 export type CheckoutFormValues = z.infer<typeof CheckoutSchema>

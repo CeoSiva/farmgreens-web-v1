@@ -5,7 +5,7 @@ import { LocationAwareLink as Link } from "@/components/location-aware-link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { Check, ChevronsUpDown, Plus } from "lucide-react"
+import { Check, ChevronsUpDown, Plus, CreditCard, Banknote } from "lucide-react"
 
 import type { Cart } from "@/lib/cart"
 import { CheckoutSchema, type CheckoutFormValues } from "@/lib/schemas/checkout"
@@ -16,6 +16,11 @@ import {
 } from "@/server/actions/location"
 import { createAreaAction } from "@/server/actions/location-admin"
 import { placeOrderAction } from "@/server/actions/order"
+import {
+  createRazorpayOrderAction,
+  verifyRazorpayPaymentAction,
+  placeOrderAfterPaymentAction,
+} from "@/server/actions/payment"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -81,6 +86,7 @@ export function CheckoutClient({
       whatsappOptIn: true,
       lat: 0,
       lng: 0,
+      paymentMethod: "online",
     },
   })
 
@@ -88,6 +94,7 @@ export function CheckoutClient({
   const mobile = watch("mobile")
   const lat = watch("lat")
   const lng = watch("lng")
+  const paymentMethod = watch("paymentMethod")
 
   const handleLocationChange = (newLat: number, newLng: number) => {
     setValue("lat", newLat)
@@ -202,21 +209,101 @@ export function CheckoutClient({
     })
   }
 
-  const onSubmit = (data: CheckoutFormValues) => {
+  const onSubmit = async (data: CheckoutFormValues) => {
     setValue("countryCode", "+91")
-    startTransition(async () => {
-      try {
-        const res = await placeOrderAction(data)
-        if ((res as any)?.error) {
-          toast.error((res as any).error)
-          return
+
+    if (data.paymentMethod === "online") {
+      // Online payment flow with Razorpay
+      startTransition(async () => {
+        try {
+          // Create Razorpay order (server will calculate total from cart)
+          const razorpayRes = await createRazorpayOrderAction(data.districtId)
+          if (!razorpayRes.success) {
+            toast.error((razorpayRes as any).error || "Failed to create payment order")
+            return
+          }
+
+          // Load Razorpay checkout script dynamically
+          const script = document.createElement("script")
+          script.src = "https://checkout.razorpay.com/v1/checkout.js"
+          script.async = true
+          script.onload = () => {
+            const options = {
+              key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+              amount: (razorpayRes as any).amount,
+              currency: "INR",
+              name: "FarmGreens",
+              description: "Order Payment",
+              order_id: (razorpayRes as any).orderId,
+              handler: async (response: any) => {
+                // Verify payment signature
+                const verifyRes = await verifyRazorpayPaymentAction(
+                  (razorpayRes as any).orderId,
+                  response.razorpay_payment_id,
+                  response.razorpay_signature
+                )
+
+                if (!verifyRes.success) {
+                  toast.error("Payment verification failed")
+                  return
+                }
+
+                // Place order after successful payment verification
+                const orderRes = await placeOrderAfterPaymentAction(
+                  data,
+                  response.razorpay_payment_id,
+                  (razorpayRes as any).orderId
+                )
+
+                if (orderRes.error) {
+                  toast.error(orderRes.error)
+                  return
+                }
+
+                toast.success("Payment successful")
+                window.location.href = `/order-confirmed/${orderRes.orderNumber}`
+              },
+              prefill: {
+                name: data.name,
+                contact: `${data.countryCode}${data.mobile}`,
+              },
+              theme: {
+                color: "#16a34a",
+              },
+              modal: {
+                ondismiss: () => {
+                  toast.error("Payment cancelled")
+                },
+              },
+            }
+
+            const rzp = new (window as any).Razorpay(options)
+            rzp.open()
+          }
+          script.onerror = () => {
+            toast.error("Failed to load payment gateway")
+          }
+          document.body.appendChild(script)
+        } catch {
+          toast.error("Failed to process payment")
         }
-        toast.success("Order placed")
-        window.location.href = `/order-confirmed/${(res as any).orderNumber}`
-      } catch {
-        toast.error("Failed to place order")
-      }
-    })
+      })
+    } else {
+      // COD flow
+      startTransition(async () => {
+        try {
+          const res = await placeOrderAction(data)
+          if ((res as any)?.error) {
+            toast.error((res as any).error)
+            return
+          }
+          toast.success("Order placed")
+          window.location.href = `/order-confirmed/${(res as any).orderNumber}`
+        } catch {
+          toast.error("Failed to place order")
+        }
+      })
+    }
   }
 
   if (!canCheckout) {
@@ -562,6 +649,48 @@ export function CheckoutClient({
 
           <Separator />
 
+          {/* Payment Method Selection */}
+          <div>
+            <h3 className="text-sm font-semibold mb-3">Payment method</h3>
+            <div className="grid gap-3">
+              <label className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                <input
+                  type="radio"
+                  {...register("paymentMethod")}
+                  value="online"
+                  disabled={isPending}
+                  className="h-4 w-4 text-primary"
+                />
+                <div className="flex-1">
+                  <div className="font-medium">Online Payment</div>
+                  <div className="text-xs text-muted-foreground">Pay securely with Razorpay</div>
+                </div>
+                <CreditCard className="h-5 w-5 text-primary" />
+              </label>
+              <label className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                <input
+                  type="radio"
+                  {...register("paymentMethod")}
+                  value="cod"
+                  disabled={isPending}
+                  className="h-4 w-4 text-primary"
+                />
+                <div className="flex-1">
+                  <div className="font-medium">Cash on Delivery</div>
+                  <div className="text-xs text-muted-foreground">Pay when you receive your order</div>
+                </div>
+                <Banknote className="h-5 w-5 text-primary" />
+              </label>
+            </div>
+            {errors.paymentMethod && (
+              <div className="text-xs text-destructive mt-2">
+                {errors.paymentMethod.message}
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
           {/* Save details & Notifications */}
           <div className="grid gap-3">
             <div className="flex items-center gap-2">
@@ -589,7 +718,7 @@ export function CheckoutClient({
           </div>
 
           <Button type="submit" disabled={isPending || !locationPinned} size="lg">
-            Place order (COD)
+            {paymentMethod === "online" ? "Pay Online" : "Place order (COD)"}
           </Button>
         </form>
       </Card>
