@@ -95,13 +95,21 @@ export function MapPicker({ initialLat, initialLng, onLocationChange }: MapPicke
       },
       (error) => {
         console.error("Error getting location:", error)
-        alert("Unable to retrieve your location. Please pin it manually on the map.")
+        let errorMessage = "Unable to retrieve your location. Please pin it manually on the map."
+        
+        if (error.code === error.PERMISSION_DENIED) {
+          errorMessage = "Location permission denied. Please enable location access in your browser settings or pin your location manually on the map."
+        } else if (error.code === error.TIMEOUT) {
+          errorMessage = "Location request timed out. Please try again or pin your location manually on the map."
+        }
+        
+        alert(errorMessage)
         setIsLoadingLocation(false)
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
+        timeout: 60000,
+        maximumAge: 300000,
       }
     )
   }
