@@ -156,15 +156,22 @@ export async function executeCampaign(campaignId: string): Promise<void> {
       }
       // ─────────────────────────────────────────────────────────────────────
 
-      // Build params, replacing dynamic variables with actual customer data
-      const params = campaign.templateParams.map((p: string) =>
-        p
-          .replace(/\{\{customerName\}\}/gi, customer.name || "")
-          .replace(/\{\{customerFirstName\}\}/gi, (customer.name || "").split(" ")[0])
-          .replace(/\{\{customerMobile\}\}/gi, customer.mobile || "")
-      )
-
       const phone = `${customer.countryCode?.replace("+", "") ?? "91"}${customer.mobile}`
+
+      // Build params, replacing dynamic variables with actual customer data.
+      // Strip trailing/leading empty strings as a safety net — Gupshup throws #132012
+      // if the params array length doesn't match the registered template variable count.
+      const resolvedParams = campaign.templateParams
+        .map((p: string) =>
+          p
+            .replace(/\{\{customerName\}\}/gi, customer.name || "")
+            .replace(/\{\{customerFirstName\}\}/gi, (customer.name || "").split(" ")[0])
+            .replace(/\{\{customerMobile\}\}/gi, customer.mobile || "")
+        )
+        .filter((p: string) => p.trim() !== "") // guard: never send empty-string params
+
+      console.log(`[Campaign] Resolved params for ${phone}:`, JSON.stringify(resolvedParams))
+
 
       if (!campaign.templateId) {
         throw new Error("[Campaign] No templateId defined for this campaign.")
@@ -177,7 +184,7 @@ export async function executeCampaign(campaignId: string): Promise<void> {
         const result = await sendCampaignWhatsApp({
           phone,
           templateId: campaign.templateId,
-          params,
+          params: resolvedParams,
         })
 
         await CampaignRecipientModel.findOneAndUpdate(

@@ -14,7 +14,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { name, templateId, templateName, templateParams, targetFilter, scheduledAt } = body
 
-    if (!name || !templateId || !templateName || !templateParams || !targetFilter) {
+    // NOTE: templateParams can be an empty array [] for templates with no variables — do NOT use
+    // !templateParams here because ![] === false in JS but an empty array IS falsy via negation operator.
+    if (!name || !templateId || !templateName || templateParams === undefined || templateParams === null || !targetFilter) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
