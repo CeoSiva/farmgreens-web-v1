@@ -1,12 +1,16 @@
 import { SettingsClient } from "@/components/settings/settings-client"
 import { getSettings } from "@/lib/data/setting"
+import { getSystemSetting } from "@/lib/data/system-setting"
 import { listDistricts } from "@/lib/data/location"
 
 export const dynamic = "force-dynamic"
 
 export default async function SettingsPage() {
-  const settings = await getSettings()
-  const districts = await listDistricts()
+  const [settings, districts, bannerMessage] = await Promise.all([
+    getSettings(),
+    listDistricts(),
+    getSystemSetting("delivery_banner_message"),
+  ])
 
   const plainSettings = JSON.parse(JSON.stringify(settings))
   const plainDistricts = JSON.parse(JSON.stringify(districts))
@@ -20,7 +24,11 @@ export default async function SettingsPage() {
         </p>
       </div>
 
-      <SettingsClient settings={plainSettings} districts={plainDistricts} />
+      <SettingsClient 
+        settings={plainSettings} 
+        districts={plainDistricts} 
+        bannerMessage={bannerMessage}
+      />
     </div>
   )
 }

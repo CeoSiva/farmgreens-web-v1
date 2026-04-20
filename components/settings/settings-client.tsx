@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   createDistrictAction,
   createAreaAction,
@@ -30,11 +31,13 @@ import { listAreasByDistrictAction, listApartmentsByDistrictAction } from "@/ser
 export function SettingsClient({
   settings,
   districts,
+  bannerMessage,
 }: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   settings: any
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   districts: any[]
+  bannerMessage: string
 }) {
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
@@ -65,6 +68,8 @@ export function SettingsClient({
 
   const [newApartmentName, setNewApartmentName] = useState("")
   const [bulkApartmentNames, setBulkApartmentNames] = useState("")
+
+  const [deliveryBannerMessage, setDeliveryBannerMessage] = useState(bannerMessage)
 
   useEffect(() => {
     if (!selectedDistrictId) {
@@ -114,6 +119,26 @@ export function SettingsClient({
       else {
         toast.success("Delivery fee saved")
         router.refresh()
+      }
+    })
+  }
+
+  const saveDeliveryBanner = () => {
+    startTransition(async () => {
+      try {
+        const res = await fetch("/api/admin/settings/delivery-banner", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: deliveryBannerMessage }),
+        })
+        const data = await res.json()
+        if (data.error) toast.error(data.error)
+        else {
+          toast.success("Delivery banner updated")
+          router.refresh()
+        }
+      } catch {
+        toast.error("Failed to update delivery banner")
       }
     })
   }
@@ -305,6 +330,7 @@ export function SettingsClient({
         <TabsTrigger value="store">Store</TabsTrigger>
         <TabsTrigger value="delivery">Delivery</TabsTrigger>
         <TabsTrigger value="locations">Locations</TabsTrigger>
+        <TabsTrigger value="banner">Delivery Banner</TabsTrigger>
       </TabsList>
 
       <TabsContent value="store" className="mt-4">
@@ -638,6 +664,30 @@ export function SettingsClient({
           </Card>
           </div>
         </div>
+      </TabsContent>
+
+      <TabsContent value="banner" className="mt-4">
+        <Card className="grid gap-3 p-4">
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Delivery Message</label>
+            <Textarea
+              value={deliveryBannerMessage}
+              onChange={(e) => setDeliveryBannerMessage(e.target.value)}
+              placeholder="e.g. Your current orders will be delivered on Monday..."
+              disabled={isPending}
+              maxLength={200}
+              className="min-h-[100px]"
+            />
+            <div className="text-xs text-muted-foreground text-right">
+              {deliveryBannerMessage.length}/200
+            </div>
+          </div>
+          <div>
+            <Button onClick={saveDeliveryBanner} disabled={isPending}>
+              Save
+            </Button>
+          </div>
+        </Card>
       </TabsContent>
     </Tabs>
   )
