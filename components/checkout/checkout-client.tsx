@@ -66,6 +66,7 @@ export function CheckoutClient({
   const [apartmentSearch, setApartmentSearch] = useState("")
   const [apartmentOpen, setApartmentOpen] = useState(false)
   const [locationPinned, setLocationPinned] = useState(false)
+  const [mapHighlight, setMapHighlight] = useState(false)
 
   const {
     register,
@@ -190,6 +191,18 @@ export function CheckoutClient({
       lng: "Location",
     }
 
+    // Highlight all invalid fields
+    Object.keys(errors).forEach((key) => {
+      const element = document.querySelector(`[name="${key}"]`) as HTMLElement
+      if (element) {
+        element.classList.add("ring-2", "ring-destructive")
+        // Remove highlight after 3 seconds
+        setTimeout(() => {
+          element.classList.remove("ring-2", "ring-destructive")
+        }, 3000)
+      }
+    })
+
     Object.keys(errors).forEach((key) => {
       const message = errors[key as keyof typeof errors]?.message
       if (message) {
@@ -278,6 +291,22 @@ export function CheckoutClient({
   }
 
   const onSubmit = async (data: CheckoutFormValues) => {
+    // Check if location is pinned before submission
+    if (!locationPinned) {
+      toast.error("Please pin your delivery location on the map before placing your order")
+      setMapHighlight(true)
+      // Scroll to map section
+      const mapElement = document.querySelector("#checkout-map") as HTMLElement
+      if (mapElement) {
+        mapElement.scrollIntoView({ behavior: "smooth", block: "center" })
+      }
+      // Clear highlight after 3 seconds
+      setTimeout(() => {
+        setMapHighlight(false)
+      }, 3000)
+      return
+    }
+
     // Check for validation errors before submission
     if (Object.keys(errors).length > 0) {
       showValidationErrorsToast()
@@ -715,11 +744,14 @@ export function CheckoutClient({
                 </div>
               </div>
 
-              <MapPicker
-                initialLat={lat !== 0 ? lat : undefined}
-                initialLng={lng !== 0 ? lng : undefined}
-                onLocationChange={handleLocationChange}
-              />
+              <div id="checkout-map">
+                <MapPicker
+                  initialLat={lat !== 0 ? lat : undefined}
+                  initialLng={lng !== 0 ? lng : undefined}
+                  onLocationChange={handleLocationChange}
+                  highlight={mapHighlight}
+                />
+              </div>
               {errors.lat && (
                 <div className="text-xs text-destructive">
                   {errors.lat.message}
@@ -798,9 +830,35 @@ export function CheckoutClient({
             </div>
           </div>
 
-          <Button type="submit" disabled={isPending || !locationPinned} size="lg">
+          <Button
+            type="submit"
+            disabled={isPending}
+            size="lg"
+            className={!locationPinned ? "opacity-50 cursor-not-allowed" : undefined}
+            onClickCapture={(e) => {
+              if (locationPinned) return
+              e.preventDefault()
+              e.stopPropagation()
+              toast.error(
+                "Please pin your delivery location on the map before placing your order"
+              )
+              setMapHighlight(true)
+              const mapElement = document.querySelector("#checkout-map") as HTMLElement
+              if (mapElement) {
+                mapElement.scrollIntoView({ behavior: "smooth", block: "center" })
+              }
+              setTimeout(() => {
+                setMapHighlight(false)
+              }, 3000)
+            }}
+          >
             {paymentMethod === "online" ? "Pay Online" : "Place order (COD)"}
           </Button>
+          {!locationPinned && (
+            <p className="text-xs text-muted-foreground text-center mt-2">
+              Please pin your delivery location on the map to continue
+            </p>
+          )}
         </form>
       </Card>
     </div>

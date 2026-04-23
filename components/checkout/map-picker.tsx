@@ -12,6 +12,7 @@ interface MapPickerProps {
   initialLat?: number
   initialLng?: number
   onLocationChange: (lat: number, lng: number) => void
+  highlight?: boolean
 }
 
 const containerStyle = {
@@ -24,7 +25,7 @@ const DEFAULT_CENTER = {
   lng: 80.2707,
 }
 
-export function MapPicker({ initialLat, initialLng, onLocationChange }: MapPickerProps) {
+export function MapPicker({ initialLat, initialLng, onLocationChange, highlight = false }: MapPickerProps) {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries,
@@ -150,7 +151,7 @@ export function MapPicker({ initialLat, initialLng, onLocationChange }: MapPicke
           {isLoadingLocation ? "Locating..." : "Use my location"}
         </Button>
       </div>
-      <Card className="overflow-hidden p-0 relative">
+      <Card className={`overflow-hidden p-0 relative ${highlight ? "ring-2 ring-destructive" : ""}`}>
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={center}
