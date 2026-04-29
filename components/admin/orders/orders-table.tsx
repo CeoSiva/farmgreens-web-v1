@@ -99,23 +99,11 @@ export function OrdersTable({ data }: { data: any[] }) {
   const [clusteredOrders, setClusteredOrders] = React.useState<ClusteredOrderType[]>([])
   const [isWarningDismissed, setIsWarningDismissed] = React.useState(false)
 
-  const normalisedRawOrders = React.useMemo(() => {
-    return normaliseOrders(data)
-  }, [data])
+  // Clear clustering results when filters change to avoid stale data
+  React.useEffect(() => {
+    setClusteredOrders([])
+  }, [cityFilter, areaFilter, valueBucketFilter, categoryFilter, date])
 
-  const missingPinsCount = React.useMemo(() => {
-    return normalisedRawOrders.filter((o) => {
-      const status = (o.status || "").toLowerCase()
-      const isActive =
-        status.includes("placed") ||
-        status.includes("paid") ||
-        status === "active" ||
-        status === "pending" ||
-        status === "confirmed"
-      const noLink = !o.googleMapsLink || o.googleMapsLink === "no location"
-      return isActive && noLink
-    }).length
-  }, [normalisedRawOrders])
 
   // Filter data by date range
   const filteredData = React.useMemo(() => {
@@ -205,6 +193,24 @@ export function OrdersTable({ data }: { data: any[] }) {
       return matchesCity && matchesArea && matchesValue && matchesCategory
     })
   }, [filteredData, cityFilter, areaFilter, valueBucketFilter, categoryFilter])
+
+  const filteredNormalisedOrders = React.useMemo(() => {
+    return normaliseOrders(structuredFilteredData)
+  }, [structuredFilteredData])
+
+  const missingPinsCount = React.useMemo(() => {
+    return filteredNormalisedOrders.filter((o) => {
+      const status = (o.status || "").toLowerCase()
+      const isActive =
+        status.includes("placed") ||
+        status.includes("paid") ||
+        status === "active" ||
+        status === "pending" ||
+        status === "confirmed"
+      const noLink = !o.googleMapsLink || o.googleMapsLink === "no location"
+      return isActive && noLink
+    }).length
+  }, [filteredNormalisedOrders])
 
   const activeStructuredFiltersCount = [
     cityFilter !== "all",
@@ -789,7 +795,7 @@ export function OrdersTable({ data }: { data: any[] }) {
       {isClusterPanelOpen && (
         <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <ClusteringPanel 
-            orders={normalisedRawOrders} 
+            orders={filteredNormalisedOrders} 
             onClusteringComplete={setClusteredOrders} 
           />
           {clusteredOrders.length > 0 && (
