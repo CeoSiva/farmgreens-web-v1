@@ -87,9 +87,9 @@ export async function bulkCreateAreas(districtId: string, names: string[]) {
   return AreaModel.insertMany(docs)
 }
 
-export async function createApartment(districtId: string, name: string) {
+export async function createApartment(districtId: string, name: string, deliveryDay?: number | null) {
   await connectDB()
-  return ApartmentModel.create({ districtId, name })
+  return ApartmentModel.create({ districtId, name, deliveryDay: deliveryDay ?? undefined })
 }
 
 export async function renameApartment(id: string, name: string) {
@@ -97,6 +97,17 @@ export async function renameApartment(id: string, name: string) {
   const updated = await ApartmentModel.findByIdAndUpdate(
     id,
     { name },
+    { new: true }
+  ).lean()
+  if (!updated) throw new Error("Apartment not found")
+  return updated
+}
+
+export async function updateApartment(id: string, name: string, deliveryDay?: number | null) {
+  await connectDB()
+  const updated = await ApartmentModel.findByIdAndUpdate(
+    id,
+    { name, deliveryDay: deliveryDay ?? null },
     { new: true }
   ).lean()
   if (!updated) throw new Error("Apartment not found")

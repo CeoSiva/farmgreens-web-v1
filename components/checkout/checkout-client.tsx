@@ -7,7 +7,8 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { trackBeginCheckout, trackPurchase, trackDistrictSelected, trackWhatsAppOptIn, trackWhatsAppOptOut } from "@/lib/analytics"
-import { Check, ChevronsUpDown, Plus, CreditCard, Banknote } from "lucide-react"
+import { Check, ChevronsUpDown, Plus, CreditCard, Banknote, CalendarClock } from "lucide-react"
+import { nextDay, format, Day } from "date-fns"
 
 import type { Cart } from "@/lib/cart"
 import { CheckoutSchema, type CheckoutFormValues } from "@/lib/schemas/checkout"
@@ -248,6 +249,29 @@ export function CheckoutClient({
     const q = apartmentSearch.toLowerCase()
     return apartments.filter((a: any) => a.name.toLowerCase().includes(q))
   }, [apartments, apartmentSearch])
+
+  const selectedApartment = useMemo(() => {
+    const street = watch("street")
+    if (!isChennai || !street) return null
+    return apartments.find((a: any) => a.name === street)
+  }, [apartments, watch("street"), isChennai])
+
+  const upcomingDeliveryDateInfo = useMemo(() => {
+    if (!selectedApartment || selectedApartment.deliveryDay == null) return null
+    
+    const dayOfWeek = selectedApartment.deliveryDay
+    const today = new Date()
+    
+    // If today is the delivery day, we'll still say next occurrence for safety, 
+    // or calculate the next date. nextDay(today, dayOfWeek) gives the next one.
+    const nextDate = nextDay(today, dayOfWeek as Day)
+    
+    const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    return {
+      dayName: DAYS_OF_WEEK[dayOfWeek],
+      dateFormatted: format(nextDate, "EEEE, MMMM do")
+    }
+  }, [selectedApartment])
 
   const handleCreateArea = async () => {
     if (!districtId || !areaSearch.trim()) return
@@ -727,6 +751,19 @@ export function CheckoutClient({
               )}
             </div>
           </div>
+
+          {upcomingDeliveryDateInfo && (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-primary flex gap-3 items-start">
+              <CalendarClock className="h-5 w-5 shrink-0 mt-0.5" />
+              <div>
+                <div className="font-semibold mb-1">Upcoming Delivery</div>
+                <div>
+                  Deliveries for <strong>{selectedApartment.name}</strong> are scheduled every <strong>{upcomingDeliveryDateInfo.dayName}</strong>. 
+                  Your order will be delivered on <strong>{upcomingDeliveryDateInfo.dateFormatted}</strong>.
+                </div>
+              </div>
+            </div>
+          )}
 
           <Separator />
 

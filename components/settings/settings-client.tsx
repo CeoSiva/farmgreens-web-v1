@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   createDistrictAction,
   createAreaAction,
   deleteAreaAction,
@@ -19,7 +26,7 @@ import {
   bulkCreateAreasAction,
   createApartmentAction,
   deleteApartmentAction,
-  renameApartmentAction,
+  updateApartmentAction,
   bulkCreateApartmentsAction,
 } from "@/server/actions/location-admin"
 import {
@@ -67,7 +74,22 @@ export function SettingsClient({
   const [bulkAreaNames, setBulkAreaNames] = useState("")
 
   const [newApartmentName, setNewApartmentName] = useState("")
+  const [newApartmentDeliveryDay, setNewApartmentDeliveryDay] = useState<string>("none")
   const [bulkApartmentNames, setBulkApartmentNames] = useState("")
+
+  const [editingApartmentId, setEditingApartmentId] = useState<string | null>(null)
+  const [editApartmentName, setEditApartmentName] = useState("")
+  const [editApartmentDeliveryDay, setEditApartmentDeliveryDay] = useState<string>("none")
+
+  const DAYS_OF_WEEK = [
+    { value: "0", label: "Sunday" },
+    { value: "1", label: "Monday" },
+    { value: "2", label: "Tuesday" },
+    { value: "3", label: "Wednesday" },
+    { value: "4", label: "Thursday" },
+    { value: "5", label: "Friday" },
+    { value: "6", label: "Saturday" },
+  ]
 
   const [deliveryBannerMessage, setDeliveryBannerMessage] = useState(bannerMessage)
 
@@ -259,27 +281,48 @@ export function SettingsClient({
       return
     }
     startTransition(async () => {
+      const deliveryDayNum = newApartmentDeliveryDay === "none" ? null : parseInt(newApartmentDeliveryDay)
       const res = await createApartmentAction({
         districtId: selectedDistrictId,
         name: newApartmentName,
+        deliveryDay: deliveryDayNum,
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
         toast.success("Apartment created")
         setNewApartmentName("")
+        setNewApartmentDeliveryDay("none")
         router.refresh()
       }
     })
   }
 
-  const handleRenameApartment = (id: string, currentName: string) => {
-    const name = window.prompt("Rename apartment", currentName)
-    if (!name) return
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const startEditApartment = (a: any) => {
+    setEditingApartmentId(String(a._id))
+    setEditApartmentName(a.name)
+    setEditApartmentDeliveryDay(a.deliveryDay != null ? String(a.deliveryDay) : "none")
+  }
+
+  const cancelEditApartment = () => {
+    setEditingApartmentId(null)
+    setEditApartmentName("")
+    setEditApartmentDeliveryDay("none")
+  }
+
+  const handleUpdateApartment = () => {
+    if (!editingApartmentId || !editApartmentName.trim()) return
     startTransition(async () => {
-      const res = await renameApartmentAction({ id, name })
+      const deliveryDayNum = editApartmentDeliveryDay === "none" ? null : parseInt(editApartmentDeliveryDay)
+      const res = await updateApartmentAction({ 
+        id: editingApartmentId, 
+        name: editApartmentName,
+        deliveryDay: deliveryDayNum
+      })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
-        toast.success("Apartment renamed")
+        toast.success("Apartment updated")
+        setEditingApartmentId(null)
         router.refresh()
       }
     })
@@ -587,7 +630,25 @@ export function SettingsClient({
                 value={newApartmentName}
                 onChange={(e) => setNewApartmentName(e.target.value)}
                 disabled={isPending || !selectedDistrictId}
+                className="flex-1"
               />
+              <Select
+                value={newApartmentDeliveryDay}
+                onValueChange={setNewApartmentDeliveryDay}
+                disabled={isPending || !selectedDistrictId}
+              >
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Delivery Day" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No specific day</SelectItem>
+                  {DAYS_OF_WEEK.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>
+                      {d.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 onClick={addApartment}
                 disabled={isPending || !selectedDistrictId || !newApartmentName}
@@ -632,31 +693,81 @@ export function SettingsClient({
                     key={a._id}
                     className="rounded-md border px-3 py-2 text-sm"
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{a.name}</span>
-                      <span className="flex gap-2">
+                    {editingApartmentId === String(a._id) ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={editApartmentName}
+                          onChange={(e) => setEditApartmentName(e.target.value)}
+                          disabled={isPending}
+                          className="flex-1 h-8"
+                        />
+                        <Select
+                          value={editApartmentDeliveryDay}
+                          onValueChange={setEditApartmentDeliveryDay}
+                          disabled={isPending}
+                        >
+                          <SelectTrigger className="w-[140px] h-8">
+                            <SelectValue placeholder="Delivery Day" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No specific day</SelectItem>
+                            {DAYS_OF_WEEK.map((d) => (
+                              <SelectItem key={d.value} value={d.value}>
+                                {d.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <Button
                           type="button"
                           size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            handleRenameApartment(String(a._id), a.name)
-                          }
-                          disabled={isPending}
+                          onClick={handleUpdateApartment}
+                          disabled={isPending || !editApartmentName.trim()}
                         >
-                          Rename
+                          Save
                         </Button>
                         <Button
                           type="button"
                           size="sm"
-                          variant="destructive"
-                          onClick={() => handleRemoveApartment(String(a._id))}
+                          variant="ghost"
+                          onClick={cancelEditApartment}
                           disabled={isPending}
                         >
-                          Delete
+                          Cancel
                         </Button>
-                      </span>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{a.name}</span>
+                          {a.deliveryDay != null && (
+                            <span className="text-xs text-muted-foreground">
+                              Delivery: {DAYS_OF_WEEK.find(d => parseInt(d.value) === a.deliveryDay)?.label}
+                            </span>
+                          )}
+                        </div>
+                        <span className="flex gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => startEditApartment(a)}
+                            disabled={isPending}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleRemoveApartment(String(a._id))}
+                            disabled={isPending}
+                          >
+                            Delete
+                          </Button>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
