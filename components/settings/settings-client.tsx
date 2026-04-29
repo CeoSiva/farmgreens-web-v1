@@ -10,6 +10,19 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { MapPin, Building, Map as MapIcon, Plus, Trash2, Edit2, MoreVertical } from "lucide-react"
+import {
   createDistrictAction,
   createAreaAction,
   deleteAreaAction,
@@ -19,7 +32,7 @@ import {
   bulkCreateAreasAction,
   createApartmentAction,
   deleteApartmentAction,
-  renameApartmentAction,
+  updateApartmentAction,
   bulkCreateApartmentsAction,
 } from "@/server/actions/location-admin"
 import {
@@ -67,7 +80,22 @@ export function SettingsClient({
   const [bulkAreaNames, setBulkAreaNames] = useState("")
 
   const [newApartmentName, setNewApartmentName] = useState("")
+  const [newApartmentDeliveryDay, setNewApartmentDeliveryDay] = useState<string>("none")
   const [bulkApartmentNames, setBulkApartmentNames] = useState("")
+
+  const [editingApartmentId, setEditingApartmentId] = useState<string | null>(null)
+  const [editApartmentName, setEditApartmentName] = useState("")
+  const [editApartmentDeliveryDay, setEditApartmentDeliveryDay] = useState<string>("none")
+
+  const DAYS_OF_WEEK = [
+    { value: "0", label: "Sunday" },
+    { value: "1", label: "Monday" },
+    { value: "2", label: "Tuesday" },
+    { value: "3", label: "Wednesday" },
+    { value: "4", label: "Thursday" },
+    { value: "5", label: "Friday" },
+    { value: "6", label: "Saturday" },
+  ]
 
   const [deliveryBannerMessage, setDeliveryBannerMessage] = useState(bannerMessage)
 
@@ -259,27 +287,48 @@ export function SettingsClient({
       return
     }
     startTransition(async () => {
+      const deliveryDayNum = newApartmentDeliveryDay === "none" ? null : parseInt(newApartmentDeliveryDay)
       const res = await createApartmentAction({
         districtId: selectedDistrictId,
         name: newApartmentName,
+        deliveryDay: deliveryDayNum,
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
         toast.success("Apartment created")
         setNewApartmentName("")
+        setNewApartmentDeliveryDay("none")
         router.refresh()
       }
     })
   }
 
-  const handleRenameApartment = (id: string, currentName: string) => {
-    const name = window.prompt("Rename apartment", currentName)
-    if (!name) return
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const startEditApartment = (a: any) => {
+    setEditingApartmentId(String(a._id))
+    setEditApartmentName(a.name)
+    setEditApartmentDeliveryDay(a.deliveryDay != null ? String(a.deliveryDay) : "none")
+  }
+
+  const cancelEditApartment = () => {
+    setEditingApartmentId(null)
+    setEditApartmentName("")
+    setEditApartmentDeliveryDay("none")
+  }
+
+  const handleUpdateApartment = () => {
+    if (!editingApartmentId || !editApartmentName.trim()) return
     startTransition(async () => {
-      const res = await renameApartmentAction({ id, name })
+      const deliveryDayNum = editApartmentDeliveryDay === "none" ? null : parseInt(editApartmentDeliveryDay)
+      const res = await updateApartmentAction({ 
+        id: editingApartmentId, 
+        name: editApartmentName,
+        deliveryDay: deliveryDayNum
+      })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
-        toast.success("Apartment renamed")
+        toast.success("Apartment updated")
+        setEditingApartmentId(null)
         router.refresh()
       }
     })
@@ -410,260 +459,385 @@ export function SettingsClient({
       </TabsContent>
 
       <TabsContent value="locations" className="mt-4">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card className="p-4">
-            <div className="font-medium">Districts</div>
-            <div className="mt-3 flex gap-2">
-              <Input
-                placeholder="New district"
-                value={newDistrictName}
-                onChange={(e) => setNewDistrictName(e.target.value)}
-                disabled={isPending}
-              />
-              <Button
-                onClick={addDistrict}
-                disabled={isPending || !newDistrictName}
-              >
-                Add
-              </Button>
+        <Card className="flex overflow-hidden border">
+          {/* Left Sidebar: Districts */}
+          <div className="w-1/3 max-w-[300px] border-r bg-muted/30 flex flex-col min-h-[500px]">
+            <div className="p-4 border-b bg-muted/50 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-primary" />
+              <div className="font-semibold text-base">Districts</div>
             </div>
-            <div className="mt-4 grid gap-2">
-              {districts.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  No districts yet.
-                </div>
-              ) : (
-                districts.map((d) => (
-                  <button
-                    key={d._id}
-                    type="button"
-                    onClick={() => setSelectedDistrictId(String(d._id))}
-                    className={`w-full rounded-md border px-3 py-2 text-left text-sm ${
-                      String(d._id) === selectedDistrictId
-                        ? "bg-muted"
-                        : "bg-background"
-                    }`}
-                    disabled={isPending}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{d.name}</span>
-                      <span className="flex gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            handleRenameDistrict(String(d._id))
-                          }}
-                          disabled={isPending}
-                        >
-                          Rename
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            handleRemoveDistrict(String(d._id))
-                          }}
-                          disabled={isPending}
-                        >
-                          Delete
-                        </Button>
-                      </span>
+            
+            <ScrollArea className="flex-1">
+              <div className="p-2 grid gap-1">
+                {districts.length === 0 ? (
+                  <div className="text-sm text-muted-foreground p-4 text-center">
+                    No districts yet.
+                  </div>
+                ) : (
+                  districts.map((d) => (
+                    <div
+                      key={d._id}
+                      className={`group flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors ${
+                        String(d._id) === selectedDistrictId
+                          ? "bg-primary text-primary-foreground font-medium shadow-sm"
+                          : "hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                      }`}
+                      onClick={() => setSelectedDistrictId(String(d._id))}
+                    >
+                      <span className="truncate">{d.name}</span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 ${
+                              String(d._id) === selectedDistrictId ? "text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground" : ""
+                            }`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleRenameDistrict(String(d._id))
+                            }}
+                          >
+                            <Edit2 className="mr-2 h-4 w-4" />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleRemoveDistrict(String(d._id))
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                  </button>
-                ))
-              )}
-            </div>
-          </Card>
-
-          <div className="flex flex-col gap-4">
-            <Card className="p-4">
-              <div className="font-medium">Areas</div>
-            <div className="mt-1 text-sm text-muted-foreground">
-              {selectedDistrictId
-                ? `For district: ${districtById.get(selectedDistrictId)?.name ?? ""}`
-                : "Select a district to manage areas."}
-            </div>
-
-            <div className="mt-3 flex gap-2">
-              <Input
-                placeholder="New area"
-                value={newAreaName}
-                onChange={(e) => setNewAreaName(e.target.value)}
-                disabled={isPending || !selectedDistrictId}
-              />
-              <Button
-                onClick={addArea}
-                disabled={isPending || !selectedDistrictId || !newAreaName}
-              >
-                Add
-              </Button>
-            </div>
-
-            <div className="mt-3 grid gap-2">
-              <div className="text-xs font-medium text-muted-foreground">
-                Bulk add (one area per line)
+                  ))
+                )}
               </div>
-              <textarea
-                className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder={"Area 1\nArea 2\nArea 3"}
-                value={bulkAreaNames}
-                onChange={(e) => setBulkAreaNames(e.target.value)}
-                disabled={isPending || !selectedDistrictId}
-              />
-              <div>
+            </ScrollArea>
+
+            <div className="p-3 border-t bg-background">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="New district..."
+                  value={newDistrictName}
+                  onChange={(e) => setNewDistrictName(e.target.value)}
+                  disabled={isPending}
+                  className="h-8 text-sm"
+                />
                 <Button
-                  onClick={bulkAddAreas}
-                  disabled={
-                    isPending || !selectedDistrictId || !bulkAreaNames.trim()
-                  }
-                  variant="secondary"
                   size="sm"
+                  className="h-8 px-3"
+                  onClick={addDistrict}
+                  disabled={isPending || !newDistrictName}
                 >
-                  Bulk Add
+                  <Plus className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-
-            <div className="mt-4 grid gap-2">
-              {areas.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  No areas yet.
-                </div>
-              ) : (
-                areas.map((a) => (
-                  <div
-                    key={a._id}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{a.name}</span>
-                      <span className="flex gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            handleRenameArea(String(a._id), a.name)
-                          }
-                          disabled={isPending}
-                        >
-                          Rename
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleRemoveArea(String(a._id))}
-                          disabled={isPending}
-                        >
-                          Delete
-                        </Button>
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-
-          <Card className="p-4">
-            <div className="font-medium">Apartments</div>
-            <div className="mt-1 text-sm text-muted-foreground">
-              {selectedDistrictId
-                ? `For district: ${districtById.get(selectedDistrictId)?.name ?? ""}`
-                : "Select a district to manage apartments."}
-            </div>
-
-            <div className="mt-3 flex gap-2">
-              <Input
-                placeholder="New apartment"
-                value={newApartmentName}
-                onChange={(e) => setNewApartmentName(e.target.value)}
-                disabled={isPending || !selectedDistrictId}
-              />
-              <Button
-                onClick={addApartment}
-                disabled={isPending || !selectedDistrictId || !newApartmentName}
-              >
-                Add
-              </Button>
-            </div>
-
-            <div className="mt-3 grid gap-2">
-              <div className="text-xs font-medium text-muted-foreground">
-                Bulk add (one apartment per line)
-              </div>
-              <textarea
-                className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                placeholder={"Apartment A\nApartment B\nApartment C"}
-                value={bulkApartmentNames}
-                onChange={(e) => setBulkApartmentNames(e.target.value)}
-                disabled={isPending || !selectedDistrictId}
-              />
-              <div>
-                <Button
-                  onClick={bulkAddApartments}
-                  disabled={
-                    isPending || !selectedDistrictId || !bulkApartmentNames.trim()
-                  }
-                  variant="secondary"
-                  size="sm"
-                >
-                  Bulk Add
-                </Button>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-2">
-              {apartments.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  No apartments yet.
-                </div>
-              ) : (
-                apartments.map((a) => (
-                  <div
-                    key={a._id}
-                    className="rounded-md border px-3 py-2 text-sm"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{a.name}</span>
-                      <span className="flex gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            handleRenameApartment(String(a._id), a.name)
-                          }
-                          disabled={isPending}
-                        >
-                          Rename
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleRemoveApartment(String(a._id))}
-                          disabled={isPending}
-                        >
-                          Delete
-                        </Button>
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
           </div>
-        </div>
+
+          {/* Right Main Content: District Details */}
+          <div className="flex-1 flex flex-col min-w-0">
+            {!selectedDistrictId ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
+                <MapPin className="h-12 w-12 opacity-20 mb-4" />
+                <p>Select a district from the sidebar to manage areas and apartments.</p>
+              </div>
+            ) : (
+              <>
+                <div className="p-6 border-b flex items-center justify-between">
+                  <h2 className="text-xl font-semibold tracking-tight truncate pr-4">
+                    {districtById.get(selectedDistrictId)?.name ?? "Unknown"}
+                  </h2>
+                </div>
+                
+                <div className="p-6 flex-1 overflow-auto">
+                  <Tabs defaultValue="areas" className="w-full">
+                    <TabsList className="mb-4">
+                      <TabsTrigger value="areas" className="flex items-center gap-2">
+                        <MapIcon className="h-4 w-4" />
+                        Areas
+                      </TabsTrigger>
+                      <TabsTrigger value="apartments" className="flex items-center gap-2">
+                        <Building className="h-4 w-4" />
+                        Apartments
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {/* Areas Sub-Tab */}
+                    <TabsContent value="areas" className="mt-0 space-y-4">
+                      <div className="flex gap-3">
+                        <Input
+                          placeholder="New area name..."
+                          value={newAreaName}
+                          onChange={(e) => setNewAreaName(e.target.value)}
+                          disabled={isPending}
+                          className="max-w-xs"
+                        />
+                        <Button
+                          onClick={addArea}
+                          disabled={isPending || !newAreaName}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Area
+                        </Button>
+                      </div>
+
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Area Name</TableHead>
+                              <TableHead className="w-[100px] text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {areas.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={2} className="text-center text-muted-foreground h-24">
+                                  No areas defined in this district.
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              areas.map((a) => (
+                                <TableRow key={a._id}>
+                                  <TableCell className="font-medium">{a.name}</TableCell>
+                                  <TableCell className="text-right">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleRenameArea(String(a._id), a.name)}>
+                                          <Edit2 className="mr-2 h-4 w-4" />
+                                          Rename
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleRemoveArea(String(a._id))}>
+                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="bulk-areas">
+                          <AccordionTrigger className="text-sm font-medium">Bulk Add Areas</AccordionTrigger>
+                          <AccordionContent>
+                            <div className="grid gap-3 pt-2">
+                              <p className="text-xs text-muted-foreground">Enter one area name per line.</p>
+                              <Textarea
+                                className="min-h-[100px]"
+                                placeholder="Area 1&#10;Area 2&#10;Area 3"
+                                value={bulkAreaNames}
+                                onChange={(e) => setBulkAreaNames(e.target.value)}
+                                disabled={isPending}
+                              />
+                              <div>
+                                <Button
+                                  onClick={bulkAddAreas}
+                                  disabled={isPending || !bulkAreaNames.trim()}
+                                  variant="secondary"
+                                >
+                                  Submit Bulk Add
+                                </Button>
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </TabsContent>
+
+                    {/* Apartments Sub-Tab */}
+                    <TabsContent value="apartments" className="mt-0 space-y-4">
+                      <div className="flex flex-wrap gap-3">
+                        <Input
+                          placeholder="New apartment name..."
+                          value={newApartmentName}
+                          onChange={(e) => setNewApartmentName(e.target.value)}
+                          disabled={isPending}
+                          className="flex-1 min-w-[200px]"
+                        />
+                        <Select
+                          value={newApartmentDeliveryDay}
+                          onValueChange={setNewApartmentDeliveryDay}
+                          disabled={isPending}
+                        >
+                          <SelectTrigger className="w-[160px]">
+                            <SelectValue placeholder="Delivery Day" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No specific day</SelectItem>
+                            {DAYS_OF_WEEK.map((d) => (
+                              <SelectItem key={d.value} value={d.value}>
+                                {d.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          onClick={addApartment}
+                          disabled={isPending || !newApartmentName}
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Apartment
+                        </Button>
+                      </div>
+
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Apartment Name</TableHead>
+                              <TableHead>Delivery Day</TableHead>
+                              <TableHead className="w-[100px] text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {apartments.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
+                                  No apartments defined in this district.
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              apartments.map((a) => (
+                                <TableRow key={a._id}>
+                                  {editingApartmentId === String(a._id) ? (
+                                    <TableCell colSpan={3} className="p-2">
+                                      <div className="flex items-center gap-2 bg-muted/50 p-2 rounded-md border border-dashed">
+                                        <Input
+                                          value={editApartmentName}
+                                          onChange={(e) => setEditApartmentName(e.target.value)}
+                                          disabled={isPending}
+                                          className="flex-1 h-9"
+                                        />
+                                        <Select
+                                          value={editApartmentDeliveryDay}
+                                          onValueChange={setEditApartmentDeliveryDay}
+                                          disabled={isPending}
+                                        >
+                                          <SelectTrigger className="w-[160px] h-9 bg-background">
+                                            <SelectValue placeholder="Delivery Day" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="none">No specific day</SelectItem>
+                                            {DAYS_OF_WEEK.map((d) => (
+                                              <SelectItem key={d.value} value={d.value}>
+                                                {d.label}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectContent>
+                                        </Select>
+                                        <Button
+                                          size="sm"
+                                          onClick={handleUpdateApartment}
+                                          disabled={isPending || !editApartmentName.trim()}
+                                        >
+                                          Save
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={cancelEditApartment}
+                                          disabled={isPending}
+                                        >
+                                          Cancel
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  ) : (
+                                    <>
+                                      <TableCell className="font-medium">{a.name}</TableCell>
+                                      <TableCell>
+                                        {a.deliveryDay != null ? (
+                                          <Badge variant="outline" className="font-normal text-xs bg-secondary/50">
+                                            {DAYS_OF_WEEK.find(d => parseInt(d.value) === a.deliveryDay)?.label}
+                                          </Badge>
+                                        ) : (
+                                          <span className="text-muted-foreground text-xs italic">Unscheduled</span>
+                                        )}
+                                      </TableCell>
+                                      <TableCell className="text-right">
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                              <MoreVertical className="h-4 w-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => startEditApartment(a)}>
+                                              <Edit2 className="mr-2 h-4 w-4" />
+                                              Edit Details
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleRemoveApartment(String(a._id))}>
+                                              <Trash2 className="mr-2 h-4 w-4" />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </TableCell>
+                                    </>
+                                  )}
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      <Accordion type="single" collapsible className="w-full">
+                        <AccordionItem value="bulk-apartments">
+                          <AccordionTrigger className="text-sm font-medium">Bulk Add Apartments</AccordionTrigger>
+                          <AccordionContent>
+                            <div className="grid gap-3 pt-2">
+                              <p className="text-xs text-muted-foreground">Enter one apartment name per line.</p>
+                              <Textarea
+                                className="min-h-[100px]"
+                                placeholder="Apartment A&#10;Apartment B&#10;Apartment C"
+                                value={bulkApartmentNames}
+                                onChange={(e) => setBulkApartmentNames(e.target.value)}
+                                disabled={isPending}
+                              />
+                              <div>
+                                <Button
+                                  onClick={bulkAddApartments}
+                                  disabled={isPending || !bulkApartmentNames.trim()}
+                                  variant="secondary"
+                                >
+                                  Submit Bulk Add
+                                </Button>
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </>
+            )}
+          </div>
+        </Card>
       </TabsContent>
 
       <TabsContent value="banner" className="mt-4">

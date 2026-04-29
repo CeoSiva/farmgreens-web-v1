@@ -12,6 +12,7 @@ export const AreaSchema = z.object({
 export const ApartmentSchema = z.object({
   districtId: z.string().min(1, "District is required"),
   name: z.string().min(1, "Apartment name is required"),
+  deliveryDay: z.number().min(0).max(6).optional().nullable(),
 });
 
 export type DistrictValues = z.infer<typeof DistrictSchema>;
