@@ -1,6 +1,8 @@
 import { connectDB } from "../db"
 import OrderModel, { IOrder } from "../models/order"
 import CustomerModel, { ICustomer } from "../models/customer"
+import ProductModel from "../models/product"
+import ComboModel from "../models/Combo"
 
 export async function listRecentOrders(limit = 50): Promise<IOrder[]> {
   await connectDB()
