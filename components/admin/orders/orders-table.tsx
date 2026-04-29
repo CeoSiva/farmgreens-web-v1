@@ -22,6 +22,8 @@ import {
   XCircle,
   Truck,
   RotateCcw,
+  X,
+  AlertCircle,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -65,6 +67,13 @@ import { DatePickerWithRange } from "./date-range-picker"
 import { isWithinInterval, startOfDay, endOfDay } from "date-fns"
 import { DateRange } from "react-day-picker"
 
+import { ClusteringPanel } from "./clustering-panel"
+import { ZoneResultsPanel } from "./zone-results-panel"
+import { ZoneExportBar } from "./zone-export-bar"
+import { normaliseOrders } from "@/lib/utils/order-mapper"
+import { ClusteredOrder } from "@/lib/utils/geo-clustering"
+import { ClusteredOrderType } from "./zone-results-panel"
+
 export function OrdersTable({ data }: { data: any[] }) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -86,6 +95,27 @@ export function OrdersTable({ data }: { data: any[] }) {
   const [areaFilter, setAreaFilter] = React.useState("all")
   const [valueBucketFilter, setValueBucketFilter] = React.useState("all")
   const [categoryFilter, setCategoryFilter] = React.useState("all")
+  const [isClusterPanelOpen, setIsClusterPanelOpen] = React.useState(false)
+  const [clusteredOrders, setClusteredOrders] = React.useState<ClusteredOrderType[]>([])
+  const [isWarningDismissed, setIsWarningDismissed] = React.useState(false)
+
+  const normalisedRawOrders = React.useMemo(() => {
+    return normaliseOrders(data)
+  }, [data])
+
+  const missingPinsCount = React.useMemo(() => {
+    return normalisedRawOrders.filter((o) => {
+      const status = (o.status || "").toLowerCase()
+      const isActive =
+        status.includes("placed") ||
+        status.includes("paid") ||
+        status === "active" ||
+        status === "pending" ||
+        status === "confirmed"
+      const noLink = !o.googleMapsLink || o.googleMapsLink === "no location"
+      return isActive && noLink
+    }).length
+  }, [normalisedRawOrders])
 
   // Filter data by date range
   const filteredData = React.useMemo(() => {
@@ -511,11 +541,17 @@ export function OrdersTable({ data }: { data: any[] }) {
         const chunk = items.slice(chunkStart, chunkStart + ITEMS_PER_EXPORT_ROW)
 
         // Fixed metadata columns (repeated on every chunk row).
-        const rowData: Record<string, string | number> = {
-          Date: new Date(o.createdAt).toLocaleString(),
-          "Order Number": o.orderNumber,
-          "Customer Name": o.customer.name,
+        const rowData: Record<string, string | number> = {}
+
+        if (clusteredOrders.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const clusteredOrder = clusteredOrders.find((co: any) => co.orderNumber === o.orderNumber)
+          rowData["Zone"] = clusteredOrder?.zoneLabel || "Outlier"
         }
+
+        rowData["Date"] = new Date(o.createdAt).toLocaleString()
+        rowData["Order Number"] = o.orderNumber
+        rowData["Customer Name"] = o.customer.name
 
         if (includeMobile) {
           rowData["Mobile"] = o.customer.mobile
@@ -571,6 +607,16 @@ export function OrdersTable({ data }: { data: any[] }) {
       }
     })
 
+    if (clusteredOrders.length > 0) {
+      exportData.sort((a, b) => {
+        const zoneA = String(a["Zone"] || "Outlier")
+        const zoneB = String(b["Zone"] || "Outlier")
+        if (zoneA === "Outlier") return 1
+        if (zoneB === "Outlier") return -1
+        return zoneA.localeCompare(zoneB)
+      })
+    }
+
     downloadCSV(
       exportData,
       `orders-export-${new Date().toISOString().split("T")[0]}.csv`
@@ -586,6 +632,27 @@ export function OrdersTable({ data }: { data: any[] }) {
 
   return (
     <div className="space-y-4">
+      {!isWarningDismissed && missingPinsCount >= 3 && (
+        <div className="flex animate-in fade-in slide-in-from-top-2 items-start gap-4 rounded-md border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+          <div className="flex-1 text-sm">
+            <p className="font-medium">
+              {missingPinsCount} active orders are missing a delivery pin.
+            </p>
+            <p className="mt-1 opacity-90">
+              These orders will be excluded from zone clustering.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsWarningDismissed(true)}
+            className="text-amber-600 hover:text-amber-900 transition-colors dark:text-amber-400 dark:hover:text-amber-300"
+            aria-label="Dismiss warning"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3">
         {/* Search & Date row */}
         <div className="flex flex-col gap-3 sm:grid sm:grid-cols-2 lg:flex lg:flex-row">
@@ -607,9 +674,13 @@ export function OrdersTable({ data }: { data: any[] }) {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-10 flex-1 sm:flex-none lg:h-9"
+                className="h-10 flex-1 sm:flex-none lg:h-9 relative"
               >
-                <Download className="mr-2 h-4 w-4" /> Export
+                <Download className="mr-2 h-4 w-4" /> 
+                {clusteredOrders.length > 0 ? "Export with zones" : "Export"}
+                {clusteredOrders.length > 0 && (
+                  <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-emerald-500 border-2 border-background" />
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -621,6 +692,15 @@ export function OrdersTable({ data }: { data: any[] }) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <Button
+            variant={isClusterPanelOpen ? "default" : "outline"}
+            size="lg"
+            className="h-10 flex-1 sm:flex-none lg:h-9"
+            onClick={() => setIsClusterPanelOpen(!isClusterPanelOpen)}
+          >
+            Zone clustering
+          </Button>
 
           <Select
             onValueChange={(val) =>
@@ -705,6 +785,21 @@ export function OrdersTable({ data }: { data: any[] }) {
           </Button>
         </div>
       </div>
+
+      {isClusterPanelOpen && (
+        <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          <ClusteringPanel 
+            orders={normalisedRawOrders} 
+            onClusteringComplete={setClusteredOrders} 
+          />
+          {clusteredOrders.length > 0 && (
+            <>
+              <ZoneResultsPanel clusteredOrders={clusteredOrders} />
+              <ZoneExportBar clusteredOrders={clusteredOrders} />
+            </>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
         <div className="rounded-md border bg-card p-3 text-xs">
