@@ -1,9 +1,8 @@
-import { getSystemSetting } from "@/lib/data/system-setting";
+"use client";
+
 import { Leaf } from "lucide-react";
 
-export async function DeliveryBanner() {
-  const message = await getSystemSetting("delivery_banner_message");
-
+export function DeliveryBanner({ message }: { message: string }) {
   if (!message || message.trim() === "") {
     return null;
   }

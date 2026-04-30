@@ -99,6 +99,15 @@ export function SettingsClient({
 
   const [deliveryBannerMessage, setDeliveryBannerMessage] = useState(bannerMessage)
 
+  const fetchLocations = async (id: string) => {
+    const [resAreas, resApts] = await Promise.all([
+      listAreasByDistrictAction(id),
+      listApartmentsByDistrictAction(id)
+    ])
+    setAreas((resAreas as any).areas)
+    setApartments((resApts as any).apartments)
+  }
+
   useEffect(() => {
     if (!selectedDistrictId) {
       setAreas([])
@@ -106,12 +115,7 @@ export function SettingsClient({
       return
     }
     startTransition(async () => {
-      const [resAreas, resApts] = await Promise.all([
-        listAreasByDistrictAction(selectedDistrictId),
-        listApartmentsByDistrictAction(selectedDistrictId)
-      ])
-      setAreas((resAreas as any).areas)
-      setApartments((resApts as any).apartments)
+      await fetchLocations(selectedDistrictId)
     })
   }, [selectedDistrictId])
 
@@ -224,6 +228,7 @@ export function SettingsClient({
       else {
         toast.success("Area created")
         setNewAreaName("")
+        await fetchLocations(selectedDistrictId)
         router.refresh()
       }
     })
@@ -237,6 +242,7 @@ export function SettingsClient({
       if ((res as any)?.error) toast.error((res as any).error)
       else {
         toast.success("Area renamed")
+        await fetchLocations(selectedDistrictId)
         router.refresh()
       }
     })
@@ -249,6 +255,7 @@ export function SettingsClient({
       if ((res as any)?.error) toast.error((res as any).error)
       else {
         toast.success("Area deleted")
+        await fetchLocations(selectedDistrictId)
         router.refresh()
       }
     })
@@ -276,6 +283,7 @@ export function SettingsClient({
       else {
         toast.success(`Created ${(res as any).count} areas`)
         setBulkAreaNames("")
+        await fetchLocations(selectedDistrictId)
         router.refresh()
       }
     })
@@ -298,6 +306,7 @@ export function SettingsClient({
         toast.success("Apartment created")
         setNewApartmentName("")
         setNewApartmentDeliveryDay("none")
+        await fetchLocations(selectedDistrictId)
         router.refresh()
       }
     })
@@ -329,6 +338,7 @@ export function SettingsClient({
       else {
         toast.success("Apartment updated")
         setEditingApartmentId(null)
+        await fetchLocations(selectedDistrictId)
         router.refresh()
       }
     })
@@ -341,6 +351,7 @@ export function SettingsClient({
       if ((res as any)?.error) toast.error((res as any).error)
       else {
         toast.success("Apartment deleted")
+        await fetchLocations(selectedDistrictId)
         router.refresh()
       }
     })
@@ -368,6 +379,7 @@ export function SettingsClient({
       else {
         toast.success(`Created ${(res as any).count} apartments`)
         setBulkApartmentNames("")
+        await fetchLocations(selectedDistrictId)
         router.refresh()
       }
     })
