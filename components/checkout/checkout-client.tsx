@@ -52,6 +52,7 @@ export function CheckoutClient({
   deliveryFee,
   districtSlug,
   bannerMessage,
+  isCodEnabled,
 }: {
   cart: Cart
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -18,7 +18,7 @@ export async function updateSettings(patch: Partial<ISetting>): Promise<ISetting
     return created.toObject() as any;
   }
 
-  Object.assign(existing, patch);
+  existing.set(patch);
   await existing.save();
   return existing.toObject() as any;
 }
