@@ -15,6 +15,7 @@ import {
   updateApartment,
   deleteApartment,
   bulkCreateApartments,
+  bulkUpdateApartmentDeliveryDays,
 } from "@/lib/data/location-admin"
 
 export async function createDistrictAction(payload: { name: string }) {
@@ -110,12 +111,12 @@ export async function bulkCreateAreasAction(payload: {
 export async function createApartmentAction(payload: {
   districtId: string
   name: string
-  deliveryDay?: number | null
+  deliveryDays?: number[]
 }) {
   const parsed = ApartmentSchema.safeParse(payload)
   if (!parsed.success) return { error: "Invalid apartment" }
   try {
-    const apartment = await createApartment(parsed.data.districtId, parsed.data.name, parsed.data.deliveryDay)
+    const apartment = await createApartment(parsed.data.districtId, parsed.data.name, parsed.data.deliveryDays)
     revalidatePath("/fmg-admin/settings")
     return { success: true, apartment: JSON.parse(JSON.stringify(apartment)) }
   } catch (e: any) {
@@ -136,15 +137,13 @@ export async function renameApartmentAction(payload: { id: string; name: string 
   }
 }
 
-export async function updateApartmentAction(payload: { id: string; name: string; deliveryDay?: number | null }) {
-  // We can just manually validate since it's simple
+export async function updateApartmentAction(payload: { id: string; name: string; deliveryDays?: number[] }) {
   if (!payload.name || payload.name.trim() === "") return { error: "Invalid apartment name" }
-  if (payload.deliveryDay !== undefined && payload.deliveryDay !== null) {
-    if (payload.deliveryDay < 0 || payload.deliveryDay > 6) return { error: "Invalid delivery day" }
-  }
+  const days = payload.deliveryDays ?? []
+  if (days.some((d) => d < 0 || d > 6)) return { error: "Invalid delivery day" }
   
   try {
-    const apartment = await updateApartment(payload.id, payload.name, payload.deliveryDay)
+    const apartment = await updateApartment(payload.id, payload.name, days)
     revalidatePath("/fmg-admin/settings")
     return { success: true, apartment: JSON.parse(JSON.stringify(apartment)) }
   } catch (e: any) {
@@ -175,5 +174,22 @@ export async function bulkCreateApartmentsAction(payload: {
     return { success: true, count: apartments.length }
   } catch (e: any) {
     return { error: e?.message ?? "Failed to create apartments" }
+  }
+}
+
+export async function bulkAssignDeliveryDaysAction(payload: {
+  apartmentIds: string[]
+  deliveryDays: number[]
+}) {
+  if (!payload.apartmentIds || payload.apartmentIds.length === 0)
+    return { error: "No apartments selected" }
+  if (payload.deliveryDays.some((d) => d < 0 || d > 6))
+    return { error: "Invalid delivery day" }
+  try {
+    await bulkUpdateApartmentDeliveryDays(payload.apartmentIds, payload.deliveryDays)
+    revalidatePath("/fmg-admin/settings")
+    return { success: true }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to assign delivery days" }
   }
 }

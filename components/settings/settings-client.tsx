@@ -34,6 +34,7 @@ import {
   deleteApartmentAction,
   updateApartmentAction,
   bulkCreateApartmentsAction,
+  bulkAssignDeliveryDaysAction,
 } from "@/server/actions/location-admin"
 import {
   updateDeliveryFeeAction,
@@ -83,22 +84,38 @@ export function SettingsClient({
   const [bulkAreaNames, setBulkAreaNames] = useState("")
 
   const [newApartmentName, setNewApartmentName] = useState("")
-  const [newApartmentDeliveryDay, setNewApartmentDeliveryDay] = useState<string>("none")
+  const [newApartmentDeliveryDays, setNewApartmentDeliveryDays] = useState<number[]>([])
   const [bulkApartmentNames, setBulkApartmentNames] = useState("")
 
   const [editingApartmentId, setEditingApartmentId] = useState<string | null>(null)
   const [editApartmentName, setEditApartmentName] = useState("")
-  const [editApartmentDeliveryDay, setEditApartmentDeliveryDay] = useState<string>("none")
+  const [editApartmentDeliveryDays, setEditApartmentDeliveryDays] = useState<number[]>([])
+
+  // Bulk weekday assignment state
+  const [selectedApartmentIds, setSelectedApartmentIds] = useState<Set<string>>(new Set())
+  const [bulkAssignDays, setBulkAssignDays] = useState<number[]>([])
 
   const DAYS_OF_WEEK = [
-    { value: "0", label: "Sunday" },
-    { value: "1", label: "Monday" },
-    { value: "2", label: "Tuesday" },
-    { value: "3", label: "Wednesday" },
-    { value: "4", label: "Thursday" },
-    { value: "5", label: "Friday" },
-    { value: "6", label: "Saturday" },
+    { value: 0, label: "Sun" },
+    { value: 1, label: "Mon" },
+    { value: 2, label: "Tue" },
+    { value: 3, label: "Wed" },
+    { value: 4, label: "Thu" },
+    { value: 5, label: "Fri" },
+    { value: 6, label: "Sat" },
   ]
+
+  const toggleDay = (days: number[], day: number): number[] =>
+    days.includes(day) ? days.filter((d) => d !== day) : [...days, day]
+
+  const dayLabel = (days: number[]) => {
+    if (!days || days.length === 0) return null
+    return days
+      .slice()
+      .sort((a, b) => a - b)
+      .map((d) => DAYS_OF_WEEK.find((x) => x.value === d)?.label)
+      .join(", ")
+  }
 
   const [deliveryBannerMessage, setDeliveryBannerMessage] = useState(bannerMessage)
 
@@ -299,17 +316,16 @@ export function SettingsClient({
       return
     }
     startTransition(async () => {
-      const deliveryDayNum = newApartmentDeliveryDay === "none" ? null : parseInt(newApartmentDeliveryDay)
       const res = await createApartmentAction({
         districtId: selectedDistrictId,
         name: newApartmentName,
-        deliveryDay: deliveryDayNum,
+        deliveryDays: newApartmentDeliveryDays,
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
         toast.success("Apartment created")
         setNewApartmentName("")
-        setNewApartmentDeliveryDay("none")
+        setNewApartmentDeliveryDays([])
         await fetchLocations(selectedDistrictId)
         router.refresh()
       }
@@ -320,23 +336,22 @@ export function SettingsClient({
   const startEditApartment = (a: any) => {
     setEditingApartmentId(String(a._id))
     setEditApartmentName(a.name)
-    setEditApartmentDeliveryDay(a.deliveryDay != null ? String(a.deliveryDay) : "none")
+    setEditApartmentDeliveryDays(Array.isArray(a.deliveryDays) ? a.deliveryDays : [])
   }
 
   const cancelEditApartment = () => {
     setEditingApartmentId(null)
     setEditApartmentName("")
-    setEditApartmentDeliveryDay("none")
+    setEditApartmentDeliveryDays([])
   }
 
   const handleUpdateApartment = () => {
     if (!editingApartmentId || !editApartmentName.trim()) return
     startTransition(async () => {
-      const deliveryDayNum = editApartmentDeliveryDay === "none" ? null : parseInt(editApartmentDeliveryDay)
       const res = await updateApartmentAction({ 
         id: editingApartmentId, 
         name: editApartmentName,
-        deliveryDay: deliveryDayNum
+        deliveryDays: editApartmentDeliveryDays,
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
@@ -344,6 +359,23 @@ export function SettingsClient({
         setEditingApartmentId(null)
         await fetchLocations(selectedDistrictId)
         router.refresh()
+      }
+    })
+  }
+
+  const handleBulkAssignDays = () => {
+    if (selectedApartmentIds.size === 0) return
+    startTransition(async () => {
+      const res = await bulkAssignDeliveryDaysAction({
+        apartmentIds: Array.from(selectedApartmentIds),
+        deliveryDays: bulkAssignDays,
+      })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success(`Delivery days updated for ${selectedApartmentIds.size} apartment(s)`)
+        setSelectedApartmentIds(new Set())
+        setBulkAssignDays([])
+        await fetchLocations(selectedDistrictId)
       }
     })
   }
@@ -701,109 +733,170 @@ export function SettingsClient({
 
                     {/* Apartments Sub-Tab */}
                     <TabsContent value="apartments" className="mt-0 space-y-4">
-                      <div className="flex flex-wrap gap-3">
-                        <Input
-                          placeholder="New apartment name..."
-                          value={newApartmentName}
-                          onChange={(e) => setNewApartmentName(e.target.value)}
-                          disabled={isPending}
-                          className="flex-1 min-w-[200px]"
-                        />
-                        <Select
-                          value={newApartmentDeliveryDay}
-                          onValueChange={setNewApartmentDeliveryDay}
-                          disabled={isPending}
-                        >
-                          <SelectTrigger className="w-[160px]">
-                            <SelectValue placeholder="Delivery Day" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No specific day</SelectItem>
+                      {/* Add Apartment Row */}
+                      <div className="flex flex-wrap gap-3 items-end">
+                        <div className="grid gap-1.5">
+                          <label className="text-xs text-muted-foreground font-medium">Apartment Name</label>
+                          <Input
+                            placeholder="New apartment name..."
+                            value={newApartmentName}
+                            onChange={(e) => setNewApartmentName(e.target.value)}
+                            disabled={isPending}
+                            className="min-w-[200px]"
+                          />
+                        </div>
+                        <div className="grid gap-1.5">
+                          <label className="text-xs text-muted-foreground font-medium">Delivery Days</label>
+                          <div className="flex gap-1.5">
                             {DAYS_OF_WEEK.map((d) => (
-                              <SelectItem key={d.value} value={d.value}>
+                              <button
+                                key={d.value}
+                                type="button"
+                                onClick={() => setNewApartmentDeliveryDays((prev) => toggleDay(prev, d.value))}
+                                disabled={isPending}
+                                className={`px-2 py-1 rounded text-xs font-medium border transition-colors ${
+                                  newApartmentDeliveryDays.includes(d.value)
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                                }`}
+                              >
                                 {d.label}
-                              </SelectItem>
+                              </button>
                             ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          onClick={addApartment}
-                          disabled={isPending || !newApartmentName}
-                        >
+                          </div>
+                        </div>
+                        <Button onClick={addApartment} disabled={isPending || !newApartmentName}>
                           <Plus className="mr-2 h-4 w-4" />
                           Add Apartment
                         </Button>
                       </div>
 
+                      {/* Bulk Assign Toolbar */}
+                      {selectedApartmentIds.size > 0 && (
+                        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                          <span className="text-sm font-medium text-primary">
+                            {selectedApartmentIds.size} selected
+                          </span>
+                          <div className="flex gap-1.5">
+                            {DAYS_OF_WEEK.map((d) => (
+                              <button
+                                key={d.value}
+                                type="button"
+                                onClick={() => setBulkAssignDays((prev) => toggleDay(prev, d.value))}
+                                disabled={isPending}
+                                className={`px-2 py-1 rounded text-xs font-medium border transition-colors ${
+                                  bulkAssignDays.includes(d.value)
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                                }`}
+                              >
+                                {d.label}
+                              </button>
+                            ))}
+                          </div>
+                          <Button size="sm" onClick={handleBulkAssignDays} disabled={isPending}>
+                            Assign Days
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => { setSelectedApartmentIds(new Set()); setBulkAssignDays([]) }}
+                            disabled={isPending}
+                          >
+                            Clear
+                          </Button>
+                        </div>
+                      )}
+
                       <div className="rounded-md border">
                         <Table>
                           <TableHeader>
                             <TableRow>
+                              <TableHead className="w-[40px]">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4"
+                                  checked={selectedApartmentIds.size === apartments.length && apartments.length > 0}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedApartmentIds(new Set(apartments.map((a: any) => String(a._id))))
+                                    } else {
+                                      setSelectedApartmentIds(new Set())
+                                    }
+                                  }}
+                                />
+                              </TableHead>
                               <TableHead>Apartment Name</TableHead>
-                              <TableHead>Delivery Day</TableHead>
+                              <TableHead>Delivery Days</TableHead>
                               <TableHead className="w-[100px] text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {apartments.length === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={3} className="text-center text-muted-foreground h-24">
+                                <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
                                   No apartments defined in this district.
                                 </TableCell>
                               </TableRow>
                             ) : (
-                              apartments.map((a) => (
+                              apartments.map((a: any) => (
                                 <TableRow key={a._id}>
                                   {editingApartmentId === String(a._id) ? (
-                                    <TableCell colSpan={3} className="p-2">
-                                      <div className="flex items-center gap-2 bg-muted/50 p-2 rounded-md border border-dashed">
+                                    <TableCell colSpan={4} className="p-2">
+                                      <div className="flex flex-wrap items-center gap-2 bg-muted/50 p-2 rounded-md border border-dashed">
                                         <Input
                                           value={editApartmentName}
                                           onChange={(e) => setEditApartmentName(e.target.value)}
                                           disabled={isPending}
-                                          className="flex-1 h-9"
+                                          className="flex-1 min-w-[150px] h-9"
                                         />
-                                        <Select
-                                          value={editApartmentDeliveryDay}
-                                          onValueChange={setEditApartmentDeliveryDay}
-                                          disabled={isPending}
-                                        >
-                                          <SelectTrigger className="w-[160px] h-9 bg-background">
-                                            <SelectValue placeholder="Delivery Day" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="none">No specific day</SelectItem>
-                                            {DAYS_OF_WEEK.map((d) => (
-                                              <SelectItem key={d.value} value={d.value}>
-                                                {d.label}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectContent>
-                                        </Select>
-                                        <Button
-                                          size="sm"
-                                          onClick={handleUpdateApartment}
-                                          disabled={isPending || !editApartmentName.trim()}
-                                        >
+                                        <div className="flex gap-1">
+                                          {DAYS_OF_WEEK.map((d) => (
+                                            <button
+                                              key={d.value}
+                                              type="button"
+                                              onClick={() => setEditApartmentDeliveryDays((prev) => toggleDay(prev, d.value))}
+                                              disabled={isPending}
+                                              className={`px-2 py-1 rounded text-xs font-medium border transition-colors ${
+                                                editApartmentDeliveryDays.includes(d.value)
+                                                  ? "bg-primary text-primary-foreground border-primary"
+                                                  : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                                              }`}
+                                            >
+                                              {d.label}
+                                            </button>
+                                          ))}
+                                        </div>
+                                        <Button size="sm" onClick={handleUpdateApartment} disabled={isPending || !editApartmentName.trim()}>
                                           Save
                                         </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={cancelEditApartment}
-                                          disabled={isPending}
-                                        >
+                                        <Button size="sm" variant="ghost" onClick={cancelEditApartment} disabled={isPending}>
                                           Cancel
                                         </Button>
                                       </div>
                                     </TableCell>
                                   ) : (
                                     <>
+                                      <TableCell>
+                                        <input
+                                          type="checkbox"
+                                          className="h-4 w-4"
+                                          checked={selectedApartmentIds.has(String(a._id))}
+                                          onChange={(e) => {
+                                            setSelectedApartmentIds((prev) => {
+                                              const next = new Set(prev)
+                                              if (e.target.checked) next.add(String(a._id))
+                                              else next.delete(String(a._id))
+                                              return next
+                                            })
+                                          }}
+                                        />
+                                      </TableCell>
                                       <TableCell className="font-medium">{a.name}</TableCell>
                                       <TableCell>
-                                        {a.deliveryDay != null ? (
+                                        {dayLabel(a.deliveryDays) ? (
                                           <Badge variant="outline" className="font-normal text-xs bg-secondary/50">
-                                            {DAYS_OF_WEEK.find(d => parseInt(d.value) === a.deliveryDay)?.label}
+                                            {dayLabel(a.deliveryDays)}
                                           </Badge>
                                         ) : (
                                           <span className="text-muted-foreground text-xs italic">Unscheduled</span>
@@ -845,7 +938,7 @@ export function SettingsClient({
                               <p className="text-xs text-muted-foreground">Enter one apartment name per line.</p>
                               <Textarea
                                 className="min-h-[100px]"
-                                placeholder="Apartment A&#10;Apartment B&#10;Apartment C"
+                                placeholder={"Apartment A\nApartment B\nApartment C"}
                                 value={bulkApartmentNames}
                                 onChange={(e) => setBulkApartmentNames(e.target.value)}
                                 disabled={isPending}

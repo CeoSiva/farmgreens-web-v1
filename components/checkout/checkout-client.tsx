@@ -283,19 +283,27 @@ export function CheckoutClient({
   }, [apartments, watch("street"), isChennai])
 
   const upcomingDeliveryDateInfo = useMemo(() => {
-    if (!selectedApartment || selectedApartment.deliveryDay == null) return null
+    if (!selectedApartment || !selectedApartment.deliveryDays || selectedApartment.deliveryDays.length === 0) return null
     
-    const dayOfWeek = selectedApartment.deliveryDay
     const today = new Date()
-    
-    // If today is the delivery day, we'll still say next occurrence for safety, 
-    // or calculate the next date. nextDay(today, dayOfWeek) gives the next one.
-    const nextDate = nextDay(today, dayOfWeek as Day)
-    
     const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+    // Compute the next occurrence for each scheduled day, pick the soonest
+    const candidates = selectedApartment.deliveryDays.map((dayOfWeek: number) => {
+      const next = nextDay(today, dayOfWeek as Day)
+      return { dayOfWeek, next }
+    })
+    candidates.sort((a: any, b: any) => a.next.getTime() - b.next.getTime())
+
+    const soonest = candidates[0]
+    const dayNames = selectedApartment.deliveryDays
+      .slice()
+      .sort((a: number, b: number) => a - b)
+      .map((d: number) => DAYS_OF_WEEK[d])
+
     return {
-      dayName: DAYS_OF_WEEK[dayOfWeek],
-      dateFormatted: format(nextDate, "EEEE, MMMM do")
+      dayNames,
+      nextDateFormatted: format(soonest.next, "EEEE, MMMM do"),
     }
   }, [selectedApartment])
 
@@ -807,8 +815,15 @@ export function CheckoutClient({
               <div>
                 <div className="font-semibold mb-1">Upcoming Delivery</div>
                 <div>
-                  Deliveries for <strong>{selectedApartment.name}</strong> are scheduled every <strong>{upcomingDeliveryDateInfo.dayName}</strong>. 
-                  Your order will be delivered on <strong>{upcomingDeliveryDateInfo.dateFormatted}</strong>.
+                  Deliveries for <strong>{selectedApartment.name}</strong> are scheduled every{" "}
+                  <strong>
+                    {upcomingDeliveryDateInfo.dayNames.length === 1
+                      ? upcomingDeliveryDateInfo.dayNames[0]
+                      : upcomingDeliveryDateInfo.dayNames.slice(0, -1).join(", ") +
+                        " & " +
+                        upcomingDeliveryDateInfo.dayNames[upcomingDeliveryDateInfo.dayNames.length - 1]}
+                  </strong>. Your next delivery is on{" "}
+                  <strong>{upcomingDeliveryDateInfo.nextDateFormatted}</strong>.
                 </div>
               </div>
             </div>
