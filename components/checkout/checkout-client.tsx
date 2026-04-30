@@ -59,6 +59,7 @@ export function CheckoutClient({
   deliveryFee: number
   districtSlug?: string
   bannerMessage: string
+  isCodEnabled: boolean
 }) {
   const [isPending, startTransition] = useTransition()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -142,6 +143,13 @@ export function CheckoutClient({
       trackDistrictSelected(districtSlug, match.name, existingCustomer?._id?.toString() || "")
     }
   }, [districtSlug, districts, setValue, districtId, existingCustomer])
+
+  // Ensure online payment is selected if COD is disabled
+  useEffect(() => {
+    if (!isCodEnabled && paymentMethod === "cod") {
+      setValue("paymentMethod", "online")
+    }
+  }, [isCodEnabled, paymentMethod, setValue])
 
   useEffect(() => {
     if (!mobile || mobile.length < 10) {
@@ -825,20 +833,22 @@ export function CheckoutClient({
                 </div>
                 <CreditCard className="h-5 w-5 text-primary" />
               </label>
-              <label className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-4 cursor-pointer hover:bg-muted/50 transition-colors">
-                <input
-                  type="radio"
-                  {...register("paymentMethod")}
-                  value="cod"
-                  disabled={isPending}
-                  className="h-4 w-4 text-primary"
-                />
-                <div className="flex-1">
-                  <div className="font-medium">Cash on Delivery</div>
-                  <div className="text-xs text-muted-foreground">Pay when you receive your order</div>
-                </div>
-                <Banknote className="h-5 w-5 text-primary" />
-              </label>
+              {isCodEnabled && (
+                <label className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                  <input
+                    type="radio"
+                    {...register("paymentMethod")}
+                    value="cod"
+                    disabled={isPending}
+                    className="h-4 w-4 text-primary"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">Cash on Delivery</div>
+                    <div className="text-xs text-muted-foreground">Pay when you receive your order</div>
+                  </div>
+                  <Banknote className="h-5 w-5 text-primary" />
+                </label>
+              )}
             </div>
             {errors.paymentMethod && (
               <div className="text-xs text-destructive mt-2">

@@ -26,6 +26,7 @@ export async function updateStoreProfileAction(payload: {
 export async function updateDeliveryFeeAction(payload: { 
   deliveryFee: number;
   freeDeliveryThreshold: number;
+  isCodEnabled: boolean;
 }) {
   const parsed = DeliveryFeeSchema.safeParse(payload);
   if (!parsed.success) return { error: "Invalid delivery settings" };
@@ -33,6 +34,7 @@ export async function updateDeliveryFeeAction(payload: {
   await updateSettings({ 
     deliveryFee: parsed.data.deliveryFee,
     freeDeliveryThreshold: parsed.data.freeDeliveryThreshold,
+    isCodEnabled: parsed.data.isCodEnabled,
   } as any);
   revalidatePath("/fmg-admin/settings");
   revalidatePath("/cart");

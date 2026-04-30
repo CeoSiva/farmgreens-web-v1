@@ -136,6 +136,10 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
     const deliveryFee = subtotal >= freeDeliveryThreshold ? 0 : baseDeliveryFee
     const total = subtotal + deliveryFee
 
+    if (parsed.data.paymentMethod === "cod" && settings.isCodEnabled === false) {
+      return { error: "Cash on delivery is currently disabled" }
+    }
+
     let customerId: any = undefined
 
     if (parsed.data.saveDetails) {

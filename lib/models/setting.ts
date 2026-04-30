@@ -7,6 +7,7 @@ export interface ISetting extends Document {
   storeAddress?: string;
   deliveryFee: number;
   freeDeliveryThreshold: number;
+  isCodEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,6 +20,7 @@ const settingSchema: Schema<ISetting> = new Schema(
     storeAddress: { type: String, trim: true },
     deliveryFee: { type: Number, required: true, min: 0, default: 0 },
     freeDeliveryThreshold: { type: Number, required: true, min: 0, default: 500 },
+    isCodEnabled: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

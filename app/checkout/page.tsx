@@ -23,6 +23,7 @@ export default async function CheckoutPage({
   const freeDeliveryThreshold = Number(
     (settings as any).freeDeliveryThreshold ?? 500
   )
+  const isCodEnabled = (settings as any).isCodEnabled ?? true
   const { districts } = await listDistrictsAction()
 
   // Compute subtotal on the server for checkout display
@@ -57,6 +58,7 @@ export default async function CheckoutPage({
               deliveryFee={effectiveDeliveryFee}
               districtSlug={districtSlug}
               bannerMessage={bannerMessage}
+              isCodEnabled={isCodEnabled}
             />
           </div>
         </div>

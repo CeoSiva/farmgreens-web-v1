@@ -68,6 +68,9 @@ export function SettingsClient({
   const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(
     String(settings.freeDeliveryThreshold ?? 500)
   )
+  const [isCodEnabled, setIsCodEnabled] = useState(
+    settings.isCodEnabled ?? true
+  )
 
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>(
     districts?.[0]?._id ? String(districts[0]._id) : ""
@@ -146,6 +149,7 @@ export function SettingsClient({
       const res = await updateDeliveryFeeAction({
         deliveryFee: Number(deliveryFee),
         freeDeliveryThreshold: Number(freeDeliveryThreshold),
+        isCodEnabled,
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
@@ -460,6 +464,22 @@ export function SettingsClient({
                 onChange={(e) => setFreeDeliveryThreshold(e.target.value)}
                 disabled={isPending}
               />
+            </div>
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Payment Options</label>
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="codEnabled"
+                  checked={isCodEnabled}
+                  onChange={(e) => setIsCodEnabled(e.target.checked)}
+                  disabled={isPending}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <label htmlFor="codEnabled" className="text-sm">
+                  Enable Cash on Delivery (COD)
+                </label>
+              </div>
             </div>
           </div>
           <div>
