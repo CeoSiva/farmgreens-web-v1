@@ -4,8 +4,8 @@ import { getCartAction } from "@/server/actions/cart"
 import { getProductsByIds } from "@/lib/data/product"
 import { listDistrictsAction } from "@/server/actions/location"
 import { CheckoutClient } from "@/components/checkout/checkout-client"
-import { DeliveryBanner } from "@/components/delivery-banner"
 import { getSettings } from "@/lib/data/setting"
+import { getSystemSetting } from "@/lib/data/system-setting"
 
 export const dynamic = "force-dynamic"
 
@@ -38,10 +38,11 @@ export default async function CheckoutPage({
   const effectiveDeliveryFee =
     subtotal >= freeDeliveryThreshold ? 0 : baseDeliveryFee
 
+  const bannerMessage = await getSystemSetting("delivery_banner_message")
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Navbar />
-      <DeliveryBanner />
       <main className="w-full flex-1 px-4 py-10 md:px-8 lg:px-16 xl:px-24">
         <div className="mx-auto max-w-4xl">
           <h1 className="text-2xl font-semibold tracking-tight">Checkout</h1>
@@ -55,6 +56,7 @@ export default async function CheckoutPage({
               districts={districts as any}
               deliveryFee={effectiveDeliveryFee}
               districtSlug={districtSlug}
+              bannerMessage={bannerMessage}
             />
           </div>
         </div>

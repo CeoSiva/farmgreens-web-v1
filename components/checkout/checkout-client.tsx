@@ -25,6 +25,8 @@ import {
   placeOrderAfterPaymentAction,
 } from "@/server/actions/payment"
 
+import { DeliveryBanner } from "@/components/delivery-banner"
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -49,12 +51,14 @@ export function CheckoutClient({
   districts,
   deliveryFee,
   districtSlug,
+  bannerMessage,
 }: {
   cart: Cart
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   districts: any[]
   deliveryFee: number
   districtSlug?: string
+  bannerMessage: string
 }) {
   const [isPending, startTransition] = useTransition()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -457,6 +461,10 @@ export function CheckoutClient({
 
   return (
     <div className="grid gap-6">
+      {!upcomingDeliveryDateInfo && (
+        <DeliveryBanner message={bannerMessage} />
+      )}
+
       <Card className="p-4">
         <div className="flex items-center justify-between">
           <div>
