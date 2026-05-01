@@ -24,6 +24,7 @@ import {
   RotateCcw,
   X,
   AlertCircle,
+  Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -58,6 +59,8 @@ import { OrderDetailsDrawer } from "./order-details-drawer"
 import {
   updateOrderStatusAction,
   bulkUpdateOrderStatusAction,
+  deleteOrderAction,
+  bulkDeleteOrdersAction,
 } from "@/server/actions/order-admin"
 import { downloadCSV } from "@/lib/utils/export"
 import { cn } from "@/lib/utils"
@@ -411,6 +414,25 @@ export function OrdersTable({ data }: { data: any[] }) {
               <DropdownMenuItem onClick={() => updateStatus("cancelled")}>
                 <XCircle className="mr-2 h-4 w-4 text-destructive" /> Cancel
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (confirm(`Are you sure you want to delete order ${order.orderNumber}? This action cannot be undone.`)) {
+                    startTransition(async () => {
+                      const res = await deleteOrderAction(order._id)
+                      if ((res as any).success) {
+                        toast.success(`Order ${order.orderNumber} deleted`)
+                      } else {
+                        toast.error("Failed to delete order")
+                      }
+                    })
+                  }
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Order
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )
@@ -482,6 +504,22 @@ export function OrdersTable({ data }: { data: any[] }) {
       table.resetRowSelection()
     } else {
       toast.error("Failed to update orders")
+    }
+  }
+
+  const [isPending, startTransition] = React.useTransition()
+
+  const handleBulkDelete = async () => {
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} selected orders? This action cannot be undone.`)) {
+      startTransition(async () => {
+        const res = await bulkDeleteOrdersAction(selectedIds)
+        if ((res as any).success) {
+          toast.success(`Successfully deleted ${selectedIds.length} orders`)
+          table.resetRowSelection()
+        } else {
+          toast.error("Failed to delete orders")
+        }
+      })
     }
   }
 
@@ -864,6 +902,17 @@ export function OrdersTable({ data }: { data: any[] }) {
               onClick={() => handleBulkUpdate("delivered")}
             >
               Deliver
+            </Button>
+            <div className="mx-1 h-4 w-px bg-primary/10" />
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-7 text-xs font-bold"
+              onClick={handleBulkDelete}
+              disabled={isPending}
+            >
+              <Trash2 className="mr-1.5 h-3 w-3" />
+              Delete
             </Button>
           </div>
         </div>

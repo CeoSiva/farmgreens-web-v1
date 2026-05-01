@@ -39,3 +39,32 @@ export async function bulkUpdateOrderStatusAction(orderIds: string[], status: Or
     return { error: "Failed to bulk update orders" }
   }
 }
+
+export async function deleteOrderAction(orderId: string) {
+  try {
+    await connectDB()
+    const order = await OrderModel.findByIdAndDelete(orderId)
+    if (!order) return { error: "Order not found" }
+    
+    revalidatePath("/fmg-admin/orders")
+    return { success: true }
+  } catch (err) {
+    console.error("Delete Order Error:", err)
+    return { error: "Failed to delete order" }
+  }
+}
+
+export async function bulkDeleteOrdersAction(orderIds: string[]) {
+  try {
+    if (!orderIds || orderIds.length === 0) return { error: "No orders selected" }
+    
+    await connectDB()
+    const result = await OrderModel.deleteMany({ _id: { $in: orderIds } })
+    
+    revalidatePath("/fmg-admin/orders")
+    return { success: true, deletedCount: result.deletedCount }
+  } catch (err) {
+    console.error("Bulk Delete Orders Error:", err)
+    return { error: "Failed to bulk delete orders" }
+  }
+}
