@@ -2,7 +2,7 @@ import { Navbar } from "@/components/landing/navbar"
 import { Footer } from "@/components/landing/footer"
 import { getCartAction } from "@/server/actions/cart"
 import { getProductsByIds } from "@/lib/data/product"
-import { listDistrictsAction } from "@/server/actions/location"
+import { listEnabledDistrictsAction } from "@/server/actions/location"
 import { CheckoutClient } from "@/components/checkout/checkout-client"
 import { getSettings } from "@/lib/data/setting"
 import { getSystemSetting } from "@/lib/data/system-setting"
@@ -24,7 +24,7 @@ export default async function CheckoutPage({
     (settings as any).freeDeliveryThreshold ?? 500
   )
   const isCodEnabled = (settings as any).isCodEnabled ?? true
-  const { districts } = await listDistrictsAction()
+  const { districts } = await listEnabledDistrictsAction()
 
   // Compute subtotal on the server for checkout display
   const ids = cart.items.map((i: any) => i.productId)

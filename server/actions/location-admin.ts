@@ -1,7 +1,11 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { DistrictSchema, AreaSchema, ApartmentSchema } from "@/lib/schemas/location-admin"
+import {
+  DistrictSchema,
+  AreaSchema,
+  ApartmentSchema,
+} from "@/lib/schemas/location-admin"
 import {
   createDistrict,
   updateDistrict,
@@ -34,6 +38,7 @@ export async function updateDistrictAction(payload: {
   id: string
   name?: string
   isCodEnabled?: boolean
+  isEnabled?: boolean
 }) {
   const parsed = DistrictSchema.partial().safeParse(payload)
   if (!parsed.success) return { error: "Invalid district data" }
@@ -53,6 +58,19 @@ export async function toggleDistrictCodAction(id: string, enabled: boolean) {
     return { success: true }
   } catch (e: any) {
     return { error: e?.message ?? "Failed to toggle COD" }
+  }
+}
+
+export async function toggleDistrictEnabledAction(
+  id: string,
+  enabled: boolean
+) {
+  try {
+    await updateDistrict(id, { isEnabled: enabled })
+    revalidatePath("/fmg-admin/settings", "page")
+    return { success: true }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to toggle district visibility" }
   }
 }
 
@@ -141,7 +159,10 @@ export async function createApartmentAction(payload: {
   }
 }
 
-export async function renameApartmentAction(payload: { id: string; name: string }) {
+export async function renameApartmentAction(payload: {
+  id: string
+  name: string
+}) {
   // Can reuse a generic schema or recreate if needed. ApartmentSchema requires districtId which we don't need for rename, so we just use DistrictSchema structural equality for "name".
   const parsed = DistrictSchema.safeParse({ name: payload.name })
   if (!parsed.success) return { error: "Invalid apartment name" }
@@ -217,7 +238,10 @@ export async function bulkAssignDeliveryDaysAction(payload: {
   if (payload.deliveryDays.some((d) => d < 0 || d > 6))
     return { error: "Invalid delivery day" }
   try {
-    await bulkUpdateApartmentDeliveryDays(payload.apartmentIds, payload.deliveryDays)
+    await bulkUpdateApartmentDeliveryDays(
+      payload.apartmentIds,
+      payload.deliveryDays
+    )
     revalidatePath("/fmg-admin/settings")
     return { success: true }
   } catch (e: any) {

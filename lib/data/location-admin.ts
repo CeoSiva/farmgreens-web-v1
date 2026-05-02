@@ -10,7 +10,10 @@ export async function createDistrict(name: string) {
   return DistrictModel.create({ name })
 }
 
-export async function updateDistrict(id: string, data: { name?: string; isCodEnabled?: boolean }) {
+export async function updateDistrict(
+  id: string,
+  data: { name?: string; isCodEnabled?: boolean; isEnabled?: boolean }
+) {
   await connectDB()
   const updated = await DistrictModel.findByIdAndUpdate(
     id,
@@ -113,23 +116,32 @@ export async function updateApartment(
   data: { name?: string; deliveryDays?: number[]; isCodEnabled?: boolean }
 ) {
   await connectDB()
-  const logMsg = `Updating apartment ${id} with data: ${JSON.stringify(data)}\n`;
-  require('fs').appendFileSync('/home/ceo/projects/Ziver/FarmGreens/farmgreens-web-v1/scratch/db_log.txt', logMsg);
-  
+  const logMsg = `Updating apartment ${id} with data: ${JSON.stringify(data)}\n`
+  require("fs").appendFileSync(
+    "/home/ceo/projects/Ziver/FarmGreens/farmgreens-web-v1/scratch/db_log.txt",
+    logMsg
+  )
+
   const updated = await ApartmentModel.findByIdAndUpdate(
     id,
     { $set: data },
     { new: true }
   ).lean()
-  
-  const resultMsg = `Updated apartment ${id} result isCodEnabled: ${updated?.isCodEnabled}\n`;
-  require('fs').appendFileSync('/home/ceo/projects/Ziver/FarmGreens/farmgreens-web-v1/scratch/db_log.txt', resultMsg);
-  
+
+  const resultMsg = `Updated apartment ${id} result isCodEnabled: ${updated?.isCodEnabled}\n`
+  require("fs").appendFileSync(
+    "/home/ceo/projects/Ziver/FarmGreens/farmgreens-web-v1/scratch/db_log.txt",
+    resultMsg
+  )
+
   if (!updated) throw new Error("Apartment not found")
   return updated
 }
 
-export async function bulkUpdateApartmentDeliveryDays(ids: string[], deliveryDays: number[]) {
+export async function bulkUpdateApartmentDeliveryDays(
+  ids: string[],
+  deliveryDays: number[]
+) {
   await connectDB()
   await ApartmentModel.updateMany(
     { _id: { $in: ids } },
@@ -150,7 +162,10 @@ export async function listApartmentsForDistrict(districtId: string) {
   return ApartmentModel.find({ districtId }).sort({ name: 1 }).lean()
 }
 
-export async function bulkCreateApartments(districtId: string, names: string[]) {
+export async function bulkCreateApartments(
+  districtId: string,
+  names: string[]
+) {
   await connectDB()
   const docs = names.map((name) => ({ districtId, name }))
   return ApartmentModel.insertMany(docs)

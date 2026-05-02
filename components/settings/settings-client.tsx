@@ -18,15 +18,42 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { MapPin, Building, Map as MapIcon, Plus, Trash2, Edit2, MoreVertical } from "lucide-react"
+import {
+  MapPin,
+  Building,
+  Map as MapIcon,
+  Plus,
+  Trash2,
+  Edit2,
+  MoreVertical,
+  EyeOff,
+} from "lucide-react"
 import {
   createDistrictAction,
   updateDistrictAction,
   toggleDistrictCodAction,
+  toggleDistrictEnabledAction,
   toggleApartmentCodAction,
   createAreaAction,
   deleteAreaAction,
@@ -43,7 +70,10 @@ import {
   updateDeliveryFeeAction,
   updateStoreProfileAction,
 } from "@/server/actions/setting"
-import { listAreasByDistrictAction, listApartmentsByDistrictAction } from "@/server/actions/location"
+import {
+  listAreasByDistrictAction,
+  listApartmentsByDistrictAction,
+} from "@/server/actions/location"
 
 export function SettingsClient({
   settings,
@@ -87,17 +117,26 @@ export function SettingsClient({
   const [bulkAreaNames, setBulkAreaNames] = useState("")
 
   const [newApartmentName, setNewApartmentName] = useState("")
-  const [newApartmentDeliveryDays, setNewApartmentDeliveryDays] = useState<number[]>([])
+  const [newApartmentDeliveryDays, setNewApartmentDeliveryDays] = useState<
+    number[]
+  >([])
   const [newApartmentIsCodEnabled, setNewApartmentIsCodEnabled] = useState(true)
   const [bulkApartmentNames, setBulkApartmentNames] = useState("")
 
-  const [editingApartmentId, setEditingApartmentId] = useState<string | null>(null)
+  const [editingApartmentId, setEditingApartmentId] = useState<string | null>(
+    null
+  )
   const [editApartmentName, setEditApartmentName] = useState("")
-  const [editApartmentDeliveryDays, setEditApartmentDeliveryDays] = useState<number[]>([])
-  const [editApartmentIsCodEnabled, setEditApartmentIsCodEnabled] = useState(true)
+  const [editApartmentDeliveryDays, setEditApartmentDeliveryDays] = useState<
+    number[]
+  >([])
+  const [editApartmentIsCodEnabled, setEditApartmentIsCodEnabled] =
+    useState(true)
 
   // Bulk weekday assignment state
-  const [selectedApartmentIds, setSelectedApartmentIds] = useState<Set<string>>(new Set())
+  const [selectedApartmentIds, setSelectedApartmentIds] = useState<Set<string>>(
+    new Set()
+  )
   const [bulkAssignDays, setBulkAssignDays] = useState<number[]>([])
 
   const DAYS_OF_WEEK = [
@@ -122,12 +161,13 @@ export function SettingsClient({
       .join(", ")
   }
 
-  const [deliveryBannerMessage, setDeliveryBannerMessage] = useState(bannerMessage)
+  const [deliveryBannerMessage, setDeliveryBannerMessage] =
+    useState(bannerMessage)
 
   const fetchLocations = async (id: string) => {
     const [resAreas, resApts] = await Promise.all([
       listAreasByDistrictAction(id),
-      listApartmentsByDistrictAction(id, Date.now())
+      listApartmentsByDistrictAction(id, Date.now()),
     ])
     setAreas((resAreas as any).areas)
     setApartments((resApts as any).apartments)
@@ -145,7 +185,12 @@ export function SettingsClient({
   }, [selectedDistrictId])
 
   // Optimistic overrides for districts (since they are passed as props)
-  const [districtCodOverrides, setDistrictCodOverrides] = useState<Record<string, boolean>>({})
+  const [districtCodOverrides, setDistrictCodOverrides] = useState<
+    Record<string, boolean>
+  >({})
+  const [districtEnabledOverrides, setDistrictEnabledOverrides] = useState<
+    Record<string, boolean>
+  >({})
 
   const districtById = useMemo(() => {
     const m = new Map<string, any>()
@@ -200,6 +245,29 @@ export function SettingsClient({
         }
       } catch {
         toast.error("Failed to update delivery banner")
+      }
+    })
+  }
+
+  const handleToggleDistrictEnabled = (id: string, enabled: boolean) => {
+    // Optimistic update
+    setDistrictEnabledOverrides((prev) => ({ ...prev, [id]: enabled }))
+
+    startTransition(async () => {
+      const res = await toggleDistrictEnabledAction(id, enabled)
+      if ((res as any)?.error) {
+        toast.error((res as any).error)
+        // Revert on error
+        setDistrictEnabledOverrides((prev) => {
+          const next = { ...prev }
+          delete next[id]
+          return next
+        })
+      } else {
+        toast.success(
+          `District ${enabled ? "enabled" : "disabled"} for customers`
+        )
+        router.refresh()
       }
     })
   }
@@ -367,7 +435,9 @@ export function SettingsClient({
   const startEditApartment = (a: any) => {
     setEditingApartmentId(String(a._id))
     setEditApartmentName(a.name)
-    setEditApartmentDeliveryDays(Array.isArray(a.deliveryDays) ? a.deliveryDays : [])
+    setEditApartmentDeliveryDays(
+      Array.isArray(a.deliveryDays) ? a.deliveryDays : []
+    )
     setEditApartmentIsCodEnabled(a.isCodEnabled !== false)
   }
 
@@ -381,8 +451,8 @@ export function SettingsClient({
   const handleUpdateApartment = () => {
     if (!editingApartmentId || !editApartmentName.trim()) return
     startTransition(async () => {
-      const res = await updateApartmentAction({ 
-        id: editingApartmentId, 
+      const res = await updateApartmentAction({
+        id: editingApartmentId,
         name: editApartmentName,
         deliveryDays: editApartmentDeliveryDays,
         isCodEnabled: editApartmentIsCodEnabled,
@@ -395,12 +465,14 @@ export function SettingsClient({
         router.refresh()
       }
     })
-}
+  }
 
   const handleToggleApartmentCod = (id: string, enabled: boolean) => {
     // Optimistic update
     setApartments((prev) =>
-      prev.map((a) => (String(a._id) === id ? { ...a, isCodEnabled: enabled } : a))
+      prev.map((a) =>
+        String(a._id) === id ? { ...a, isCodEnabled: enabled } : a
+      )
     )
 
     startTransition(async () => {
@@ -417,7 +489,6 @@ export function SettingsClient({
     })
   }
 
-
   const handleBulkAssignDays = () => {
     if (selectedApartmentIds.size === 0) return
     startTransition(async () => {
@@ -427,7 +498,9 @@ export function SettingsClient({
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
-        toast.success(`Delivery days updated for ${selectedApartmentIds.size} apartment(s)`)
+        toast.success(
+          `Delivery days updated for ${selectedApartmentIds.size} apartment(s)`
+        )
         setSelectedApartmentIds(new Set())
         setBulkAssignDays([])
         await fetchLocations(selectedDistrictId)
@@ -533,7 +606,9 @@ export function SettingsClient({
         <Card className="grid gap-3 p-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
-              <label className="text-sm font-medium">Flat delivery fee (₹)</label>
+              <label className="text-sm font-medium">
+                Flat delivery fee (₹)
+              </label>
               <Input
                 type="number"
                 min={0}
@@ -543,7 +618,9 @@ export function SettingsClient({
               />
             </div>
             <div className="grid gap-2">
-              <label className="text-sm font-medium">Free Delivery Minimum Order (₹)</label>
+              <label className="text-sm font-medium">
+                Free Delivery Minimum Order (₹)
+              </label>
               <Input
                 type="number"
                 min={0}
@@ -580,16 +657,16 @@ export function SettingsClient({
       <TabsContent value="locations" className="mt-4">
         <Card className="flex overflow-hidden border">
           {/* Left Sidebar: Districts */}
-          <div className="w-1/3 max-w-[300px] border-r bg-muted/30 flex flex-col min-h-[500px]">
-            <div className="p-4 border-b bg-muted/50 flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-primary" />
-              <div className="font-semibold text-base">Districts</div>
+          <div className="flex min-h-[500px] w-1/3 max-w-[300px] flex-col border-r bg-muted/30">
+            <div className="flex items-center gap-2 border-b bg-muted/50 p-4">
+              <MapPin className="h-5 w-5 text-primary" />
+              <div className="text-base font-semibold">Districts</div>
             </div>
-            
+
             <ScrollArea className="flex-1">
-              <div className="p-2 grid gap-1">
+              <div className="grid gap-1 p-2">
                 {districts.length === 0 ? (
-                  <div className="text-sm text-muted-foreground p-4 text-center">
+                  <div className="p-4 text-center text-sm text-muted-foreground">
                     No districts yet.
                   </div>
                 ) : (
@@ -598,19 +675,28 @@ export function SettingsClient({
                       key={d._id}
                       className={`group flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors ${
                         String(d._id) === selectedDistrictId
-                          ? "bg-primary text-primary-foreground font-medium shadow-sm"
-                          : "hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                          ? "bg-primary font-medium text-primary-foreground shadow-sm"
+                          : d.isEnabled === false
+                            ? "cursor-pointer text-muted-foreground/40 hover:bg-muted hover:text-foreground"
+                            : "cursor-pointer text-muted-foreground hover:bg-muted hover:text-foreground"
                       }`}
                       onClick={() => setSelectedDistrictId(String(d._id))}
                     >
-                      <span className="truncate">{d.name}</span>
+                      <span className="flex items-center gap-1.5 truncate">
+                        {d.isEnabled === false && (
+                          <EyeOff className="h-3.5 w-3.5 shrink-0" />
+                        )}
+                        {d.name}
+                      </span>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
                             className={`h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100 ${
-                              String(d._id) === selectedDistrictId ? "text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground" : ""
+                              String(d._id) === selectedDistrictId
+                                ? "text-primary-foreground hover:bg-primary/80 hover:text-primary-foreground"
+                                : ""
                             }`}
                             onClick={(e) => e.stopPropagation()}
                           >
@@ -645,7 +731,7 @@ export function SettingsClient({
               </div>
             </ScrollArea>
 
-            <div className="p-3 border-t bg-background">
+            <div className="border-t bg-background p-3">
               <div className="flex gap-2">
                 <Input
                   placeholder="New district..."
@@ -667,42 +753,73 @@ export function SettingsClient({
           </div>
 
           {/* Right Main Content: District Details */}
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex min-w-0 flex-1 flex-col">
             {!selectedDistrictId ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8">
-                <MapPin className="h-12 w-12 opacity-20 mb-4" />
-                <p>Select a district from the sidebar to manage areas and apartments.</p>
+              <div className="flex flex-1 flex-col items-center justify-center p-8 text-muted-foreground">
+                <MapPin className="mb-4 h-12 w-12 opacity-20" />
+                <p>
+                  Select a district from the sidebar to manage areas and
+                  apartments.
+                </p>
               </div>
             ) : (
               <>
-                <div className="p-6 border-b flex items-center justify-between">
-                  <h2 className="text-xl font-semibold tracking-tight truncate pr-4">
+                <div className="flex items-center justify-between border-b p-6">
+                  <h2 className="truncate pr-4 text-xl font-semibold tracking-tight">
                     {districtById.get(selectedDistrictId)?.name ?? "Unknown"}
                   </h2>
                   <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Visible</span>
+                      <Switch
+                        checked={
+                          districtEnabledOverrides[selectedDistrictId] !==
+                          undefined
+                            ? districtEnabledOverrides[selectedDistrictId]
+                            : districtById.get(selectedDistrictId)
+                                ?.isEnabled !== false
+                        }
+                        onCheckedChange={(checked) =>
+                          handleToggleDistrictEnabled(
+                            selectedDistrictId,
+                            checked
+                          )
+                        }
+                        disabled={isPending}
+                      />
+                    </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">COD Enabled</span>
                       <Switch
                         checked={
                           districtCodOverrides[selectedDistrictId] !== undefined
                             ? districtCodOverrides[selectedDistrictId]
-                            : districtById.get(selectedDistrictId)?.isCodEnabled !== false
+                            : districtById.get(selectedDistrictId)
+                                ?.isCodEnabled !== false
                         }
-                        onCheckedChange={(checked) => handleToggleDistrictCod(selectedDistrictId, checked)}
+                        onCheckedChange={(checked) =>
+                          handleToggleDistrictCod(selectedDistrictId, checked)
+                        }
                         disabled={isPending}
                       />
                     </div>
                   </div>
                 </div>
-                
-                <div className="p-6 flex-1 overflow-auto">
+
+                <div className="flex-1 overflow-auto p-6">
                   <Tabs defaultValue="areas" className="w-full">
                     <TabsList className="mb-4">
-                      <TabsTrigger value="areas" className="flex items-center gap-2">
+                      <TabsTrigger
+                        value="areas"
+                        className="flex items-center gap-2"
+                      >
                         <MapIcon className="h-4 w-4" />
                         Areas
                       </TabsTrigger>
-                      <TabsTrigger value="apartments" className="flex items-center gap-2">
+                      <TabsTrigger
+                        value="apartments"
+                        className="flex items-center gap-2"
+                      >
                         <Building className="h-4 w-4" />
                         Apartments
                       </TabsTrigger>
@@ -732,33 +849,56 @@ export function SettingsClient({
                           <TableHeader>
                             <TableRow>
                               <TableHead>Area Name</TableHead>
-                              <TableHead className="w-[100px] text-right">Actions</TableHead>
+                              <TableHead className="w-[100px] text-right">
+                                Actions
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {areas.length === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={2} className="text-center text-muted-foreground h-24">
+                                <TableCell
+                                  colSpan={2}
+                                  className="h-24 text-center text-muted-foreground"
+                                >
                                   No areas defined in this district.
                                 </TableCell>
                               </TableRow>
                             ) : (
                               areas.map((a) => (
                                 <TableRow key={a._id}>
-                                  <TableCell className="font-medium">{a.name}</TableCell>
+                                  <TableCell className="font-medium">
+                                    {a.name}
+                                  </TableCell>
                                   <TableCell className="text-right">
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8"
+                                        >
                                           <MoreVertical className="h-4 w-4" />
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => handleRenameArea(String(a._id), a.name)}>
+                                        <DropdownMenuItem
+                                          onClick={() =>
+                                            handleRenameArea(
+                                              String(a._id),
+                                              a.name
+                                            )
+                                          }
+                                        >
                                           <Edit2 className="mr-2 h-4 w-4" />
                                           Rename
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleRemoveArea(String(a._id))}>
+                                        <DropdownMenuItem
+                                          className="text-destructive focus:text-destructive"
+                                          onClick={() =>
+                                            handleRemoveArea(String(a._id))
+                                          }
+                                        >
                                           <Trash2 className="mr-2 h-4 w-4" />
                                           Delete
                                         </DropdownMenuItem>
@@ -774,15 +914,21 @@ export function SettingsClient({
 
                       <Accordion type="single" collapsible className="w-full">
                         <AccordionItem value="bulk-areas">
-                          <AccordionTrigger className="text-sm font-medium">Bulk Add Areas</AccordionTrigger>
+                          <AccordionTrigger className="text-sm font-medium">
+                            Bulk Add Areas
+                          </AccordionTrigger>
                           <AccordionContent>
                             <div className="grid gap-3 pt-2">
-                              <p className="text-xs text-muted-foreground">Enter one area name per line.</p>
+                              <p className="text-xs text-muted-foreground">
+                                Enter one area name per line.
+                              </p>
                               <Textarea
                                 className="min-h-[100px]"
                                 placeholder="Area 1&#10;Area 2&#10;Area 3"
                                 value={bulkAreaNames}
-                                onChange={(e) => setBulkAreaNames(e.target.value)}
+                                onChange={(e) =>
+                                  setBulkAreaNames(e.target.value)
+                                }
                                 disabled={isPending}
                               />
                               <div>
@@ -803,30 +949,40 @@ export function SettingsClient({
                     {/* Apartments Sub-Tab */}
                     <TabsContent value="apartments" className="mt-0 space-y-4">
                       {/* Add Apartment Row */}
-                      <div className="flex flex-wrap gap-3 items-end">
+                      <div className="flex flex-wrap items-end gap-3">
                         <div className="grid gap-1.5">
-                          <label className="text-xs text-muted-foreground font-medium">Apartment Name</label>
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Apartment Name
+                          </label>
                           <Input
                             placeholder="New apartment name..."
                             value={newApartmentName}
-                            onChange={(e) => setNewApartmentName(e.target.value)}
+                            onChange={(e) =>
+                              setNewApartmentName(e.target.value)
+                            }
                             disabled={isPending}
                             className="min-w-[200px]"
                           />
                         </div>
                         <div className="grid gap-1.5">
-                          <label className="text-xs text-muted-foreground font-medium">Delivery Days</label>
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Delivery Days
+                          </label>
                           <div className="flex gap-1.5">
                             {DAYS_OF_WEEK.map((d) => (
                               <button
                                 key={d.value}
                                 type="button"
-                                onClick={() => setNewApartmentDeliveryDays((prev) => toggleDay(prev, d.value))}
+                                onClick={() =>
+                                  setNewApartmentDeliveryDays((prev) =>
+                                    toggleDay(prev, d.value)
+                                  )
+                                }
                                 disabled={isPending}
-                                className={`px-2 py-1 rounded text-xs font-medium border transition-colors ${
+                                className={`rounded border px-2 py-1 text-xs font-medium transition-colors ${
                                   newApartmentDeliveryDays.includes(d.value)
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border bg-background text-muted-foreground hover:border-primary/50"
                                 }`}
                               >
                                 {d.label}
@@ -835,8 +991,10 @@ export function SettingsClient({
                           </div>
                         </div>
                         <div className="grid gap-1.5">
-                          <label className="text-xs text-muted-foreground font-medium">COD</label>
-                          <div className="flex items-center gap-2 h-9">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            COD
+                          </label>
+                          <div className="flex h-9 items-center gap-2">
                             <Switch
                               checked={newApartmentIsCodEnabled}
                               onCheckedChange={setNewApartmentIsCodEnabled}
@@ -845,7 +1003,10 @@ export function SettingsClient({
                             <span className="text-xs">Enabled</span>
                           </div>
                         </div>
-                        <Button onClick={addApartment} disabled={isPending || !newApartmentName}>
+                        <Button
+                          onClick={addApartment}
+                          disabled={isPending || !newApartmentName}
+                        >
                           <Plus className="mr-2 h-4 w-4" />
                           Add Apartment
                         </Button>
@@ -862,25 +1023,36 @@ export function SettingsClient({
                               <button
                                 key={d.value}
                                 type="button"
-                                onClick={() => setBulkAssignDays((prev) => toggleDay(prev, d.value))}
+                                onClick={() =>
+                                  setBulkAssignDays((prev) =>
+                                    toggleDay(prev, d.value)
+                                  )
+                                }
                                 disabled={isPending}
-                                className={`px-2 py-1 rounded text-xs font-medium border transition-colors ${
+                                className={`rounded border px-2 py-1 text-xs font-medium transition-colors ${
                                   bulkAssignDays.includes(d.value)
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border bg-background text-muted-foreground hover:border-primary/50"
                                 }`}
                               >
                                 {d.label}
                               </button>
                             ))}
                           </div>
-                          <Button size="sm" onClick={handleBulkAssignDays} disabled={isPending}>
+                          <Button
+                            size="sm"
+                            onClick={handleBulkAssignDays}
+                            disabled={isPending}
+                          >
                             Assign Days
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => { setSelectedApartmentIds(new Set()); setBulkAssignDays([]) }}
+                            onClick={() => {
+                              setSelectedApartmentIds(new Set())
+                              setBulkAssignDays([])
+                            }}
                             disabled={isPending}
                           >
                             Clear
@@ -896,10 +1068,19 @@ export function SettingsClient({
                                 <input
                                   type="checkbox"
                                   className="h-4 w-4"
-                                  checked={selectedApartmentIds.size === apartments.length && apartments.length > 0}
+                                  checked={
+                                    selectedApartmentIds.size ===
+                                      apartments.length && apartments.length > 0
+                                  }
                                   onChange={(e) => {
                                     if (e.target.checked) {
-                                      setSelectedApartmentIds(new Set(apartments.map((a: any) => String(a._id))))
+                                      setSelectedApartmentIds(
+                                        new Set(
+                                          apartments.map((a: any) =>
+                                            String(a._id)
+                                          )
+                                        )
+                                      )
                                     } else {
                                       setSelectedApartmentIds(new Set())
                                     }
@@ -908,14 +1089,21 @@ export function SettingsClient({
                               </TableHead>
                               <TableHead>Apartment Name</TableHead>
                               <TableHead>Delivery Days</TableHead>
-                              <TableHead className="w-[100px] text-center">COD</TableHead>
-                              <TableHead className="w-[100px] text-right">Actions</TableHead>
+                              <TableHead className="w-[100px] text-center">
+                                COD
+                              </TableHead>
+                              <TableHead className="w-[100px] text-right">
+                                Actions
+                              </TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {apartments.length === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                                <TableCell
+                                  colSpan={5}
+                                  className="h-24 text-center text-muted-foreground"
+                                >
                                   No apartments defined in this district.
                                 </TableCell>
                               </TableRow>
@@ -924,42 +1112,67 @@ export function SettingsClient({
                                 <TableRow key={a._id}>
                                   {editingApartmentId === String(a._id) ? (
                                     <TableCell colSpan={5} className="p-2">
-                                      <div className="flex flex-wrap items-center gap-2 bg-muted/50 p-2 rounded-md border border-dashed">
+                                      <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed bg-muted/50 p-2">
                                         <Input
                                           value={editApartmentName}
-                                          onChange={(e) => setEditApartmentName(e.target.value)}
+                                          onChange={(e) =>
+                                            setEditApartmentName(e.target.value)
+                                          }
                                           disabled={isPending}
-                                          className="flex-1 min-w-[150px] h-9"
+                                          className="h-9 min-w-[150px] flex-1"
                                         />
                                         <div className="flex gap-1">
                                           {DAYS_OF_WEEK.map((d) => (
                                             <button
                                               key={d.value}
                                               type="button"
-                                              onClick={() => setEditApartmentDeliveryDays((prev) => toggleDay(prev, d.value))}
+                                              onClick={() =>
+                                                setEditApartmentDeliveryDays(
+                                                  (prev) =>
+                                                    toggleDay(prev, d.value)
+                                                )
+                                              }
                                               disabled={isPending}
-                                              className={`px-2 py-1 rounded text-xs font-medium border transition-colors ${
-                                                editApartmentDeliveryDays.includes(d.value)
-                                                  ? "bg-primary text-primary-foreground border-primary"
-                                                  : "bg-background border-border text-muted-foreground hover:border-primary/50"
+                                              className={`rounded border px-2 py-1 text-xs font-medium transition-colors ${
+                                                editApartmentDeliveryDays.includes(
+                                                  d.value
+                                                )
+                                                  ? "border-primary bg-primary text-primary-foreground"
+                                                  : "border-border bg-background text-muted-foreground hover:border-primary/50"
                                               }`}
                                             >
                                               {d.label}
                                             </button>
                                           ))}
                                         </div>
-                                         <div className="flex items-center gap-2 bg-background border rounded px-2 h-9">
+                                        <div className="flex h-9 items-center gap-2 rounded border bg-background px-2">
                                           <Switch
                                             checked={editApartmentIsCodEnabled}
-                                            onCheckedChange={setEditApartmentIsCodEnabled}
+                                            onCheckedChange={
+                                              setEditApartmentIsCodEnabled
+                                            }
                                             disabled={isPending}
                                           />
-                                          <label className="text-xs">COD Enabled</label>
+                                          <label className="text-xs">
+                                            COD Enabled
+                                          </label>
                                         </div>
-                                        <Button size="sm" onClick={handleUpdateApartment} disabled={isPending || !editApartmentName.trim()}>
+                                        <Button
+                                          size="sm"
+                                          onClick={handleUpdateApartment}
+                                          disabled={
+                                            isPending ||
+                                            !editApartmentName.trim()
+                                          }
+                                        >
                                           Save
                                         </Button>
-                                        <Button size="sm" variant="ghost" onClick={cancelEditApartment} disabled={isPending}>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={cancelEditApartment}
+                                          disabled={isPending}
+                                        >
                                           Cancel
                                         </Button>
                                       </div>
@@ -970,32 +1183,47 @@ export function SettingsClient({
                                         <input
                                           type="checkbox"
                                           className="h-4 w-4"
-                                          checked={selectedApartmentIds.has(String(a._id))}
+                                          checked={selectedApartmentIds.has(
+                                            String(a._id)
+                                          )}
                                           onChange={(e) => {
                                             setSelectedApartmentIds((prev) => {
                                               const next = new Set(prev)
-                                              if (e.target.checked) next.add(String(a._id))
+                                              if (e.target.checked)
+                                                next.add(String(a._id))
                                               else next.delete(String(a._id))
                                               return next
                                             })
                                           }}
                                         />
                                       </TableCell>
-                                      <TableCell className="font-medium">{a.name}</TableCell>
+                                      <TableCell className="font-medium">
+                                        {a.name}
+                                      </TableCell>
                                       <TableCell>
                                         {dayLabel(a.deliveryDays) ? (
-                                          <Badge variant="outline" className="font-normal text-xs bg-secondary/50">
+                                          <Badge
+                                            variant="outline"
+                                            className="bg-secondary/50 text-xs font-normal"
+                                          >
                                             {dayLabel(a.deliveryDays)}
                                           </Badge>
                                         ) : (
-                                          <span className="text-muted-foreground text-xs italic">Unscheduled</span>
+                                          <span className="text-xs text-muted-foreground italic">
+                                            Unscheduled
+                                          </span>
                                         )}
                                       </TableCell>
                                       <TableCell className="text-center">
                                         <div className="flex justify-center">
                                           <Switch
                                             checked={a.isCodEnabled !== false}
-                                            onCheckedChange={(checked) => handleToggleApartmentCod(String(a._id), checked)}
+                                            onCheckedChange={(checked) =>
+                                              handleToggleApartmentCod(
+                                                String(a._id),
+                                                checked
+                                              )
+                                            }
                                             disabled={isPending}
                                           />
                                         </div>
@@ -1003,16 +1231,31 @@ export function SettingsClient({
                                       <TableCell className="text-right">
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8"
+                                            >
                                               <MoreVertical className="h-4 w-4" />
                                             </Button>
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => startEditApartment(a)}>
+                                            <DropdownMenuItem
+                                              onClick={() =>
+                                                startEditApartment(a)
+                                              }
+                                            >
                                               <Edit2 className="mr-2 h-4 w-4" />
                                               Edit Details
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleRemoveApartment(String(a._id))}>
+                                            <DropdownMenuItem
+                                              className="text-destructive focus:text-destructive"
+                                              onClick={() =>
+                                                handleRemoveApartment(
+                                                  String(a._id)
+                                                )
+                                              }
+                                            >
                                               <Trash2 className="mr-2 h-4 w-4" />
                                               Delete
                                             </DropdownMenuItem>
@@ -1030,21 +1273,31 @@ export function SettingsClient({
 
                       <Accordion type="single" collapsible className="w-full">
                         <AccordionItem value="bulk-apartments">
-                          <AccordionTrigger className="text-sm font-medium">Bulk Add Apartments</AccordionTrigger>
+                          <AccordionTrigger className="text-sm font-medium">
+                            Bulk Add Apartments
+                          </AccordionTrigger>
                           <AccordionContent>
                             <div className="grid gap-3 pt-2">
-                              <p className="text-xs text-muted-foreground">Enter one apartment name per line.</p>
+                              <p className="text-xs text-muted-foreground">
+                                Enter one apartment name per line.
+                              </p>
                               <Textarea
                                 className="min-h-[100px]"
-                                placeholder={"Apartment A\nApartment B\nApartment C"}
+                                placeholder={
+                                  "Apartment A\nApartment B\nApartment C"
+                                }
                                 value={bulkApartmentNames}
-                                onChange={(e) => setBulkApartmentNames(e.target.value)}
+                                onChange={(e) =>
+                                  setBulkApartmentNames(e.target.value)
+                                }
                                 disabled={isPending}
                               />
                               <div>
                                 <Button
                                   onClick={bulkAddApartments}
-                                  disabled={isPending || !bulkApartmentNames.trim()}
+                                  disabled={
+                                    isPending || !bulkApartmentNames.trim()
+                                  }
                                   variant="secondary"
                                 >
                                   Submit Bulk Add
@@ -1075,7 +1328,7 @@ export function SettingsClient({
               maxLength={200}
               className="min-h-[100px]"
             />
-            <div className="text-xs text-muted-foreground text-right">
+            <div className="text-right text-xs text-muted-foreground">
               {deliveryBannerMessage.length}/200
             </div>
           </div>
