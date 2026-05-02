@@ -58,7 +58,7 @@ export default async function CheckoutPage({
               deliveryFee={effectiveDeliveryFee}
               districtSlug={districtSlug}
               bannerMessage={bannerMessage}
-              isCodEnabled={isCodEnabled}
+              globalIsCodEnabled={isCodEnabled}
             />
           </div>
         </div>
