@@ -39,6 +39,8 @@ export async function updateDistrictAction(payload: {
   name?: string
   isCodEnabled?: boolean
   isEnabled?: boolean
+  deliveryCenter?: { lat: number; lng: number }
+  deliveryRadius?: number
 }) {
   const parsed = DistrictSchema.partial().safeParse(payload)
   if (!parsed.success) return { error: "Invalid district data" }

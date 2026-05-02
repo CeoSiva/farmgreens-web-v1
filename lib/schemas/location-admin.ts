@@ -4,6 +4,13 @@ export const DistrictSchema = z.object({
   name: z.string().min(1, "District name is required"),
   isCodEnabled: z.boolean().optional(),
   isEnabled: z.boolean().optional(),
+  deliveryCenter: z
+    .object({
+      lat: z.number(),
+      lng: z.number(),
+    })
+    .optional(),
+  deliveryRadius: z.number().optional(),
 })
 
 export const AreaSchema = z.object({

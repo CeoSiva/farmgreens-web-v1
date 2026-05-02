@@ -12,7 +12,13 @@ export async function createDistrict(name: string) {
 
 export async function updateDistrict(
   id: string,
-  data: { name?: string; isCodEnabled?: boolean; isEnabled?: boolean }
+  data: {
+    name?: string
+    isCodEnabled?: boolean
+    isEnabled?: boolean
+    deliveryCenter?: { lat: number; lng: number }
+    deliveryRadius?: number
+  }
 ) {
   await connectDB()
   const updated = await DistrictModel.findByIdAndUpdate(

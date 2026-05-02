@@ -74,6 +74,7 @@ import {
   listAreasByDistrictAction,
   listApartmentsByDistrictAction,
 } from "@/server/actions/location"
+import { DistrictRadiusPicker } from "./district-radius-picker"
 
 export function SettingsClient({
   settings,
@@ -327,6 +328,25 @@ export function SettingsClient({
       else {
         toast.success("District deleted")
         if (selectedDistrictId === id) setSelectedDistrictId("")
+        router.refresh()
+      }
+    })
+  }
+
+  const handleSaveDistrictRadius = (
+    center: { lat: number; lng: number },
+    radius: number
+  ) => {
+    if (!selectedDistrictId) return
+    startTransition(async () => {
+      const res = await updateDistrictAction({
+        id: selectedDistrictId,
+        deliveryCenter: center,
+        deliveryRadius: radius,
+      })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success("Delivery boundary updated")
         router.refresh()
       }
     })
@@ -806,24 +826,27 @@ export function SettingsClient({
                   </div>
                 </div>
 
-                <div className="flex-1 overflow-auto p-6">
-                  <Tabs defaultValue="areas" className="w-full">
-                    <TabsList className="mb-4">
-                      <TabsTrigger
-                        value="areas"
-                        className="flex items-center gap-2"
-                      >
-                        <MapIcon className="h-4 w-4" />
-                        Areas
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="apartments"
-                        className="flex items-center gap-2"
-                      >
-                        <Building className="h-4 w-4" />
-                        Apartments
-                      </TabsTrigger>
-                    </TabsList>
+                <div className="flex-1 overflow-auto">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 divide-y lg:divide-y-0 lg:divide-x h-full">
+                    {/* Sub-Tabs: Areas & Apartments */}
+                    <div className="p-6">
+                      <Tabs defaultValue="areas" className="w-full">
+                        <TabsList className="mb-4">
+                          <TabsTrigger
+                            value="areas"
+                            className="flex items-center gap-2"
+                          >
+                            <MapIcon className="h-4 w-4" />
+                            Areas
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="apartments"
+                            className="flex items-center gap-2"
+                          >
+                            <Building className="h-4 w-4" />
+                            Apartments
+                          </TabsTrigger>
+                        </TabsList>
 
                     {/* Areas Sub-Tab */}
                     <TabsContent value="areas" className="mt-0 space-y-4">
@@ -1310,11 +1333,28 @@ export function SettingsClient({
                     </TabsContent>
                   </Tabs>
                 </div>
-              </>
-            )}
-          </div>
-        </Card>
-      </TabsContent>
+
+                {/* Map Configuration Section */}
+                <div className="bg-muted/10 p-6 border-t lg:border-t-0">
+                  <DistrictRadiusPicker
+                    key={selectedDistrictId}
+                    initialCenter={
+                      districtById.get(selectedDistrictId)?.deliveryCenter
+                    }
+                    initialRadius={
+                      districtById.get(selectedDistrictId)?.deliveryRadius
+                    }
+                    onSave={handleSaveDistrictRadius}
+                    isPending={isPending}
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+        </div>
+      </Card>
+    </TabsContent>
 
       <TabsContent value="banner" className="mt-4">
         <Card className="grid gap-3 p-4">

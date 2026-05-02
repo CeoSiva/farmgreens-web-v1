@@ -20,7 +20,18 @@ import {
   CreditCard,
   Banknote,
   CalendarClock,
+  AlertCircle,
+  MapPinOff,
 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { nextDay, format, Day } from "date-fns"
 
 import type { Cart } from "@/lib/cart"
@@ -87,6 +98,8 @@ export function CheckoutClient({
   const [apartmentOpen, setApartmentOpen] = useState(false)
   const [locationPinned, setLocationPinned] = useState(false)
   const [mapHighlight, setMapHighlight] = useState(false)
+  const [isOutOfRadius, setIsOutOfRadius] = useState(false)
+  const [showRadiusWarning, setShowRadiusWarning] = useState(false)
 
   const {
     register,
@@ -123,6 +136,34 @@ export function CheckoutClient({
     setValue("lat", newLat)
     setValue("lng", newLng)
     setLocationPinned(true)
+
+    // Check if within radius if district has configuration
+    const currentDistrict = districts.find(
+      (d: any) => String(d._id) === String(districtId)
+    )
+
+    if (
+      currentDistrict?.deliveryCenter?.lat &&
+      currentDistrict?.deliveryCenter?.lng &&
+      currentDistrict?.deliveryRadius
+    ) {
+      if (typeof google !== "undefined" && google.maps && google.maps.geometry) {
+        const distance = google.maps.geometry.spherical.computeDistanceBetween(
+          new google.maps.LatLng(newLat, newLng),
+          new google.maps.LatLng(
+            currentDistrict.deliveryCenter.lat,
+            currentDistrict.deliveryCenter.lng
+          )
+        )
+
+        if (distance > currentDistrict.deliveryRadius) {
+          setIsOutOfRadius(true)
+          setShowRadiusWarning(true)
+        } else {
+          setIsOutOfRadius(false)
+        }
+      }
+    }
   }
 
   useEffect(() => {
@@ -403,6 +444,12 @@ export function CheckoutClient({
       setTimeout(() => {
         setMapHighlight(false)
       }, 3000)
+      return
+    }
+
+    // Check if location is serviceable
+    if (isOutOfRadius) {
+      setShowRadiusWarning(true)
       return
     }
 
@@ -1018,6 +1065,27 @@ export function CheckoutClient({
           )}
         </form>
       </Card>
+
+      <AlertDialog open={showRadiusWarning} onOpenChange={setShowRadiusWarning}>
+        <AlertDialogContent className="max-w-[400px]">
+          <AlertDialogHeader className="flex flex-col items-center text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-50 text-green-600">
+              <MapPinOff className="h-6 w-6" />
+            </div>
+            <AlertDialogTitle className="text-xl font-semibold text-green-900">We&apos;re not here yet...</AlertDialogTitle>
+            <AlertDialogDescription className="text-base text-muted-foreground leading-relaxed">
+              We really wish we could reach you, but we don&apos;t deliver to this area just yet. 
+              <br /><br />
+              We&apos;re working hard to come to your neighborhood soon. Thank you for your love! 🌱
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction className="w-full">
+              I Understand
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
