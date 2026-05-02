@@ -1,0 +1,16 @@
+Updating apartment 69cbfd55ca022fa62ad268ba with data: {"isCodEnabled":false}
+Updated apartment 69cbfd55ca022fa62ad268ba result isCodEnabled: undefined
+Updating apartment 69cbfd55ca022fa62ad268ba with data: {"isCodEnabled":false}
+Updated apartment 69cbfd55ca022fa62ad268ba result isCodEnabled: false
+Updating apartment 69cbfd55ca022fa62ad268ac with data: {"isCodEnabled":false}
+Updated apartment 69cbfd55ca022fa62ad268ac result isCodEnabled: false
+Updating apartment 69cbfd55ca022fa62ad2690e with data: {"isCodEnabled":false}
+Updated apartment 69cbfd55ca022fa62ad2690e result isCodEnabled: false
+Updating apartment 69cbfd55ca022fa62ad268c7 with data: {"isCodEnabled":false}
+Updated apartment 69cbfd55ca022fa62ad268c7 result isCodEnabled: false
+Updating apartment 69cbfd55ca022fa62ad268b7 with data: {"isCodEnabled":false}
+Updated apartment 69cbfd55ca022fa62ad268b7 result isCodEnabled: false
+Updating apartment 69cbfd55ca022fa62ad26904 with data: {"isCodEnabled":false}
+Updated apartment 69cbfd55ca022fa62ad26904 result isCodEnabled: false
+Updating apartment 69cbfd55ca022fa62ad268c6 with data: {"isCodEnabled":false}
+Updated apartment 69cbfd55ca022fa62ad268c6 result isCodEnabled: false

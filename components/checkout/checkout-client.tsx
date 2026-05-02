@@ -52,7 +52,7 @@ export function CheckoutClient({
   deliveryFee,
   districtSlug,
   bannerMessage,
-  isCodEnabled,
+  isCodEnabled: globalIsCodEnabled,
 }: {
   cart: Cart
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,7 +60,7 @@ export function CheckoutClient({
   deliveryFee: number
   districtSlug?: string
   bannerMessage: string
-  isCodEnabled: boolean
+  globalIsCodEnabled: boolean
 }) {
   const [isPending, startTransition] = useTransition()
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -144,13 +144,33 @@ export function CheckoutClient({
       trackDistrictSelected(districtSlug, match.name, existingCustomer?._id?.toString() || "")
     }
   }, [districtSlug, districts, setValue, districtId, existingCustomer])
+ 
+  const isChennai = useMemo(() => {
+    if (!districtId || !districts) return false
+    const d = districts.find((x) => String(x._id) === String(districtId))
+    return d && d.name.toLowerCase() === "chennai"
+  }, [districtId, districts])
+
+  const selectedApartment = useMemo(() => {
+    const street = watch("street")
+    if (!isChennai || !street) return null
+    return apartments.find((a: any) => a.name === street)
+  }, [apartments, watch("street"), isChennai])
+
+  const effectiveIsCodEnabled = useMemo(() => {
+    if (!globalIsCodEnabled) return false
+    const currentDistrict = districts.find((d: any) => String(d._id) === String(districtId))
+    if (currentDistrict && currentDistrict.isCodEnabled === false) return false
+    if (selectedApartment && selectedApartment.isCodEnabled === false) return false
+    return true
+  }, [globalIsCodEnabled, districts, districtId, selectedApartment])
 
   // Ensure online payment is selected if COD is disabled
   useEffect(() => {
-    if (!isCodEnabled && paymentMethod === "cod") {
+    if (!effectiveIsCodEnabled && paymentMethod === "cod") {
       setValue("paymentMethod", "online")
     }
-  }, [isCodEnabled, paymentMethod, setValue])
+  }, [effectiveIsCodEnabled, paymentMethod, setValue])
 
   useEffect(() => {
     if (!mobile || mobile.length < 10) {
@@ -254,12 +274,6 @@ export function CheckoutClient({
     return { itemCount }
   }, [cart.items])
 
-  const isChennai = useMemo(() => {
-    if (!districtId || !districts) return false
-    const d = districts.find((x) => String(x._id) === String(districtId))
-    return d && d.name.toLowerCase() === "chennai"
-  }, [districtId, districts])
-
   const filteredAreas = useMemo(() => {
     if (!areaSearch) return areas
     const q = areaSearch.toLowerCase()
@@ -275,12 +289,6 @@ export function CheckoutClient({
     const q = apartmentSearch.toLowerCase()
     return apartments.filter((a: any) => a.name.toLowerCase().includes(q))
   }, [apartments, apartmentSearch])
-
-  const selectedApartment = useMemo(() => {
-    const street = watch("street")
-    if (!isChennai || !street) return null
-    return apartments.find((a: any) => a.name === street)
-  }, [apartments, watch("street"), isChennai])
 
   const upcomingDeliveryDateInfo = useMemo(() => {
     if (!selectedApartment || !selectedApartment.deliveryDays || selectedApartment.deliveryDays.length === 0) return null
@@ -849,7 +857,7 @@ export function CheckoutClient({
                 </div>
                 <CreditCard className="h-5 w-5 text-primary" />
               </label>
-              {isCodEnabled && (
+              {effectiveIsCodEnabled && (
                 <label className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-4 cursor-pointer hover:bg-muted/50 transition-colors">
                   <input
                     type="radio"

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 import mongoose from "mongoose"
+import ApartmentModel from "@/lib/models/apartment"
 
 /** Safely converts any value to a mongoose ObjectId. Handles strings, objects with _id, and existing ObjectIds. */
 function toObjectId(val: unknown): mongoose.Types.ObjectId {
@@ -136,8 +137,23 @@ export async function placeOrderAction(formData: CheckoutFormValues) {
     const deliveryFee = subtotal >= freeDeliveryThreshold ? 0 : baseDeliveryFee
     const total = subtotal + deliveryFee
 
-    if (parsed.data.paymentMethod === "cod" && settings.isCodEnabled === false) {
-      return { error: "Cash on delivery is currently disabled" }
+    if (parsed.data.paymentMethod === "cod") {
+      if (settings.isCodEnabled === false) {
+        return { error: "Cash on delivery is currently disabled" }
+      }
+      if ((district as any).isCodEnabled === false) {
+        return { error: "Cash on delivery is disabled for your district" }
+      }
+      
+      // Check apartment-specific COD if applicable
+      const apartment = await ApartmentModel.findOne({
+        districtId: toObjectId(parsed.data.districtId),
+        name: parsed.data.street,
+      }).lean()
+      
+      if (apartment && (apartment as any).isCodEnabled === false) {
+        return { error: "Cash on delivery is disabled for your apartment" }
+      }
     }
 
     let customerId: any = undefined

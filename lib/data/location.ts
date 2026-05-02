@@ -2,8 +2,10 @@ import { connectDB } from "../db";
 import DistrictModel, { IDistrict } from "../models/district";
 import AreaModel, { IArea } from "../models/area";
 import ApartmentModel, { IApartment } from "../models/apartment";
+import { unstable_noStore as noStore } from "next/cache";
 
 export async function listDistricts(): Promise<IDistrict[]> {
+  noStore();
   await connectDB();
   return DistrictModel.find().sort({ name: 1 }).lean();
 }
@@ -18,6 +20,7 @@ export async function getDistrictBySlug(
 }
 
 export async function listAreasByDistrict(districtId: string): Promise<IArea[]> {
+  noStore();
   await connectDB();
   return AreaModel.find({ districtId }).sort({ name: 1 }).lean();
 }
@@ -33,6 +36,7 @@ export async function getAreaById(areaId: string): Promise<IArea | null> {
 }
 
 export async function listApartmentsByDistrict(districtId: string): Promise<IApartment[]> {
+  noStore();
   await connectDB();
   return ApartmentModel.find({ districtId }).sort({ name: 1 }).lean();
 }

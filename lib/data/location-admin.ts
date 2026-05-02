@@ -10,11 +10,11 @@ export async function createDistrict(name: string) {
   return DistrictModel.create({ name })
 }
 
-export async function renameDistrict(id: string, name: string) {
+export async function updateDistrict(id: string, data: { name?: string; isCodEnabled?: boolean }) {
   await connectDB()
   const updated = await DistrictModel.findByIdAndUpdate(
     id,
-    { name },
+    { $set: data },
     { new: true }
   ).lean()
   if (!updated) throw new Error("District not found")
@@ -87,9 +87,14 @@ export async function bulkCreateAreas(districtId: string, names: string[]) {
   return AreaModel.insertMany(docs)
 }
 
-export async function createApartment(districtId: string, name: string, deliveryDays: number[] = []) {
+export async function createApartment(
+  districtId: string,
+  name: string,
+  deliveryDays: number[] = [],
+  isCodEnabled: boolean = true
+) {
   await connectDB()
-  return ApartmentModel.create({ districtId, name, deliveryDays })
+  return ApartmentModel.create({ districtId, name, deliveryDays, isCodEnabled })
 }
 
 export async function renameApartment(id: string, name: string) {
@@ -103,13 +108,23 @@ export async function renameApartment(id: string, name: string) {
   return updated
 }
 
-export async function updateApartment(id: string, name: string, deliveryDays: number[] = []) {
+export async function updateApartment(
+  id: string,
+  data: { name?: string; deliveryDays?: number[]; isCodEnabled?: boolean }
+) {
   await connectDB()
+  const logMsg = `Updating apartment ${id} with data: ${JSON.stringify(data)}\n`;
+  require('fs').appendFileSync('/home/ceo/projects/Ziver/FarmGreens/farmgreens-web-v1/scratch/db_log.txt', logMsg);
+  
   const updated = await ApartmentModel.findByIdAndUpdate(
     id,
-    { name, deliveryDays },
+    { $set: data },
     { new: true }
   ).lean()
+  
+  const resultMsg = `Updated apartment ${id} result isCodEnabled: ${updated?.isCodEnabled}\n`;
+  require('fs').appendFileSync('/home/ceo/projects/Ziver/FarmGreens/farmgreens-web-v1/scratch/db_log.txt', resultMsg);
+  
   if (!updated) throw new Error("Apartment not found")
   return updated
 }

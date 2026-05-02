@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { Switch } from "@/components/ui/switch"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
@@ -24,11 +25,13 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { MapPin, Building, Map as MapIcon, Plus, Trash2, Edit2, MoreVertical } from "lucide-react"
 import {
   createDistrictAction,
+  updateDistrictAction,
+  toggleDistrictCodAction,
+  toggleApartmentCodAction,
   createAreaAction,
   deleteAreaAction,
   deleteDistrictAction,
   renameAreaAction,
-  renameDistrictAction,
   bulkCreateAreasAction,
   createApartmentAction,
   deleteApartmentAction,
@@ -85,11 +88,13 @@ export function SettingsClient({
 
   const [newApartmentName, setNewApartmentName] = useState("")
   const [newApartmentDeliveryDays, setNewApartmentDeliveryDays] = useState<number[]>([])
+  const [newApartmentIsCodEnabled, setNewApartmentIsCodEnabled] = useState(true)
   const [bulkApartmentNames, setBulkApartmentNames] = useState("")
 
   const [editingApartmentId, setEditingApartmentId] = useState<string | null>(null)
   const [editApartmentName, setEditApartmentName] = useState("")
   const [editApartmentDeliveryDays, setEditApartmentDeliveryDays] = useState<number[]>([])
+  const [editApartmentIsCodEnabled, setEditApartmentIsCodEnabled] = useState(true)
 
   // Bulk weekday assignment state
   const [selectedApartmentIds, setSelectedApartmentIds] = useState<Set<string>>(new Set())
@@ -122,7 +127,7 @@ export function SettingsClient({
   const fetchLocations = async (id: string) => {
     const [resAreas, resApts] = await Promise.all([
       listAreasByDistrictAction(id),
-      listApartmentsByDistrictAction(id)
+      listApartmentsByDistrictAction(id, Date.now())
     ])
     setAreas((resAreas as any).areas)
     setApartments((resApts as any).apartments)
@@ -138,6 +143,9 @@ export function SettingsClient({
       await fetchLocations(selectedDistrictId)
     })
   }, [selectedDistrictId])
+
+  // Optimistic overrides for districts (since they are passed as props)
+  const [districtCodOverrides, setDistrictCodOverrides] = useState<Record<string, boolean>>({})
 
   const districtById = useMemo(() => {
     const m = new Map<string, any>()
@@ -213,10 +221,31 @@ export function SettingsClient({
     const name = window.prompt("Rename district", current?.name ?? "")
     if (!name) return
     startTransition(async () => {
-      const res = await renameDistrictAction({ id, name })
+      const res = await updateDistrictAction({ id, name })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
         toast.success("District renamed")
+        router.refresh()
+      }
+    })
+  }
+
+  const handleToggleDistrictCod = (id: string, enabled: boolean) => {
+    // Optimistic update
+    setDistrictCodOverrides((prev) => ({ ...prev, [id]: enabled }))
+
+    startTransition(async () => {
+      const res = await toggleDistrictCodAction(id, enabled)
+      if ((res as any)?.error) {
+        toast.error((res as any).error)
+        // Revert on error
+        setDistrictCodOverrides((prev) => {
+          const next = { ...prev }
+          delete next[id]
+          return next
+        })
+      } else {
+        toast.success(`COD ${enabled ? "enabled" : "disabled"} for district`)
         router.refresh()
       }
     })
@@ -320,12 +349,14 @@ export function SettingsClient({
         districtId: selectedDistrictId,
         name: newApartmentName,
         deliveryDays: newApartmentDeliveryDays,
+        isCodEnabled: newApartmentIsCodEnabled,
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
         toast.success("Apartment created")
         setNewApartmentName("")
         setNewApartmentDeliveryDays([])
+        setNewApartmentIsCodEnabled(true)
         await fetchLocations(selectedDistrictId)
         router.refresh()
       }
@@ -337,12 +368,14 @@ export function SettingsClient({
     setEditingApartmentId(String(a._id))
     setEditApartmentName(a.name)
     setEditApartmentDeliveryDays(Array.isArray(a.deliveryDays) ? a.deliveryDays : [])
+    setEditApartmentIsCodEnabled(a.isCodEnabled !== false)
   }
 
   const cancelEditApartment = () => {
     setEditingApartmentId(null)
     setEditApartmentName("")
     setEditApartmentDeliveryDays([])
+    setEditApartmentIsCodEnabled(true)
   }
 
   const handleUpdateApartment = () => {
@@ -352,6 +385,7 @@ export function SettingsClient({
         id: editingApartmentId, 
         name: editApartmentName,
         deliveryDays: editApartmentDeliveryDays,
+        isCodEnabled: editApartmentIsCodEnabled,
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
@@ -361,7 +395,28 @@ export function SettingsClient({
         router.refresh()
       }
     })
+}
+
+  const handleToggleApartmentCod = (id: string, enabled: boolean) => {
+    // Optimistic update
+    setApartments((prev) =>
+      prev.map((a) => (String(a._id) === id ? { ...a, isCodEnabled: enabled } : a))
+    )
+
+    startTransition(async () => {
+      const res = await toggleApartmentCodAction(id, enabled)
+      if ((res as any)?.error) {
+        toast.error((res as any).error)
+        // Revert on error
+        await fetchLocations(selectedDistrictId)
+      } else {
+        toast.success(`COD ${enabled ? "enabled" : "disabled"} for apartment`)
+        await fetchLocations(selectedDistrictId)
+        router.refresh()
+      }
+    })
   }
+
 
   const handleBulkAssignDays = () => {
     if (selectedApartmentIds.size === 0) return
@@ -624,6 +679,20 @@ export function SettingsClient({
                   <h2 className="text-xl font-semibold tracking-tight truncate pr-4">
                     {districtById.get(selectedDistrictId)?.name ?? "Unknown"}
                   </h2>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">COD Enabled</span>
+                      <Switch
+                        checked={
+                          districtCodOverrides[selectedDistrictId] !== undefined
+                            ? districtCodOverrides[selectedDistrictId]
+                            : districtById.get(selectedDistrictId)?.isCodEnabled !== false
+                        }
+                        onCheckedChange={(checked) => handleToggleDistrictCod(selectedDistrictId, checked)}
+                        disabled={isPending}
+                      />
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="p-6 flex-1 overflow-auto">
@@ -765,6 +834,17 @@ export function SettingsClient({
                             ))}
                           </div>
                         </div>
+                        <div className="grid gap-1.5">
+                          <label className="text-xs text-muted-foreground font-medium">COD</label>
+                          <div className="flex items-center gap-2 h-9">
+                            <Switch
+                              checked={newApartmentIsCodEnabled}
+                              onCheckedChange={setNewApartmentIsCodEnabled}
+                              disabled={isPending}
+                            />
+                            <span className="text-xs">Enabled</span>
+                          </div>
+                        </div>
                         <Button onClick={addApartment} disabled={isPending || !newApartmentName}>
                           <Plus className="mr-2 h-4 w-4" />
                           Add Apartment
@@ -828,13 +908,14 @@ export function SettingsClient({
                               </TableHead>
                               <TableHead>Apartment Name</TableHead>
                               <TableHead>Delivery Days</TableHead>
+                              <TableHead className="w-[100px] text-center">COD</TableHead>
                               <TableHead className="w-[100px] text-right">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {apartments.length === 0 ? (
                               <TableRow>
-                                <TableCell colSpan={4} className="text-center text-muted-foreground h-24">
+                                <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
                                   No apartments defined in this district.
                                 </TableCell>
                               </TableRow>
@@ -842,7 +923,7 @@ export function SettingsClient({
                               apartments.map((a: any) => (
                                 <TableRow key={a._id}>
                                   {editingApartmentId === String(a._id) ? (
-                                    <TableCell colSpan={4} className="p-2">
+                                    <TableCell colSpan={5} className="p-2">
                                       <div className="flex flex-wrap items-center gap-2 bg-muted/50 p-2 rounded-md border border-dashed">
                                         <Input
                                           value={editApartmentName}
@@ -866,6 +947,14 @@ export function SettingsClient({
                                               {d.label}
                                             </button>
                                           ))}
+                                        </div>
+                                         <div className="flex items-center gap-2 bg-background border rounded px-2 h-9">
+                                          <Switch
+                                            checked={editApartmentIsCodEnabled}
+                                            onCheckedChange={setEditApartmentIsCodEnabled}
+                                            disabled={isPending}
+                                          />
+                                          <label className="text-xs">COD Enabled</label>
                                         </div>
                                         <Button size="sm" onClick={handleUpdateApartment} disabled={isPending || !editApartmentName.trim()}>
                                           Save
@@ -901,6 +990,15 @@ export function SettingsClient({
                                         ) : (
                                           <span className="text-muted-foreground text-xs italic">Unscheduled</span>
                                         )}
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        <div className="flex justify-center">
+                                          <Switch
+                                            checked={a.isCodEnabled !== false}
+                                            onCheckedChange={(checked) => handleToggleApartmentCod(String(a._id), checked)}
+                                            disabled={isPending}
+                                          />
+                                        </div>
                                       </TableCell>
                                       <TableCell className="text-right">
                                         <DropdownMenu>

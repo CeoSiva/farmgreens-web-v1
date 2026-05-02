@@ -1,7 +1,9 @@
 import { connectDB } from "../db";
 import SettingModel, { ISetting } from "../models/setting";
+import { unstable_noStore as noStore } from "next/cache";
 
 export async function getSettings(): Promise<ISetting> {
+  noStore();
   await connectDB();
   const existing = await SettingModel.findOne().lean();
   if (existing) return existing as any;

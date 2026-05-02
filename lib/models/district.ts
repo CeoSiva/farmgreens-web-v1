@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IDistrict extends Document {
   name: string;
+  isCodEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -9,8 +10,9 @@ export interface IDistrict extends Document {
 const districtSchema: Schema<IDistrict> = new Schema(
   {
     name: { type: String, required: true, unique: true, trim: true },
+    isCodEnabled: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true, strict: false }
 );
 
 const DistrictModel: Model<IDistrict> =

@@ -14,7 +14,7 @@ export async function listAreasByDistrictAction(districtId: string) {
   return { areas: JSON.parse(JSON.stringify(areas)) };
 }
 
-export async function listApartmentsByDistrictAction(districtId: string) {
+export async function listApartmentsByDistrictAction(districtId: string, t?: number) {
   const apartments = await listApartmentsByDistrict(districtId);
   // Ensure we return a plain serializable object
   return { apartments: JSON.parse(JSON.stringify(apartments)) };
