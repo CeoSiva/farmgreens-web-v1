@@ -6,8 +6,21 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { trackBeginCheckout, trackPurchase, trackDistrictSelected, trackWhatsAppOptIn, trackWhatsAppOptOut } from "@/lib/analytics"
-import { Check, ChevronsUpDown, Plus, CreditCard, Banknote, CalendarClock } from "lucide-react"
+import {
+  trackBeginCheckout,
+  trackPurchase,
+  trackDistrictSelected,
+  trackWhatsAppOptIn,
+  trackWhatsAppOptOut,
+} from "@/lib/analytics"
+import {
+  Check,
+  ChevronsUpDown,
+  Plus,
+  CreditCard,
+  Banknote,
+  CalendarClock,
+} from "lucide-react"
 import { nextDay, format, Day } from "date-fns"
 
 import type { Cart } from "@/lib/cart"
@@ -52,7 +65,7 @@ export function CheckoutClient({
   deliveryFee,
   districtSlug,
   bannerMessage,
-  isCodEnabled: globalIsCodEnabled,
+  globalIsCodEnabled,
 }: {
   cart: Cart
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -141,10 +154,14 @@ export function CheckoutClient({
     if (match) {
       setValue("districtId", match._id)
       // Track district selection
-      trackDistrictSelected(districtSlug, match.name, existingCustomer?._id?.toString() || "")
+      trackDistrictSelected(
+        districtSlug,
+        match.name,
+        existingCustomer?._id?.toString() || ""
+      )
     }
   }, [districtSlug, districts, setValue, districtId, existingCustomer])
- 
+
   const isChennai = useMemo(() => {
     if (!districtId || !districts) return false
     const d = districts.find((x) => String(x._id) === String(districtId))
@@ -159,9 +176,12 @@ export function CheckoutClient({
 
   const effectiveIsCodEnabled = useMemo(() => {
     if (!globalIsCodEnabled) return false
-    const currentDistrict = districts.find((d: any) => String(d._id) === String(districtId))
+    const currentDistrict = districts.find(
+      (d: any) => String(d._id) === String(districtId)
+    )
     if (currentDistrict && currentDistrict.isCodEnabled === false) return false
-    if (selectedApartment && selectedApartment.isCodEnabled === false) return false
+    if (selectedApartment && selectedApartment.isCodEnabled === false)
+      return false
     return true
   }, [globalIsCodEnabled, districts, districtId, selectedApartment])
 
@@ -196,7 +216,12 @@ export function CheckoutClient({
   // Track begin_checkout when checkout page loads
   useEffect(() => {
     if (canCheckout && cart.items.length > 0) {
-      trackBeginCheckout(0, cart.items.length, existingCustomer?._id?.toString(), districtSlug || "")
+      trackBeginCheckout(
+        0,
+        cart.items.length,
+        existingCustomer?._id?.toString(),
+        districtSlug || ""
+      )
     }
   }, [canCheckout, cart.items, existingCustomer, districtSlug])
 
@@ -248,9 +273,11 @@ export function CheckoutClient({
     if (errorMessages.length > 0) {
       toast.error("Please fix the following errors:", {
         description: (
-          <ul className="list-disc pl-4 mt-2">
+          <ul className="mt-2 list-disc pl-4">
             {errorMessages.map((msg, idx) => (
-              <li key={idx} className="text-sm">{msg}</li>
+              <li key={idx} className="text-sm">
+                {msg}
+              </li>
             ))}
           </ul>
         ),
@@ -258,7 +285,9 @@ export function CheckoutClient({
           label: "Go to first error",
           onClick: () => {
             const firstErrorKey = Object.keys(errors)[0]
-            const element = document.querySelector(`[name="${firstErrorKey}"]`) as HTMLElement
+            const element = document.querySelector(
+              `[name="${firstErrorKey}"]`
+            ) as HTMLElement
             if (element) {
               element.scrollIntoView({ behavior: "smooth", block: "center" })
               element.focus()
@@ -291,16 +320,31 @@ export function CheckoutClient({
   }, [apartments, apartmentSearch])
 
   const upcomingDeliveryDateInfo = useMemo(() => {
-    if (!selectedApartment || !selectedApartment.deliveryDays || selectedApartment.deliveryDays.length === 0) return null
-    
+    if (
+      !selectedApartment ||
+      !selectedApartment.deliveryDays ||
+      selectedApartment.deliveryDays.length === 0
+    )
+      return null
+
     const today = new Date()
-    const DAYS_OF_WEEK = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    const DAYS_OF_WEEK = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ]
 
     // Compute the next occurrence for each scheduled day, pick the soonest
-    const candidates = selectedApartment.deliveryDays.map((dayOfWeek: number) => {
-      const next = nextDay(today, dayOfWeek as Day)
-      return { dayOfWeek, next }
-    })
+    const candidates = selectedApartment.deliveryDays.map(
+      (dayOfWeek: number) => {
+        const next = nextDay(today, dayOfWeek as Day)
+        return { dayOfWeek, next }
+      }
+    )
     candidates.sort((a: any, b: any) => a.next.getTime() - b.next.getTime())
 
     const soonest = candidates[0]
@@ -346,7 +390,9 @@ export function CheckoutClient({
   const onSubmit = async (data: CheckoutFormValues) => {
     // Check if location is pinned before submission
     if (!locationPinned) {
-      toast.error("Please pin your delivery location on the map before placing your order")
+      toast.error(
+        "Please pin your delivery location on the map before placing your order"
+      )
       setMapHighlight(true)
       // Scroll to map section
       const mapElement = document.querySelector("#checkout-map") as HTMLElement
@@ -375,7 +421,9 @@ export function CheckoutClient({
           // Create Razorpay order (server will calculate total from cart)
           const razorpayRes = await createRazorpayOrderAction(data.districtId)
           if (!razorpayRes.success) {
-            toast.error((razorpayRes as any).error || "Failed to create payment order")
+            toast.error(
+              (razorpayRes as any).error || "Failed to create payment order"
+            )
             return
           }
 
@@ -417,7 +465,13 @@ export function CheckoutClient({
                 }
 
                 // Track purchase event
-                trackPurchase(orderRes.orderNumber || "", 0, cart.items.length, existingCustomer?._id?.toString() || "", districtSlug || "")
+                trackPurchase(
+                  orderRes.orderNumber || "",
+                  0,
+                  cart.items.length,
+                  existingCustomer?._id?.toString() || "",
+                  districtSlug || ""
+                )
 
                 toast.success("Payment successful")
                 window.location.href = `/order-confirmed/${orderRes.orderNumber}`
@@ -458,7 +512,13 @@ export function CheckoutClient({
           }
 
           // Track purchase event
-          trackPurchase((res as any).orderNumber || "", 0, cart.items.length, existingCustomer?._id?.toString() || "", districtSlug || "")
+          trackPurchase(
+            (res as any).orderNumber || "",
+            0,
+            cart.items.length,
+            existingCustomer?._id?.toString() || "",
+            districtSlug || ""
+          )
 
           toast.success("Order placed")
           window.location.href = `/order-confirmed/${(res as any).orderNumber}`
@@ -486,9 +546,7 @@ export function CheckoutClient({
 
   return (
     <div className="grid gap-6">
-      {!upcomingDeliveryDateInfo && (
-        <DeliveryBanner message={bannerMessage} />
-      )}
+      {!upcomingDeliveryDateInfo && <DeliveryBanner message={bannerMessage} />}
 
       <Card className="p-4">
         <div className="flex items-center justify-between">
@@ -818,19 +876,25 @@ export function CheckoutClient({
           </div>
 
           {upcomingDeliveryDateInfo && (
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-primary flex gap-3 items-start">
-              <CalendarClock className="h-5 w-5 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-primary">
+              <CalendarClock className="mt-0.5 h-5 w-5 shrink-0" />
               <div>
-                <div className="font-semibold mb-1">Upcoming Delivery</div>
+                <div className="mb-1 font-semibold">Upcoming Delivery</div>
                 <div>
-                  Deliveries for <strong>{selectedApartment.name}</strong> are scheduled every{" "}
+                  Deliveries for <strong>{selectedApartment.name}</strong> are
+                  scheduled every{" "}
                   <strong>
                     {upcomingDeliveryDateInfo.dayNames.length === 1
                       ? upcomingDeliveryDateInfo.dayNames[0]
-                      : upcomingDeliveryDateInfo.dayNames.slice(0, -1).join(", ") +
+                      : upcomingDeliveryDateInfo.dayNames
+                          .slice(0, -1)
+                          .join(", ") +
                         " & " +
-                        upcomingDeliveryDateInfo.dayNames[upcomingDeliveryDateInfo.dayNames.length - 1]}
-                  </strong>. Your next delivery is on{" "}
+                        upcomingDeliveryDateInfo.dayNames[
+                          upcomingDeliveryDateInfo.dayNames.length - 1
+                        ]}
+                  </strong>
+                  . Your next delivery is on{" "}
                   <strong>{upcomingDeliveryDateInfo.nextDateFormatted}</strong>.
                 </div>
               </div>
@@ -841,9 +905,9 @@ export function CheckoutClient({
 
           {/* Payment Method Selection */}
           <div>
-            <h3 className="text-sm font-semibold mb-3">Payment method</h3>
+            <h3 className="mb-3 text-sm font-semibold">Payment method</h3>
             <div className="grid gap-3">
-              <label className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+              <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-4 transition-colors hover:bg-muted/50">
                 <input
                   type="radio"
                   {...register("paymentMethod")}
@@ -853,12 +917,14 @@ export function CheckoutClient({
                 />
                 <div className="flex-1">
                   <div className="font-medium">Online Payment</div>
-                  <div className="text-xs text-muted-foreground">Pay securely with Razorpay</div>
+                  <div className="text-xs text-muted-foreground">
+                    Pay securely with Razorpay
+                  </div>
                 </div>
                 <CreditCard className="h-5 w-5 text-primary" />
               </label>
               {effectiveIsCodEnabled && (
-                <label className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+                <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-4 transition-colors hover:bg-muted/50">
                   <input
                     type="radio"
                     {...register("paymentMethod")}
@@ -868,14 +934,16 @@ export function CheckoutClient({
                   />
                   <div className="flex-1">
                     <div className="font-medium">Cash on Delivery</div>
-                    <div className="text-xs text-muted-foreground">Pay when you receive your order</div>
+                    <div className="text-xs text-muted-foreground">
+                      Pay when you receive your order
+                    </div>
                   </div>
                   <Banknote className="h-5 w-5 text-primary" />
                 </label>
               )}
             </div>
             {errors.paymentMethod && (
-              <div className="text-xs text-destructive mt-2">
+              <div className="mt-2 text-xs text-destructive">
                 {errors.paymentMethod.message}
               </div>
             )}
@@ -903,7 +971,10 @@ export function CheckoutClient({
                 disabled={isPending}
                 id="whatsappOptIn"
               />
-              <label htmlFor="whatsappOptIn" className="text-sm cursor-pointer select-none">
+              <label
+                htmlFor="whatsappOptIn"
+                className="cursor-pointer text-sm select-none"
+              >
                 Send me order updates by WhatsApp
               </label>
             </div>
@@ -913,7 +984,9 @@ export function CheckoutClient({
             type="submit"
             disabled={isPending}
             size="lg"
-            className={!locationPinned ? "opacity-50 cursor-not-allowed" : undefined}
+            className={
+              !locationPinned ? "cursor-not-allowed opacity-50" : undefined
+            }
             onClickCapture={(e) => {
               if (locationPinned) return
               e.preventDefault()
@@ -922,9 +995,14 @@ export function CheckoutClient({
                 "Please pin your delivery location on the map before placing your order"
               )
               setMapHighlight(true)
-              const mapElement = document.querySelector("#checkout-map") as HTMLElement
+              const mapElement = document.querySelector(
+                "#checkout-map"
+              ) as HTMLElement
               if (mapElement) {
-                mapElement.scrollIntoView({ behavior: "smooth", block: "center" })
+                mapElement.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                })
               }
               setTimeout(() => {
                 setMapHighlight(false)
@@ -934,7 +1012,7 @@ export function CheckoutClient({
             {paymentMethod === "online" ? "Pay Online" : "Place order (COD)"}
           </Button>
           {!locationPinned && (
-            <p className="text-xs text-muted-foreground text-center mt-2">
+            <p className="mt-2 text-center text-xs text-muted-foreground">
               Please pin your delivery location on the map to continue
             </p>
           )}
