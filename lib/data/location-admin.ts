@@ -122,23 +122,12 @@ export async function updateApartment(
   data: { name?: string; deliveryDays?: number[]; isCodEnabled?: boolean }
 ) {
   await connectDB()
-  const logMsg = `Updating apartment ${id} with data: ${JSON.stringify(data)}\n`
-  require("fs").appendFileSync(
-    "/home/ceo/projects/Ziver/FarmGreens/farmgreens-web-v1/scratch/db_log.txt",
-    logMsg
-  )
 
   const updated = await ApartmentModel.findByIdAndUpdate(
     id,
     { $set: data },
     { new: true }
   ).lean()
-
-  const resultMsg = `Updated apartment ${id} result isCodEnabled: ${updated?.isCodEnabled}\n`
-  require("fs").appendFileSync(
-    "/home/ceo/projects/Ziver/FarmGreens/farmgreens-web-v1/scratch/db_log.txt",
-    resultMsg
-  )
 
   if (!updated) throw new Error("Apartment not found")
   return updated
