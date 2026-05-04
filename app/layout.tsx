@@ -17,7 +17,7 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 })
 
-import { WhatsAppButton } from "@/components/ui/whatsapp-button"
+import { WhatsAppButtonWrapper } from "@/components/ui/whatsapp-button-wrapper"
 
 export default async function RootLayout({
   children,
@@ -38,7 +38,7 @@ export default async function RootLayout({
           <ThemeProvider>
             <CartProvider initialItems={cart.items}>
               {children}
-              <WhatsAppButton />
+              <WhatsAppButtonWrapper />
               <Toaster />
             </CartProvider>
           </ThemeProvider>
