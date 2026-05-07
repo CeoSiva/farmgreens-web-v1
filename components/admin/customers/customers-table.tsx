@@ -14,7 +14,8 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Search, Eye, User, Calendar } from "lucide-react"
+import { MoreHorizontal, Search, Eye, User, Calendar, FileDown } from "lucide-react"
+import Papa from "papaparse"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -295,6 +296,39 @@ export function CustomersTable({ data }: { data: CustomerRow[] }) {
     onGlobalFilterChange: setGlobalFilter,
   })
 
+  const exportToCSV = () => {
+    const rows = table.getFilteredRowModel().rows
+    const exportData = rows.map((row) => {
+      const customer = row.original
+      const addresses = customer.addresses || []
+      const primary = addresses.find((a) => a.isDefault) || addresses[0]
+
+      return {
+        Name: customer.name,
+        Mobile: customer.mobile,
+        "Order Count": customer.orderCount,
+        City: customer.districtName,
+        Area: customer.areaName,
+        Address: primary ? `${primary.door}, ${primary.street}` : "N/A",
+        WhatsApp: customer.whatsappOptIn ? "Opted In" : "Opted Out",
+        "Last Activity": customer.updatedAt
+          ? new Date(customer.updatedAt).toLocaleDateString()
+          : "N/A",
+      }
+    })
+
+    const csv = Papa.unparse(exportData)
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    link.setAttribute("download", `customers_export_${new Date().toISOString().split("T")[0]}.csv`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   React.useEffect(() => {
     table.getColumn("districtName")?.setFilterValue(cityFilter === "all" ? undefined : cityFilter)
   }, [cityFilter, table])
@@ -360,6 +394,15 @@ export function CustomersTable({ data }: { data: CustomerRow[] }) {
               disabled={activeFiltersCount === 0}
             >
               Clear filters
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportToCSV}
+              className="ml-auto"
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              Export CSV
             </Button>
           </div>
         </div>
