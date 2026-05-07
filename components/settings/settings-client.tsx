@@ -3,7 +3,16 @@
 import { useEffect, useMemo, useState, useTransition } from "react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import Papa from "papaparse"
 import { Switch } from "@/components/ui/switch"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card } from "@/components/ui/card"
@@ -59,7 +68,10 @@ import {
   deleteAreaAction,
   deleteDistrictAction,
   renameAreaAction,
+  updateAreaAction,
+  toggleAreaEnabledAction,
   bulkCreateAreasAction,
+  bulkUpdateAreasAction,
   createApartmentAction,
   deleteApartmentAction,
   updateApartmentAction,
@@ -115,7 +127,21 @@ export function SettingsClient({
 
   const [newDistrictName, setNewDistrictName] = useState("")
   const [newAreaName, setNewAreaName] = useState("")
-  const [bulkAreaNames, setBulkAreaNames] = useState("")
+  const [newAreaPincode, setNewAreaPincode] = useState("")
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [csvData, setCsvData] = useState<{ name: string; pincode?: string }[]>([])
+  const [isCsvParsed, setIsCsvParsed] = useState(false)
+
+  // Edit All mode state
+  const [isEditAllMode, setIsEditAllMode] = useState(false)
+  const [editAllData, setEditAllData] = useState<
+    { id: string; name: string; pincode: string; isEnabled: boolean }[]
+  >([])
+
+  // Area editing state
+  const [editingAreaId, setEditingAreaId] = useState<string | null>(null)
+  const [editAreaName, setEditAreaName] = useState("")
+  const [editAreaPincode, setEditAreaPincode] = useState("")
 
   const [newApartmentName, setNewApartmentName] = useState("")
   const [newApartmentDeliveryDays, setNewApartmentDeliveryDays] = useState<
@@ -361,25 +387,13 @@ export function SettingsClient({
       const res = await createAreaAction({
         districtId: selectedDistrictId,
         name: newAreaName,
+        pincode: newAreaPincode || undefined,
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
         toast.success("Area created")
         setNewAreaName("")
-        await fetchLocations(selectedDistrictId)
-        router.refresh()
-      }
-    })
-  }
-
-  const handleRenameArea = (id: string, currentName: string) => {
-    const name = window.prompt("Rename area", currentName)
-    if (!name) return
-    startTransition(async () => {
-      const res = await renameAreaAction({ id, name })
-      if ((res as any)?.error) toast.error((res as any).error)
-      else {
-        toast.success("Area renamed")
+        setNewAreaPincode("")
         await fetchLocations(selectedDistrictId)
         router.refresh()
       }
@@ -399,32 +413,184 @@ export function SettingsClient({
     })
   }
 
-  const bulkAddAreas = () => {
-    if (!selectedDistrictId) {
-      toast.error("Select a district first")
-      return
-    }
-    const names = bulkAreaNames
-      .split("\n")
-      .map((n) => n.trim())
-      .filter(Boolean)
-    if (names.length === 0) {
-      toast.error("Enter at least one area name")
-      return
-    }
+  const handleEditArea = (id: string, currentName: string, currentPincode?: string) => {
+    setEditingAreaId(id)
+    setEditAreaName(currentName)
+    setEditAreaPincode(currentPincode || "")
+  }
+
+  const handleUpdateArea = () => {
+    if (!editingAreaId || !editAreaName.trim()) return
     startTransition(async () => {
-      const res = await bulkCreateAreasAction({
-        districtId: selectedDistrictId,
-        names,
+      const res = await updateAreaAction({
+        id: editingAreaId,
+        name: editAreaName,
+        pincode: editAreaPincode || undefined,
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
-        toast.success(`Created ${(res as any).count} areas`)
-        setBulkAreaNames("")
+        toast.success("Area updated")
+        setEditingAreaId(null)
         await fetchLocations(selectedDistrictId)
         router.refresh()
       }
     })
+  }
+
+  const handleToggleAreaEnabled = (id: string, enabled: boolean) => {
+    setAreas((prev) =>
+      prev.map((a) =>
+        String(a._id) === id ? { ...a, isEnabled: enabled } : a
+      )
+    )
+    startTransition(async () => {
+      const res = await toggleAreaEnabledAction(id, enabled)
+      if ((res as any)?.error) {
+        toast.error((res as any).error)
+        await fetchLocations(selectedDistrictId)
+      } else {
+        toast.success(`Area ${enabled ? "enabled" : "disabled"}`)
+        await fetchLocations(selectedDistrictId)
+        router.refresh()
+      }
+    })
+  }
+
+  const startEditAllMode = () => {
+    setEditAllData(
+      areas.map((a: any) => ({
+        id: String(a._id),
+        name: a.name || "",
+        pincode: a.pincode || "",
+        isEnabled: a.isEnabled !== false,
+      }))
+    )
+    setIsEditAllMode(true)
+  }
+
+  const cancelEditAllMode = () => {
+    setIsEditAllMode(false)
+    setEditAllData([])
+  }
+
+  const handleEditAllFieldChange = (
+    id: string,
+    field: "name" | "pincode" | "isEnabled",
+    value: string | boolean
+  ) => {
+    setEditAllData((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    )
+  }
+
+  const handleDeleteEditAllItem = (id: string) => {
+    setEditAllData((prev) => prev.filter((item) => item.id !== id))
+  }
+
+  const saveEditAll = () => {
+    if (!selectedDistrictId) return
+
+    const validItems = editAllData.filter((item) => item.name.trim())
+    if (validItems.length === 0) {
+      toast.error("No valid areas to save")
+      return
+    }
+
+    console.log("Saving areas:", JSON.stringify(validItems, null, 2))
+
+    startTransition(async () => {
+      const res = await bulkUpdateAreasAction(validItems)
+      console.log("Save result:", res)
+      if ((res as any)?.error) {
+        toast.error((res as any).error)
+      } else {
+        toast.success(`Updated ${(res as any).count} areas`)
+        setIsEditAllMode(false)
+        setEditAllData([])
+        await fetchLocations(selectedDistrictId)
+        router.refresh()
+      }
+    })
+  }
+
+  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) {
+      setCsvFile(null)
+      setCsvData([])
+      setIsCsvParsed(false)
+      return
+    }
+
+    if (!file.name.endsWith(".csv")) {
+      toast.error("Please select a CSV file")
+      return
+    }
+
+    setCsvFile(file)
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        if (results.errors.length > 0) {
+          toast.error("Error parsing CSV file")
+          return
+        }
+
+        const data = results.data as Record<string, string>[]
+        const parsedAreas = data
+          .map((row) => ({
+            name: row.name?.trim() || row.Name?.trim() || "",
+            pincode: row.pincode?.trim() || row.Pincode?.trim() || undefined,
+          }))
+          .filter((a) => a.name)
+
+        if (parsedAreas.length === 0) {
+          toast.error("No valid areas found in CSV")
+          return
+        }
+
+        setCsvData(parsedAreas)
+        setIsCsvParsed(true)
+      },
+    })
+  }
+
+  const handleCsvUpload = () => {
+    if (!selectedDistrictId) {
+      toast.error("Select a district first")
+      return
+    }
+
+    if (csvData.length === 0) {
+      toast.error("No areas to upload")
+      return
+    }
+
+    startTransition(async () => {
+      const res = await bulkCreateAreasAction({
+        districtId: selectedDistrictId,
+        areas: csvData,
+      })
+      if ((res as any)?.error) toast.error((res as any).error)
+      else {
+        toast.success(`Created ${(res as any).count} areas`)
+        setCsvFile(null)
+        setCsvData([])
+        setIsCsvParsed(false)
+        await fetchLocations(selectedDistrictId)
+        router.refresh()
+      }
+    })
+  }
+
+  const resetCsvUpload = () => {
+    setCsvFile(null)
+    setCsvData([])
+    setIsCsvParsed(false)
   }
 
   const addApartment = () => {
@@ -848,23 +1014,61 @@ export function SettingsClient({
                           </TabsTrigger>
                         </TabsList>
 
-                    {/* Areas Sub-Tab */}
-                    <TabsContent value="areas" className="mt-0 space-y-4">
-                      <div className="flex gap-3">
-                        <Input
-                          placeholder="New area name..."
-                          value={newAreaName}
-                          onChange={(e) => setNewAreaName(e.target.value)}
-                          disabled={isPending}
-                          className="max-w-xs"
-                        />
-                        <Button
-                          onClick={addArea}
-                          disabled={isPending || !newAreaName}
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Area
-                        </Button>
+{/* Areas Sub-Tab */}
+                      <TabsContent value="areas" className="mt-0 space-y-4">
+                        <div className="flex gap-3">
+                          <Input
+                            placeholder="Area name"
+                            value={newAreaName}
+                            onChange={(e) => setNewAreaName(e.target.value)}
+                            disabled={isPending}
+                            className="max-w-[200px]"
+                          />
+                          <Input
+                            placeholder="Pincode (e.g. 600001)"
+                            value={newAreaPincode}
+                            onChange={(e) => setNewAreaPincode(e.target.value)}
+                            disabled={isPending}
+                            className="max-w-[150px]"
+                          />
+                          <Button
+                            onClick={addArea}
+                            disabled={isPending || !newAreaName}
+                          >
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Area
+                          </Button>
+                        </div>
+
+                      <div className="flex items-center justify-between">
+                        {isEditAllMode ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={cancelEditAllMode}
+                          >
+                            Cancel Edit All
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={startEditAllMode}
+                            disabled={areas.length === 0}
+                          >
+                            <Edit2 className="mr-2 h-4 w-4" />
+                            Edit All
+                          </Button>
+                        )}
+                        {isEditAllMode && (
+                          <Button
+                            size="sm"
+                            onClick={saveEditAll}
+                            disabled={isPending}
+                          >
+                            Save All Changes ({editAllData.length})
+                          </Button>
+                        )}
                       </div>
 
                       <div className="rounded-md border">
@@ -872,6 +1076,8 @@ export function SettingsClient({
                           <TableHeader>
                             <TableRow>
                               <TableHead>Area Name</TableHead>
+                              <TableHead>Pincode</TableHead>
+                              <TableHead>Status</TableHead>
                               <TableHead className="w-[100px] text-right">
                                 Actions
                               </TableHead>
@@ -881,17 +1087,88 @@ export function SettingsClient({
                             {areas.length === 0 ? (
                               <TableRow>
                                 <TableCell
-                                  colSpan={2}
+                                  colSpan={4}
                                   className="h-24 text-center text-muted-foreground"
                                 >
                                   No areas defined in this district.
                                 </TableCell>
                               </TableRow>
+                            ) : isEditAllMode ? (
+                              editAllData.map((item) => (
+                                <TableRow key={item.id}>
+                                  <TableCell>
+                                    <Input
+                                      value={item.name}
+                                      onChange={(e) =>
+                                        handleEditAllFieldChange(
+                                          item.id,
+                                          "name",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="h-8"
+                                      placeholder="Area name"
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Input
+                                      value={item.pincode}
+                                      onChange={(e) =>
+                                        handleEditAllFieldChange(
+                                          item.id,
+                                          "pincode",
+                                          e.target.value
+                                        )
+                                      }
+                                      className="h-8"
+                                      placeholder="Pincode"
+                                    />
+                                  </TableCell>
+                                  <TableCell>
+                                    <Switch
+                                      checked={item.isEnabled}
+                                      onCheckedChange={(checked) =>
+                                        handleEditAllFieldChange(
+                                          item.id,
+                                          "isEnabled",
+                                          checked
+                                        )
+                                      }
+                                    />
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-destructive hover:text-destructive"
+                                      onClick={() =>
+                                        handleDeleteEditAllItem(item.id)
+                                      }
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))
                             ) : (
                               areas.map((a) => (
                                 <TableRow key={a._id}>
                                   <TableCell className="font-medium">
                                     {a.name}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground">
+                                    {a.pincode || "-"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Switch
+                                      checked={a.isEnabled !== false}
+                                      onCheckedChange={(checked) =>
+                                        handleToggleAreaEnabled(
+                                          String(a._id),
+                                          checked
+                                        )
+                                      }
+                                    />
                                   </TableCell>
                                   <TableCell className="text-right">
                                     <DropdownMenu>
@@ -907,14 +1184,15 @@ export function SettingsClient({
                                       <DropdownMenuContent align="end">
                                         <DropdownMenuItem
                                           onClick={() =>
-                                            handleRenameArea(
+                                            handleEditArea(
                                               String(a._id),
-                                              a.name
+                                              a.name,
+                                              a.pincode
                                             )
                                           }
                                         >
                                           <Edit2 className="mr-2 h-4 w-4" />
-                                          Rename
+                                          Edit
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                           className="text-destructive focus:text-destructive"
@@ -935,34 +1213,138 @@ export function SettingsClient({
                         </Table>
                       </div>
 
+                      <Sheet
+                        open={!!editingAreaId}
+                        onOpenChange={(open) => {
+                          if (!open) {
+                            setEditingAreaId(null)
+                            setEditAreaName("")
+                            setEditAreaPincode("")
+                          }
+                        }}
+                      >
+                        <SheetContent>
+                          <SheetHeader>
+                            <SheetTitle>Edit Area</SheetTitle>
+                            <SheetDescription>
+                              Update the area name and pincode.
+                            </SheetDescription>
+                          </SheetHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <label className="text-sm font-medium">
+                                Area Name
+                              </label>
+                              <Input
+                                value={editAreaName}
+                                onChange={(e) =>
+                                  setEditAreaName(e.target.value)
+                                }
+                                placeholder="Area name"
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <label className="text-sm font-medium">
+                                Pincode
+                              </label>
+                              <Input
+                                value={editAreaPincode}
+                                onChange={(e) =>
+                                  setEditAreaPincode(e.target.value)
+                                }
+                                placeholder="Pincode (e.g. 600001)"
+                              />
+                            </div>
+                            <Button
+                              onClick={handleUpdateArea}
+                              disabled={isPending || !editAreaName.trim()}
+                              className="w-full"
+                            >
+                              Save Changes
+                            </Button>
+                          </div>
+                        </SheetContent>
+                      </Sheet>
+
                       <Accordion type="single" collapsible className="w-full">
                         <AccordionItem value="bulk-areas">
                           <AccordionTrigger className="text-sm font-medium">
-                            Bulk Add Areas
+                            Bulk Add Areas (CSV Import)
                           </AccordionTrigger>
                           <AccordionContent>
-                            <div className="grid gap-3 pt-2">
-                              <p className="text-xs text-muted-foreground">
-                                Enter one area name per line.
-                              </p>
-                              <Textarea
-                                className="min-h-[100px]"
-                                placeholder="Area 1&#10;Area 2&#10;Area 3"
-                                value={bulkAreaNames}
-                                onChange={(e) =>
-                                  setBulkAreaNames(e.target.value)
-                                }
-                                disabled={isPending}
-                              />
-                              <div>
-                                <Button
-                                  onClick={bulkAddAreas}
-                                  disabled={isPending || !bulkAreaNames.trim()}
-                                  variant="secondary"
-                                >
-                                  Submit Bulk Add
-                                </Button>
+                            <div className="grid gap-4 pt-2">
+                              <div className="rounded-lg border border-dashed p-4">
+                                <div className="flex flex-col gap-3">
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="file"
+                                      accept=".csv"
+                                      onChange={handleCsvFileChange}
+                                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:mr-4 file:inline-flex file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground file:hover:bg-primary/90"
+                                    />
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    <span className="font-medium">CSV Format:</span> name, pincode
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Example CSV:
+                                  </p>
+                                  <code className="block whitespace-nowrap rounded bg-muted p-2 text-xs">
+                                    name,pincode{'\n'}Anna Nagar,600001{'\n'}T Nagar,600018{'\n'}Nungambakkam,600034
+                                  </code>
+                                </div>
                               </div>
+
+                              {isCsvParsed && csvData.length > 0 && (
+                                <div className="rounded-md border">
+                                  <div className="flex items-center justify-between px-3 py-2">
+                                    <span className="text-sm font-medium">
+                                      {csvData.length} areas ready to import
+                                    </span>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={resetCsvUpload}
+                                    >
+                                      Reset
+                                    </Button>
+                                  </div>
+                                  <div className="max-h-40 overflow-auto">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead>Name</TableHead>
+                                          <TableHead>Pincode</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {csvData.slice(0, 5).map((area, idx) => (
+                                          <TableRow key={idx}>
+                                            <TableCell className="py-1">{area.name}</TableCell>
+                                            <TableCell className="py-1">{area.pincode || "-"}</TableCell>
+                                          </TableRow>
+                                        ))}
+                                        {csvData.length > 5 && (
+                                          <TableRow>
+                                            <TableCell colSpan={2} className="py-1 text-xs text-muted-foreground">
+                                              ...and {csvData.length - 5} more
+                                            </TableCell>
+                                          </TableRow>
+                                        )}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                  <div className="px-3 py-2">
+                                    <Button
+                                      onClick={handleCsvUpload}
+                                      disabled={isPending}
+                                      className="w-full"
+                                    >
+                                      Import {csvData.length} Areas
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </AccordionContent>
                         </AccordionItem>

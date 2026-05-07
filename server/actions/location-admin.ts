@@ -12,14 +12,18 @@ import {
   deleteDistrict,
   createArea,
   renameArea,
+  updateArea,
   deleteArea,
   bulkCreateAreas,
+  bulkUpdateAreas,
   createApartment,
   renameApartment,
   updateApartment,
   deleteApartment,
   bulkCreateApartments,
   bulkUpdateApartmentDeliveryDays,
+  findAreaByPincode,
+  listEnabledAreasByDistrict,
 } from "@/lib/data/location-admin"
 
 export async function createDistrictAction(payload: { name: string }) {
@@ -89,11 +93,17 @@ export async function deleteDistrictAction(payload: { id: string }) {
 export async function createAreaAction(payload: {
   districtId: string
   name: string
+  pincode?: string
 }) {
   const parsed = AreaSchema.safeParse(payload)
   if (!parsed.success) return { error: "Invalid area" }
   try {
-    const area = await createArea(parsed.data.districtId, parsed.data.name)
+    const area = await createArea(
+      parsed.data.districtId,
+      parsed.data.name,
+      parsed.data.pincode,
+      parsed.data.isEnabled ?? true
+    )
     revalidatePath("/fmg-admin/settings")
     return { success: true, area: JSON.parse(JSON.stringify(area)) }
   } catch (e: any) {
@@ -113,6 +123,45 @@ export async function renameAreaAction(payload: { id: string; name: string }) {
   }
 }
 
+export async function updateAreaAction(payload: {
+  id: string
+  name?: string
+  pincode?: string
+  isEnabled?: boolean
+}) {
+  const parsed = AreaSchema.partial().safeParse(payload)
+  if (!parsed.success) return { error: "Invalid area data" }
+  try {
+    const area = await updateArea(payload.id, parsed.data)
+    revalidatePath("/fmg-admin/settings")
+    return { success: true, area: JSON.parse(JSON.stringify(area)) }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to update area" }
+  }
+}
+
+export async function toggleAreaEnabledAction(id: string, enabled: boolean) {
+  try {
+    await updateArea(id, { isEnabled: enabled })
+    revalidatePath("/fmg-admin/settings", "page")
+    return { success: true }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to toggle area visibility" }
+  }
+}
+
+export async function bulkUpdateAreasAction(
+  areas: { id: string; name: string; pincode?: string; isEnabled: boolean }[]
+) {
+  try {
+    await bulkUpdateAreas(areas)
+    revalidatePath("/fmg-admin/settings")
+    return { success: true, count: areas.length }
+} catch (e: any) {
+    return { error: e?.message ?? "Failed to update areas" }
+  }
+}
+
 export async function deleteAreaAction(payload: { id: string }) {
   try {
     await deleteArea(payload.id)
@@ -125,15 +174,15 @@ export async function deleteAreaAction(payload: { id: string }) {
 
 export async function bulkCreateAreasAction(payload: {
   districtId: string
-  names: string[]
+  areas: { name: string; pincode?: string }[]
 }) {
   if (!payload.districtId) return { error: "District is required" }
-  const names = payload.names.map((n) => n.trim()).filter(Boolean)
-  if (names.length === 0) return { error: "No valid area names provided" }
+  const areas = payload.areas.filter((a) => a.name.trim())
+  if (areas.length === 0) return { error: "No valid area names provided" }
   try {
-    const areas = await bulkCreateAreas(payload.districtId, names)
+    const created = await bulkCreateAreas(payload.districtId, areas)
     revalidatePath("/fmg-admin/settings")
-    return { success: true, count: areas.length }
+    return { success: true, count: created.length }
   } catch (e: any) {
     return { error: e?.message ?? "Failed to create areas" }
   }
@@ -248,5 +297,26 @@ export async function bulkAssignDeliveryDaysAction(payload: {
     return { success: true }
   } catch (e: any) {
     return { error: e?.message ?? "Failed to assign delivery days" }
+  }
+}
+
+export async function findAreaByPincodeAction(
+  pincode: string,
+  districtId: string
+) {
+  try {
+    const area = await findAreaByPincode(pincode, districtId)
+    return { success: true, area }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to find area" }
+  }
+}
+
+export async function listEnabledAreasByDistrictAction(districtId: string) {
+  try {
+    const areas = await listEnabledAreasByDistrict(districtId)
+    return { success: true, areas: JSON.parse(JSON.stringify(areas)) }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to list areas" }
   }
 }

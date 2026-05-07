@@ -16,6 +16,8 @@ export const DistrictSchema = z.object({
 export const AreaSchema = z.object({
   districtId: z.string().min(1, "District is required"),
   name: z.string().min(1, "Area name is required"),
+  pincode: z.string().optional(),
+  isEnabled: z.boolean().optional(),
 })
 
 export const ApartmentSchema = z.object({

@@ -1,17 +1,29 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api"
 import { MapPin, Navigation } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 
-const libraries: ("places" | "geometry")[] = ["places", "geometry"]
+const libraries: ("places" | "geometry" | "geocoding")[] = [
+  "places",
+  "geometry",
+  "geocoding",
+]
+
+export interface GeocodedAddress {
+  fullAddress: string
+  pincode?: string
+  area?: string
+  city?: string
+}
 
 interface MapPickerProps {
   initialLat?: number
   initialLng?: number
   onLocationChange: (lat: number, lng: number) => void
+  onAddressChange?: (address: GeocodedAddress | null) => void
   highlight?: boolean
 }
 
@@ -25,11 +37,77 @@ const DEFAULT_CENTER = {
   lng: 80.2707,
 }
 
-export function MapPicker({ initialLat, initialLng, onLocationChange, highlight = false }: MapPickerProps) {
+export function MapPicker({
+  initialLat,
+  initialLng,
+  onLocationChange,
+  onAddressChange,
+  highlight = false,
+}: MapPickerProps) {
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries,
   })
+
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null)
+
+  const geocodeLocation = useCallback(
+    async (lat: number, lng: number) => {
+      if (!onAddressChange) return
+
+      if (!geocoderRef.current && isLoaded) {
+        geocoderRef.current = new google.maps.Geocoder()
+      }
+
+      if (!geocoderRef.current) return
+
+      try {
+        const results = await new Promise<google.maps.GeocoderResult | null>(
+          (resolve) => {
+            geocoderRef.current!.geocode(
+              { location: { lat, lng } },
+              (results) => resolve(results?.[0] || null)
+            )
+          }
+        )
+
+        if (results) {
+          const addressComponents = results.address_components
+          let pincode: string | undefined
+          let area: string | undefined
+          let city: string | undefined
+
+          for (const component of addressComponents) {
+            if (component.types.includes("postal_code")) {
+              pincode = component.long_name
+            }
+            if (
+              component.types.includes("sublocality") ||
+              component.types.includes("neighborhood")
+            ) {
+              area = component.long_name
+            }
+            if (component.types.includes("locality")) {
+              city = component.long_name
+            }
+          }
+
+          onAddressChange({
+            fullAddress: results.formatted_address,
+            pincode,
+            area,
+            city,
+          })
+        } else {
+          onAddressChange(null)
+        }
+      } catch (error) {
+        console.error("Geocoding error:", error)
+        onAddressChange(null)
+      }
+    },
+    [isLoaded, onAddressChange]
+  )
 
   const [center, setCenter] = useState<{ lat: number; lng: number }>(
     initialLat && initialLng ? { lat: initialLat, lng: initialLng } : DEFAULT_CENTER
@@ -59,6 +137,7 @@ export function MapPicker({ initialLat, initialLng, onLocationChange, highlight 
     if (lat !== undefined && lng !== undefined) {
       setMarkerPosition({ lat, lng })
       onLocationChange(lat, lng)
+      geocodeLocation(lat, lng)
     }
   }
 
@@ -68,6 +147,7 @@ export function MapPicker({ initialLat, initialLng, onLocationChange, highlight 
     if (lat !== undefined && lng !== undefined) {
       setMarkerPosition({ lat, lng })
       onLocationChange(lat, lng)
+      geocodeLocation(lat, lng)
     }
   }
 
@@ -85,6 +165,7 @@ export function MapPicker({ initialLat, initialLng, onLocationChange, highlight 
         setCenter(newPosition)
         setMarkerPosition(newPosition)
         onLocationChange(latitude, longitude)
+        geocodeLocation(latitude, longitude)
         setIsLoadingLocation(false)
         setShowOverlay(false)
 

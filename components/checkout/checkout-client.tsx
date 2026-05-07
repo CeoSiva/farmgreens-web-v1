@@ -41,7 +41,7 @@ import {
   listAreasByDistrictAction,
   listApartmentsByDistrictAction,
 } from "@/server/actions/location"
-import { createAreaAction } from "@/server/actions/location-admin"
+import { createAreaAction, findAreaByPincodeAction } from "@/server/actions/location-admin"
 import { placeOrderAction } from "@/server/actions/order"
 import {
   createRazorpayOrderAction,
@@ -63,7 +63,7 @@ import {
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Separator } from "@/components/ui/separator"
-import { MapPicker } from "@/components/checkout/map-picker"
+import { MapPicker, type GeocodedAddress } from "@/components/checkout/map-picker"
 import {
   Popover,
   PopoverContent,
@@ -100,6 +100,7 @@ export function CheckoutClient({
   const [mapHighlight, setMapHighlight] = useState(false)
   const [isOutOfRadius, setIsOutOfRadius] = useState(false)
   const [showRadiusWarning, setShowRadiusWarning] = useState(false)
+  const [areaNotAvailable, setAreaNotAvailable] = useState(false)
 
   const {
     register,
@@ -136,6 +137,8 @@ export function CheckoutClient({
     setValue("lat", newLat)
     setValue("lng", newLng)
     setLocationPinned(true)
+    setAreaNotAvailable(false)
+    setShowRadiusWarning(false)
 
     // Check if within radius if district has configuration
     const currentDistrict = districts.find(
@@ -158,10 +161,39 @@ export function CheckoutClient({
 
         if (distance > currentDistrict.deliveryRadius) {
           setIsOutOfRadius(true)
-          setShowRadiusWarning(true)
+          // Don't show warning yet - wait for area check
         } else {
           setIsOutOfRadius(false)
         }
+      }
+    }
+  }
+
+  const handleAddressChange = async (address: GeocodedAddress | null) => {
+    if (!address?.pincode || !districtId) {
+      setAreaNotAvailable(false)
+      // Show warning if outside radius and no pincode to validate
+      if (isOutOfRadius) {
+        setShowRadiusWarning(true)
+      }
+      return
+    }
+
+    // Find area by pincode for this district
+    const res = await findAreaByPincodeAction(address.pincode, districtId)
+
+    if ((res as any)?.area) {
+      // Found matching enabled area - auto-select it
+      setValue("areaId", (res as any).area._id)
+      setAreaNotAvailable(false)
+      // Even if outside radius, area is enabled - allow order
+      setShowRadiusWarning(false)
+    } else {
+      // No matching enabled area found
+      setAreaNotAvailable(true)
+      // Show warning only if also outside radius (both conditions fail)
+      if (isOutOfRadius) {
+        setShowRadiusWarning(true)
       }
     }
   }
@@ -447,10 +479,21 @@ export function CheckoutClient({
       return
     }
 
-    // Check if location is serviceable
-    if (isOutOfRadius) {
-      setShowRadiusWarning(true)
-      return
+    // For non-apartment orders: Allow if within radius OR area is enabled (OR logic)
+    // For apartment orders: Bypass area/radius validation (existing behavior)
+    const isNonApartmentOrder = !selectedApartment
+    if (isNonApartmentOrder) {
+      if (isOutOfRadius && areaNotAvailable) {
+        // Block only when BOTH radius AND area validation fail
+        toast.error(
+          "Delivery is not available in your area. We only deliver within our delivery radius or to serviceable areas."
+        )
+        return
+      }
+      // Reset radius warning if at least one condition passes
+      if (!isOutOfRadius && showRadiusWarning) {
+        setShowRadiusWarning(false)
+      }
     }
 
     // Check for validation errors before submission
@@ -911,12 +954,21 @@ export function CheckoutClient({
                   initialLat={lat !== 0 ? lat : undefined}
                   initialLng={lng !== 0 ? lng : undefined}
                   onLocationChange={handleLocationChange}
+                  onAddressChange={handleAddressChange}
                   highlight={mapHighlight}
                 />
               </div>
               {errors.lat && (
                 <div className="text-xs text-destructive">
                   {errors.lat.message}
+                </div>
+              )}
+              {areaNotAvailable && !selectedApartment && (
+                <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>
+                    This area is not serviceable. You can still order if your location is within our delivery radius.
+                  </span>
                 </div>
               )}
             </div>
