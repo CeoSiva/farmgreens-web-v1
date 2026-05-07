@@ -1,11 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { GoogleMap, Marker, Circle, useJsApiLoader } from "@react-google-maps/api"
+import { GoogleMap, Marker, Circle, useJsApiLoader, Autocomplete } from "@react-google-maps/api"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { MapPin, Target } from "lucide-react"
+import { MapPin, Target, Search } from "lucide-react"
 
 const libraries: ("places" | "geometry")[] = ["places", "geometry"]
 
@@ -41,6 +41,7 @@ export function DistrictRadiusPicker({
     initialCenter || DEFAULT_CENTER
   )
   const [radius, setRadius] = useState<number>(initialRadius)
+  const [autocomplete, setAutocomplete] = useState<google.maps.places.Autocomplete | null>(null)
   const mapRef = useRef<google.maps.Map | null>(null)
 
   useEffect(() => {
@@ -68,6 +69,21 @@ export function DistrictRadiusPicker({
     const value = parseFloat(e.target.value)
     if (!isNaN(value)) {
       setRadius(value * 1000) // Convert km to meters
+    }
+  }
+
+  const onPlaceChanged = () => {
+    if (autocomplete !== null) {
+      const place = autocomplete.getPlace()
+      const lat = place.geometry?.location?.lat()
+      const lng = place.geometry?.location?.lng()
+      if (lat !== undefined && lng !== undefined) {
+        setCenter({ lat, lng })
+        mapRef.current?.panTo({ lat, lng })
+        mapRef.current?.setZoom(15)
+      }
+    } else {
+      console.log("Autocomplete is not loaded yet!")
     }
   }
 
@@ -113,7 +129,27 @@ export function DistrictRadiusPicker({
         </div>
       </div>
 
-      <Card className="overflow-hidden border-2 border-muted shadow-inner relative">
+      <div className="relative group">
+        <div className="absolute top-3 left-3 right-3 z-10">
+          <Autocomplete
+            onLoad={(ac) => setAutocomplete(ac)}
+            onPlaceChanged={onPlaceChanged}
+          >
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Search for a place to mark center..."
+                className="h-10 pl-9 pr-4 bg-background/95 backdrop-blur-sm shadow-md border-primary/20 focus-visible:ring-primary w-full"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") e.preventDefault()
+                }}
+              />
+            </div>
+          </Autocomplete>
+        </div>
+
+        <Card className="overflow-hidden border-2 border-muted shadow-inner relative">
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={center}
@@ -160,6 +196,7 @@ export function DistrictRadiusPicker({
           </Button>
         </div>
       </Card>
+      </div>
       
       <div className="rounded-lg bg-primary/5 p-3 text-xs text-muted-foreground flex items-start gap-2 border border-primary/10">
         <Target className="h-4 w-4 text-primary shrink-0 mt-0.5" />
