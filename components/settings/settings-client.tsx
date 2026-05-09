@@ -63,6 +63,7 @@ import {
   updateDistrictAction,
   toggleDistrictCodAction,
   toggleDistrictEnabledAction,
+  toggleDistrictApartmentsAction,
   toggleApartmentCodAction,
   createAreaAction,
   deleteAreaAction,
@@ -141,6 +142,10 @@ export function SettingsClient({
   // Area editing state
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null)
   const [editAreaName, setEditAreaName] = useState("")
+
+  // Search state
+  const [areaSearchQuery, setAreaSearchQuery] = useState("")
+  const [apartmentSearchQuery, setApartmentSearchQuery] = useState("")
   const [editAreaPincode, setEditAreaPincode] = useState("")
 
   const [newApartmentName, setNewApartmentName] = useState("")
@@ -218,6 +223,8 @@ export function SettingsClient({
   const [districtEnabledOverrides, setDistrictEnabledOverrides] = useState<
     Record<string, boolean>
   >({})
+  const [districtApartmentsOverrides, setDistrictApartmentsOverrides] =
+    useState<Record<string, boolean>>({})
 
   const districtById = useMemo(() => {
     const m = new Map<string, any>()
@@ -341,6 +348,29 @@ export function SettingsClient({
         })
       } else {
         toast.success(`COD ${enabled ? "enabled" : "disabled"} for district`)
+        router.refresh()
+      }
+    })
+  }
+
+  const handleToggleDistrictApartments = (id: string, enabled: boolean) => {
+    // Optimistic update
+    setDistrictApartmentsOverrides((prev) => ({ ...prev, [id]: enabled }))
+
+    startTransition(async () => {
+      const res = await toggleDistrictApartmentsAction(id, enabled)
+      if ((res as any)?.error) {
+        toast.error((res as any).error)
+        // Revert on error
+        setDistrictApartmentsOverrides((prev) => {
+          const next = { ...prev }
+          delete next[id]
+          return next
+        })
+      } else {
+        toast.success(
+          `Apartment selection ${enabled ? "enabled" : "disabled"} for district`
+        )
         router.refresh()
       }
     })
@@ -989,6 +1019,25 @@ export function SettingsClient({
                         disabled={isPending}
                       />
                     </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Apartments</span>
+                      <Switch
+                        checked={
+                          districtApartmentsOverrides[selectedDistrictId] !==
+                          undefined
+                            ? districtApartmentsOverrides[selectedDistrictId]
+                            : districtById.get(selectedDistrictId)
+                                ?.hasApartments !== false
+                        }
+                        onCheckedChange={(checked) =>
+                          handleToggleDistrictApartments(
+                            selectedDistrictId,
+                            checked
+                          )
+                        }
+                        disabled={isPending}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1071,6 +1120,24 @@ export function SettingsClient({
                         )}
                       </div>
 
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Search areas..."
+                          value={areaSearchQuery}
+                          onChange={(e) => setAreaSearchQuery(e.target.value)}
+                          className="max-w-[200px]"
+                        />
+                        {areaSearchQuery && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setAreaSearchQuery("")}
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+
                       <div className="rounded-md border">
                         <Table>
                           <TableHeader>
@@ -1093,8 +1160,46 @@ export function SettingsClient({
                                   No areas defined in this district.
                                 </TableCell>
                               </TableRow>
+                            ) : (isEditAllMode
+                                ? editAllData.filter(
+                                    (item) =>
+                                      item.name
+                                        .toLowerCase()
+                                        .includes(areaSearchQuery.toLowerCase()) ||
+                                      (item.pincode || "")
+                                        .toLowerCase()
+                                        .includes(areaSearchQuery.toLowerCase())
+                                  )
+                                : areas.filter(
+                                    (a) =>
+                                      a.name
+                                        .toLowerCase()
+                                        .includes(areaSearchQuery.toLowerCase()) ||
+                                      (a.pincode || "")
+                                        .toLowerCase()
+                                        .includes(areaSearchQuery.toLowerCase())
+                                  )
+                              ).length === 0 ? (
+                              <TableRow>
+                                <TableCell
+                                  colSpan={4}
+                                  className="h-24 text-center text-muted-foreground"
+                                >
+                                  No areas match your search.
+                                </TableCell>
+                              </TableRow>
                             ) : isEditAllMode ? (
-                              editAllData.map((item) => (
+                              editAllData
+                                .filter(
+                                  (item) =>
+                                    item.name
+                                      .toLowerCase()
+                                      .includes(areaSearchQuery.toLowerCase()) ||
+                                    (item.pincode || "")
+                                      .toLowerCase()
+                                      .includes(areaSearchQuery.toLowerCase())
+                                )
+                                .map((item) => (
                                 <TableRow key={item.id}>
                                   <TableCell>
                                     <Input
@@ -1151,7 +1256,17 @@ export function SettingsClient({
                                 </TableRow>
                               ))
                             ) : (
-                              areas.map((a) => (
+                              areas
+                                .filter(
+                                  (a) =>
+                                    a.name
+                                      .toLowerCase()
+                                      .includes(areaSearchQuery.toLowerCase()) ||
+                                    (a.pincode || "")
+                                      .toLowerCase()
+                                      .includes(areaSearchQuery.toLowerCase())
+                                )
+                                .map((a) => (
                                 <TableRow key={a._id}>
                                   <TableCell className="font-medium">
                                     {a.name}
@@ -1465,6 +1580,24 @@ export function SettingsClient({
                         </div>
                       )}
 
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="Search apartments..."
+                          value={apartmentSearchQuery}
+                          onChange={(e) => setApartmentSearchQuery(e.target.value)}
+                          className="max-w-[200px]"
+                        />
+                        {apartmentSearchQuery && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setApartmentSearchQuery("")}
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+
                       <div className="rounded-md border">
                         <Table>
                           <TableHeader>
@@ -1513,7 +1646,23 @@ export function SettingsClient({
                                 </TableCell>
                               </TableRow>
                             ) : (
-                              apartments.map((a: any) => (
+                              (() => {
+                                const filteredApartments = apartments.filter((a: any) =>
+                                  a.name.toLowerCase().includes(apartmentSearchQuery.toLowerCase())
+                                )
+                                if (filteredApartments.length === 0) {
+                                  return (
+                                    <TableRow>
+                                      <TableCell
+                                        colSpan={5}
+                                        className="h-24 text-center text-muted-foreground"
+                                      >
+                                        No apartments match your search.
+                                      </TableCell>
+                                    </TableRow>
+                                  )
+                                }
+                                return filteredApartments.map((a: any) => (
                                 <TableRow key={a._id}>
                                   {editingApartmentId === String(a._id) ? (
                                     <TableCell colSpan={5} className="p-2">
@@ -1671,6 +1820,7 @@ export function SettingsClient({
                                   )}
                                 </TableRow>
                               ))
+                              })()
                             )}
                           </TableBody>
                         </Table>

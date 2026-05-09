@@ -16,6 +16,7 @@ export async function updateDistrict(
     name?: string
     isCodEnabled?: boolean
     isEnabled?: boolean
+    hasApartments?: boolean
     deliveryCenter?: { lat: number; lng: number }
     deliveryRadius?: number
   }
@@ -137,11 +138,24 @@ export async function findAreaByPincode(
   districtId: string
 ) {
   await connectDB()
-  return AreaModel.findOne({
-    pincode,
+
+  const normalizedPincode = pincode?.trim()
+
+  let area = await AreaModel.findOne({
+    pincode: normalizedPincode,
     districtId,
     isEnabled: true,
   }).lean()
+
+  if (!area) {
+    area = await AreaModel.findOne({
+      pincode: { $regex: normalizedPincode, $options: "i" },
+      districtId,
+      isEnabled: true,
+    }).lean()
+  }
+
+  return area
 }
 
 export async function bulkCreateAreas(

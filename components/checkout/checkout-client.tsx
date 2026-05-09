@@ -37,11 +37,12 @@ import { nextDay, format, Day } from "date-fns"
 import type { Cart } from "@/lib/cart"
 import { CheckoutSchema, type CheckoutFormValues } from "@/lib/schemas/checkout"
 import { findCustomerByMobileAction } from "@/server/actions/customer"
+import { listApartmentsByDistrictAction } from "@/server/actions/location"
 import {
-  listAreasByDistrictAction,
-  listApartmentsByDistrictAction,
-} from "@/server/actions/location"
-import { createAreaAction, findAreaByPincodeAction } from "@/server/actions/location-admin"
+  createAreaAction,
+  findAreaByPincodeAction,
+  listEnabledAreasByDistrictAction,
+} from "@/server/actions/location-admin"
 import { placeOrderAction } from "@/server/actions/order"
 import {
   createRazorpayOrderAction,
@@ -101,6 +102,7 @@ export function CheckoutClient({
   const [isOutOfRadius, setIsOutOfRadius] = useState(false)
   const [showRadiusWarning, setShowRadiusWarning] = useState(false)
   const [areaNotAvailable, setAreaNotAvailable] = useState(false)
+  const [userLivesInApartment, setUserLivesInApartment] = useState(true)
 
   const {
     register,
@@ -202,7 +204,7 @@ export function CheckoutClient({
     if (!districtId) return
     startTransition(async () => {
       const [resAreas, resApts] = await Promise.all([
-        listAreasByDistrictAction(districtId),
+        listEnabledAreasByDistrictAction(districtId),
         listApartmentsByDistrictAction(districtId),
       ])
       setAreas((resAreas as any).areas)
@@ -235,17 +237,31 @@ export function CheckoutClient({
     }
   }, [districtSlug, districts, setValue, districtId, existingCustomer])
 
-  const isChennai = useMemo(() => {
+  const districtHasApartments = useMemo(() => {
     if (!districtId || !districts) return false
     const d = districts.find((x) => String(x._id) === String(districtId))
-    return d && d.name.toLowerCase() === "chennai"
+    // Default to true for backward compatibility if not explicitly set to false
+    return d?.hasApartments !== false
   }, [districtId, districts])
+
+  // Reset apartment mode when district changes
+  useEffect(() => {
+    if (districtHasApartments !== undefined) {
+      setUserLivesInApartment(true)
+    }
+  }, [districtId])
 
   const selectedApartment = useMemo(() => {
     const street = watch("street")
-    if (!isChennai || !street) return null
+    if (!districtHasApartments || !userLivesInApartment || !street) return null
     return apartments.find((a: any) => a.name === street)
-  }, [apartments, watch("street"), isChennai])
+  }, [apartments, watch("street"), districtHasApartments, userLivesInApartment])
+
+  const selectedArea = useMemo(() => {
+    const areaId = watch("areaId")
+    if (!areaId) return null
+    return areas.find((a: any) => String(a._id) === String(areaId))
+  }, [areas, watch("areaId")])
 
   const effectiveIsCodEnabled = useMemo(() => {
     if (!globalIsCodEnabled) return false
@@ -771,9 +787,11 @@ export function CheckoutClient({
                   )}
                 </div>
 
+                
+
                 <div className="grid gap-2">
                   <label className="text-sm font-medium">
-                    Area{isChennai ? " (optional)" : ""}
+                    Area{districtHasApartments && userLivesInApartment ? " (optional)" : ""}
                   </label>
                   <Popover open={areaOpen} onOpenChange={setAreaOpen}>
                     <PopoverTrigger asChild>
@@ -787,7 +805,7 @@ export function CheckoutClient({
                         {watch("areaId")
                           ? areas.find((a: any) => a._id === watch("areaId"))
                               ?.name
-                          : isChennai
+                          : districtHasApartments && userLivesInApartment
                             ? "Select area (optional)"
                             : "Select area"}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -815,6 +833,7 @@ export function CheckoutClient({
                               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
                               onClick={() => {
                                 setValue("areaId", a._id)
+                                setAreaNotAvailable(false)
                                 setAreaSearch("")
                                 setAreaOpen(false)
                               }}
@@ -844,7 +863,7 @@ export function CheckoutClient({
                       </div>
                     </PopoverContent>
                   </Popover>
-                  {errors.areaId && !isChennai && (
+                  {errors.areaId && !(districtHasApartments && userLivesInApartment) && (
                     <div className="text-xs text-destructive">
                       {errors.areaId.message}
                     </div>
@@ -852,12 +871,31 @@ export function CheckoutClient({
                 </div>
               </div>
 
+              {districtHasApartments && (
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="userLivesInApartment"
+                    checked={userLivesInApartment}
+                    onCheckedChange={(checked) =>
+                      setUserLivesInApartment(Boolean(checked))
+                    }
+                    disabled={isPending}
+                  />
+                  <label
+                    htmlFor="userLivesInApartment"
+                    className="text-sm cursor-pointer select-none"
+                  >
+                    I live in an apartment
+                  </label>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="grid gap-2">
                   <label className="text-sm font-medium">
-                    {isChennai ? "Apartment" : "Street"}
+                    {districtHasApartments && userLivesInApartment ? "Apartment" : "Street"}
                   </label>
-                  {isChennai ? (
+                  {districtHasApartments && userLivesInApartment ? (
                     <Popover
                       open={apartmentOpen}
                       onOpenChange={setApartmentOpen}
@@ -963,7 +1001,7 @@ export function CheckoutClient({
                   {errors.lat.message}
                 </div>
               )}
-              {areaNotAvailable && !selectedApartment && (
+              {areaNotAvailable && !selectedArea && !selectedApartment && (
                 <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>

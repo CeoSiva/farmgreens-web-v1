@@ -80,6 +80,16 @@ export async function toggleDistrictEnabledAction(
   }
 }
 
+export async function toggleDistrictApartmentsAction(id: string, enabled: boolean) {
+  try {
+    await updateDistrict(id, { hasApartments: enabled })
+    revalidatePath("/fmg-admin/settings", "page")
+    return { success: true }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to toggle apartment selection" }
+  }
+}
+
 export async function deleteDistrictAction(payload: { id: string }) {
   try {
     await deleteDistrict(payload.id)
@@ -94,6 +104,7 @@ export async function createAreaAction(payload: {
   districtId: string
   name: string
   pincode?: string
+  isEnabled?: boolean
 }) {
   const parsed = AreaSchema.safeParse(payload)
   if (!parsed.success) return { error: "Invalid area" }

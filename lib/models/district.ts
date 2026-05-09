@@ -4,6 +4,7 @@ export interface IDistrict extends Document {
   name: string
   isCodEnabled: boolean
   isEnabled: boolean
+  hasApartments: boolean
   deliveryCenter?: {
     lat: number
     lng: number
@@ -18,6 +19,7 @@ const districtSchema: Schema<IDistrict> = new Schema(
     name: { type: String, required: true, unique: true, trim: true },
     isCodEnabled: { type: Boolean, default: true },
     isEnabled: { type: Boolean, default: true },
+    hasApartments: { type: Boolean, default: true },
     deliveryCenter: {
       lat: { type: Number },
       lng: { type: Number },
