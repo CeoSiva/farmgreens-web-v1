@@ -177,10 +177,11 @@ export async function createApartment(
   districtId: string,
   name: string,
   deliveryDays: number[] = [],
-  isCodEnabled: boolean = true
+  isCodEnabled: boolean = true,
+  isEnabled: boolean = true
 ) {
   await connectDB()
-  return ApartmentModel.create({ districtId, name, deliveryDays, isCodEnabled })
+  return ApartmentModel.create({ districtId, name, deliveryDays, isCodEnabled, isEnabled })
 }
 
 export async function renameApartment(id: string, name: string) {
@@ -196,7 +197,7 @@ export async function renameApartment(id: string, name: string) {
 
 export async function updateApartment(
   id: string,
-  data: { name?: string; deliveryDays?: number[]; isCodEnabled?: boolean }
+  data: { name?: string; deliveryDays?: number[]; isCodEnabled?: boolean; isEnabled?: boolean }
 ) {
   await connectDB()
 

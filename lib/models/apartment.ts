@@ -5,6 +5,7 @@ export interface IApartment extends Document {
   name: string;
   deliveryDays: number[];
   isCodEnabled: boolean;
+  isEnabled: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,6 +16,7 @@ const apartmentSchema: Schema<IApartment> = new Schema(
     name: { type: String, required: true, trim: true },
     deliveryDays: { type: [Number], default: [] },
     isCodEnabled: { type: Boolean, default: true },
+    isEnabled: { type: Boolean, default: true },
   },
   { timestamps: true, strict: false }
 );

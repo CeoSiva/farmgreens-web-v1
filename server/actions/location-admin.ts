@@ -212,7 +212,8 @@ export async function createApartmentAction(payload: {
       parsed.data.districtId,
       parsed.data.name,
       parsed.data.deliveryDays,
-      parsed.data.isCodEnabled
+      parsed.data.isCodEnabled,
+      parsed.data.isEnabled ?? true
     )
     revalidatePath("/fmg-admin/settings")
     return { success: true, apartment: JSON.parse(JSON.stringify(apartment)) }
@@ -242,6 +243,7 @@ export async function updateApartmentAction(payload: {
   name?: string
   deliveryDays?: number[]
   isCodEnabled?: boolean
+  isEnabled?: boolean
 }) {
   const parsed = ApartmentSchema.partial().safeParse(payload)
   if (!parsed.success) return { error: "Invalid apartment data" }
@@ -262,6 +264,16 @@ export async function toggleApartmentCodAction(id: string, enabled: boolean) {
     return { success: true }
   } catch (e: any) {
     return { error: e?.message ?? "Failed to toggle COD" }
+  }
+}
+
+export async function toggleApartmentEnabledAction(id: string, enabled: boolean) {
+  try {
+    await updateApartment(id, { isEnabled: enabled })
+    revalidatePath("/fmg-admin/settings", "page")
+    return { success: true }
+  } catch (e: any) {
+    return { error: e?.message ?? "Failed to toggle apartment visibility" }
   }
 }
 

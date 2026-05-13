@@ -65,6 +65,7 @@ import {
   toggleDistrictEnabledAction,
   toggleDistrictApartmentsAction,
   toggleApartmentCodAction,
+  toggleApartmentEnabledAction,
   createAreaAction,
   deleteAreaAction,
   deleteDistrictAction,
@@ -164,6 +165,7 @@ export function SettingsClient({
   >([])
   const [editApartmentIsCodEnabled, setEditApartmentIsCodEnabled] =
     useState(true)
+  const [editApartmentIsEnabled, setEditApartmentIsEnabled] = useState(true)
 
   // Bulk weekday assignment state
   const [selectedApartmentIds, setSelectedApartmentIds] = useState<Set<string>>(
@@ -199,7 +201,7 @@ export function SettingsClient({
   const fetchLocations = async (id: string) => {
     const [resAreas, resApts] = await Promise.all([
       listAreasByDistrictAction(id),
-      listApartmentsByDistrictAction(id, Date.now()),
+      listApartmentsByDistrictAction(id, Date.now(), true),
     ])
     setAreas((resAreas as any).areas)
     setApartments((resApts as any).apartments)
@@ -655,6 +657,7 @@ export function SettingsClient({
       Array.isArray(a.deliveryDays) ? a.deliveryDays : []
     )
     setEditApartmentIsCodEnabled(a.isCodEnabled !== false)
+    setEditApartmentIsEnabled(a.isEnabled !== false)
   }
 
   const cancelEditApartment = () => {
@@ -662,6 +665,7 @@ export function SettingsClient({
     setEditApartmentName("")
     setEditApartmentDeliveryDays([])
     setEditApartmentIsCodEnabled(true)
+    setEditApartmentIsEnabled(true)
   }
 
   const handleUpdateApartment = () => {
@@ -672,6 +676,7 @@ export function SettingsClient({
         name: editApartmentName,
         deliveryDays: editApartmentDeliveryDays,
         isCodEnabled: editApartmentIsCodEnabled,
+        isEnabled: editApartmentIsEnabled,
       })
       if ((res as any)?.error) toast.error((res as any).error)
       else {
@@ -699,6 +704,26 @@ export function SettingsClient({
         await fetchLocations(selectedDistrictId)
       } else {
         toast.success(`COD ${enabled ? "enabled" : "disabled"} for apartment`)
+        await fetchLocations(selectedDistrictId)
+        router.refresh()
+      }
+    })
+  }
+
+  const handleToggleApartmentEnabled = (id: string, enabled: boolean) => {
+    // Optimistic update
+    setApartments((prev) =>
+      prev.map((a) => (String(a._id) === id ? { ...a, isEnabled: enabled } : a))
+    )
+
+    startTransition(async () => {
+      const res = await toggleApartmentEnabledAction(id, enabled)
+      if ((res as any)?.error) {
+        toast.error((res as any).error)
+        // Revert on error
+        await fetchLocations(selectedDistrictId)
+      } else {
+        toast.success(`Apartment ${enabled ? "enabled" : "disabled"}`)
         await fetchLocations(selectedDistrictId)
         router.refresh()
       }
@@ -1630,6 +1655,9 @@ export function SettingsClient({
                               <TableHead className="w-[100px] text-center">
                                 COD
                               </TableHead>
+                              <TableHead className="w-[80px] text-center">
+                                Visible
+                              </TableHead>
                               <TableHead className="w-[100px] text-right">
                                 Actions
                               </TableHead>
@@ -1639,7 +1667,7 @@ export function SettingsClient({
                             {apartments.length === 0 ? (
                               <TableRow>
                                 <TableCell
-                                  colSpan={5}
+                                  colSpan={6}
                                   className="h-24 text-center text-muted-foreground"
                                 >
                                   No apartments defined in this district.
@@ -1654,7 +1682,7 @@ export function SettingsClient({
                                   return (
                                     <TableRow>
                                       <TableCell
-                                        colSpan={5}
+                                        colSpan={6}
                                         className="h-24 text-center text-muted-foreground"
                                       >
                                         No apartments match your search.
@@ -1665,7 +1693,7 @@ export function SettingsClient({
                                 return filteredApartments.map((a: any) => (
                                 <TableRow key={a._id}>
                                   {editingApartmentId === String(a._id) ? (
-                                    <TableCell colSpan={5} className="p-2">
+                                    <TableCell colSpan={6} className="p-2">
                                       <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed bg-muted/50 p-2">
                                         <Input
                                           value={editApartmentName}
@@ -1709,6 +1737,18 @@ export function SettingsClient({
                                           />
                                           <label className="text-xs">
                                             COD Enabled
+                                          </label>
+                                        </div>
+                                        <div className="flex h-9 items-center gap-2 rounded border bg-background px-2">
+                                          <Switch
+                                            checked={editApartmentIsEnabled}
+                                            onCheckedChange={
+                                              setEditApartmentIsEnabled
+                                            }
+                                            disabled={isPending}
+                                          />
+                                          <label className="text-xs">
+                                            Visible
                                           </label>
                                         </div>
                                         <Button
@@ -1774,6 +1814,20 @@ export function SettingsClient({
                                             checked={a.isCodEnabled !== false}
                                             onCheckedChange={(checked) =>
                                               handleToggleApartmentCod(
+                                                String(a._id),
+                                                checked
+                                              )
+                                            }
+                                            disabled={isPending}
+                                          />
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-center">
+                                        <div className="flex justify-center">
+                                          <Switch
+                                            checked={a.isEnabled !== false}
+                                            onCheckedChange={(checked) =>
+                                              handleToggleApartmentEnabled(
                                                 String(a._id),
                                                 checked
                                               )

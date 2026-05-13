@@ -26,9 +26,10 @@ export async function listAreasByDistrictAction(districtId: string) {
 
 export async function listApartmentsByDistrictAction(
   districtId: string,
-  t?: number
+  t?: number,
+  admin = false
 ) {
-  const apartments = await listApartmentsByDistrict(districtId)
+  const apartments = await listApartmentsByDistrict(districtId, admin)
   // Ensure we return a plain serializable object
   return { apartments: JSON.parse(JSON.stringify(apartments)) }
 }

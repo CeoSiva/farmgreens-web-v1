@@ -48,11 +48,16 @@ export async function getAreaById(areaId: string): Promise<IArea | null> {
 }
 
 export async function listApartmentsByDistrict(
-  districtId: string
+  districtId: string,
+  includeDisabled = false
 ): Promise<IApartment[]> {
   noStore()
   await connectDB()
-  return ApartmentModel.find({ districtId }).sort({ name: 1 }).lean()
+  const filter: any = { districtId }
+  if (!includeDisabled) {
+    filter.isEnabled = { $ne: false }
+  }
+  return ApartmentModel.find(filter).sort({ name: 1 }).lean()
 }
 
 export async function getApartmentById(

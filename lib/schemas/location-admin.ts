@@ -26,6 +26,7 @@ export const ApartmentSchema = z.object({
   name: z.string().min(1, "Apartment name is required"),
   deliveryDays: z.array(z.number().min(0).max(6)).default([]),
   isCodEnabled: z.boolean().optional(),
+  isEnabled: z.boolean().optional(),
 })
 
 export type DistrictValues = z.infer<typeof DistrictSchema>
